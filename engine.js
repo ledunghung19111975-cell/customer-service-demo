@@ -1,285 +1,643 @@
-/* 产出 Agent：Codex。固定模板的演示执行器；无网络和真实业务写入。 */
+/* 知序 V3：在原静态演示基础上增加事项、受理、知识治理与回归门槛。
+ * 所有身份、订单、运行状态均为样例；本地校验不构成服务端授权或并发保证。
+ * 无网络请求、真实模型调用或真实退款。 */
 (function (root) {
   'use strict';
   const clone = value => JSON.parse(JSON.stringify(value));
   const now = () => new Date().toISOString();
-  const words = value => String(value).split(/[,，、\n]+/).map(s => s.trim()).filter(Boolean);
-  const defaults = {
-    version: 1,
-    orderWords: '订单,物流,快递,发货',
-    humanWords: '人工,投诉,客服专员',
-    queryMode: 'success',
-    humanOnline: true,
-    queue: '售后服务组',
-    prefix: '为你查到以下信息：'
+  const words = value => [...new Set(String(value || '').split(/[,，、\n]+/).map(s => s.trim()).filter(Boolean))];
+  const length = value => Array.from(String(value)).length;
+  const clean = (value, label, limit, required = true) => {
+    const text = String(value ?? '').trim();
+    if (required && !text) throw new Error(`请填写${label}`);
+    if (length(text) > limit) throw new Error(`${label}最多 ${limit.toLocaleString('en-US')} 字`);
+    return text;
   };
+  const assert = (condition, message) => { if (!condition) throw new Error(message); };
+  const uid = (state, prefix) => prefix + String(++state.counter).padStart(5, '0');
+  const makeMessage = (role, text, extra = {}) => ({ role, text, time: now(), ...extra });
+  const defaults = { version: 1, orderWords: '订单,物流,快递,发货', humanWords: '人工,投诉,客服专员', queryMode: 'success', queue: '售后服务组', prefix: '为你查到以下信息：', intakeEnabled: true };
+  const itemNames = { clarifying: '待澄清', processing: '处理中', needs_human: '待人工', needs_customer: '待客户补充', awaiting_confirmation: '待结果确认', resolved: '已解决', cancelled: '已撤销' };
+  const itemTypes = { knowledge: '知识咨询', order: '订单查询', aftersales: '售后申请', other: '人工协助' };
   const orders = [
-    { id: 'SO20260926001', product: '原木便携保温杯 · 雾白', price: '129.00', status: '运输中', delivery: '演示快递 · 已到达配送站', receiver: '林** · 138****0618', date: '2026-09-25', icon: '◒' },
-    { id: 'SO20260926002', product: '棉麻收纳袋 · 自然色', price: '49.00', status: '待发货', delivery: '仓库正在备货，发出后更新物流', receiver: '林** · 138****0618', date: '2026-09-26', icon: '▧' }
+    { id: 'SO20260926001', customerId: 'DEMO-CUSTOMER', product: '原木便携保温杯 · 雾白', price: '129.00', status: '运输中', delivery: '演示快递 · 已到达配送站', receiver: '林** · 138****0618', date: '2026-09-25', icon: '◒' },
+    { id: 'SO20260926002', customerId: 'DEMO-CUSTOMER', product: '棉麻收纳袋 · 自然色', price: '49.00', status: '待发货', delivery: '仓库正在备货，发出后更新物流', receiver: '林** · 138****0618', date: '2026-09-26', icon: '▧' }
   ];
-  function uid(state, prefix) { state.counter += 1; return prefix + String(state.counter).padStart(5, '0'); }
-  function makeMessage(role, text, extra = {}) { return { role, text, time: now(), ...extra }; }
-  function newSession(state, name = '林小夏') {
+  const getSession = (state, id) => { const s = state.sessions.find(s => s.id === id); assert(s, '会话不存在，请重新选择'); return s; };
+  const getItem = (state, id) => { const item = state.items.find(i => i.id === id); assert(item, '服务事项不存在'); return item; };
+  const getTicket = (state, id) => { const t = state.tickets.find(t => t.id === id); assert(t, '工单不存在'); return t; };
+  const sessionItems = (state, session) => session.itemIds.map(id => getItem(state, id));
+  const audit = (state, type, target, reason, extra = {}) => state.audit.push({ id: uid(state, 'EV'), time: now(), type, target, reason, operator: state.operator, ...extra });
+  function newSession(state, name = '林小夏', options = {}) {
+    const linked = options.itemId ? getItem(state, options.itemId) : null;
+    const customerId = options.customerId || 'DEMO-CUSTOMER';
+    if (linked) assert(linked.customerId === customerId, '无法关联此服务事项');
     const session = {
-      id: uid(state, 'CS'), name, channel: 'Web 在线咨询', created: now(), status: 'bot',
-      flow: clone(state.published), robot: clone(state.robot), messages: [], runs: [],
-      pendingOrder: false, hadHandoff: false, resolution: '', tickets: [], summary: '', lastIssue: ''
+      id: uid(state, 'CS'), name, customerId, channel: 'Web 在线咨询', created: now(), status: 'bot',
+      flow: clone(state.published), robot: clone(state.robot), messages: [], runs: [], itemIds: [],
+      pendingItemId: '', pendingOrder: false, hadHandoff: false, resolution: '', owner: '', queue: '',
+      tickets: [], summary: '', lastIssue: '', sample: Boolean(options.sample)
     };
     session.messages.push(makeMessage('bot', session.robot.greeting));
     state.sessions.unshift(session);
+    if (linked) {
+      session.itemIds.push(linked.id); linked.sessionIds.push(session.id);
+      session.tickets = [...linked.tickets];
+      if (['resolved', 'cancelled'].includes(linked.status)) changeItem(linked, 'needs_human', '客户再次联系原事项');
+      session.messages.push(makeMessage('system', `继续处理 ${linked.id}：${linked.title}。原受理时间与工单保留，请补充当前需要帮助的内容。`));
+      if (linked.status === 'clarifying') session.pendingItemId = linked.id;
+      if (linked.tickets.length || linked.humanTouched) requestHandoff(state, session, '原事项需要人工继续处理', [linked]);
+    }
     return session;
   }
-  function findKnowledge(query, knowledge) {
-    const q = query.toLowerCase();
-    return knowledge.filter(k => k.status === 'published').map(k => ({ item: k, matches: words(k.keywords).filter(w => q.includes(w.toLowerCase())) }))
-      .filter(r => r.matches.length).sort((a, b) => b.matches.length - a.matches.length)[0] || null;
+  function changeItem(item, status, reason, actor = '系统模拟') {
+    assert(itemNames[status], '事项状态无效');
+    if (item.status !== status) item.history.push({ time: now(), from: item.status, to: status, reason, actor });
+    if (item.status === 'resolved' && status !== 'resolved') {
+      item.previousResolution = { resolvedAt: item.resolvedAt, method: item.confirmation, evidence: clone(item.evidence) };
+      item.resolvedAt = null; item.confirmation = '';
+    }
+    item.status = status; item.updated = now();
   }
-  function simulate(query, context, flow, knowledge) {
-    validateFlow(flow);
-    const text = query.trim();
-    if (!text) throw new Error('请输入一条测试消息');
-    if (text.length > 2000) throw new Error('单条消息请控制在 2,000 字以内');
-    const result = { messages: [], trace: [], status: 'bot', pendingOrder: false, issue: null };
-    const step = (node, label, detail, status = 'success') => result.trace.push({ node, label, detail, status });
-    const say = (value, extra = {}) => result.messages.push(makeMessage('bot', value, extra));
-    const handoff = reason => {
-      result.status = flow.humanOnline ? 'waiting' : 'offline';
-      step('human', '人工兜底', flow.humanOnline ? `转至${flow.queue}，等待坐席接管` : '人工当前离线，可登记工单', flow.humanOnline ? 'waiting' : 'warning');
-      say(flow.humanOnline ? `${reason}\n已为你转接${flow.queue}，人工接管前可以继续补充问题。` : `${reason}\n人工当前离线，请点击“提交问题”登记处理需求。`);
+  function newItem(state, session, values) {
+    const item = {
+      id: uid(state, 'SI'), type: values.type, title: values.title, key: values.key || values.type,
+      request: values.request || values.title, objectId: values.objectId || '', customerId: session?.customerId || 'DEMO-CUSTOMER',
+      sessionIds: session ? [session.id] : [], created: now(), updated: now(), status: 'clarifying',
+      evidence: [], tickets: [], history: [], humanTouched: false, resolvedAt: null, confirmation: '', sample: Boolean(session?.sample)
     };
-    step('start', '开始', `固定模板 · v${flow.version}`);
-    const lower = text.toLowerCase();
-    if (context.forceHandoff || words(flow.humanWords).some(w => lower.includes(w.toLowerCase()))) {
-      step('router', '意图路由', context.forceHandoff ? '客户主动请求人工服务' : '命中人工服务关键词');
-      handoff('我会把当前问题和聊天记录一起交给客服。');
-    } else {
-      const orderId = text.match(/\bSO[A-Z0-9]+\b/i)?.[0]?.toUpperCase();
-      const isOrder = Boolean(orderId) || words(flow.orderWords).some(w => lower.includes(w.toLowerCase())) || (context.pendingOrder && /^[\s\dA-Za-z-]+$/.test(text));
-      if (isOrder) {
-        step('router', '意图路由', '进入订单查询分支');
-        if (!orderId) {
+    state.items.unshift(item);
+    if (session) session.itemIds.push(item.id);
+    return item;
+  }
+  function isKnowledgeActive(k, at = now(), scope = '青禾生活') {
+    const t = Date.parse(at), start = Date.parse(k.effectiveAt), end = k.expiresAt ? Date.parse(k.expiresAt) : Infinity;
+    return k.status === 'published' && k.scope === scope && Number.isFinite(start) && start <= t && t < end;
+  }
+  function findKnowledge(query, knowledge, options = {}) {
+    const q = String(query).toLowerCase();
+    const results = knowledge.filter(k => isKnowledgeActive(k, options.at, options.scope)).map(k => ({
+      item: k, matches: words(k.keywords).filter(w => q.includes(w.toLowerCase()))
+    })).filter(r => r.matches.length).sort((a, b) => b.matches.length - a.matches.length || a.item.id.localeCompare(b.item.id));
+    if (!results.length) return null;
+    const ties = results.filter(r => r.matches.length === results[0].matches.length);
+    if (ties.length > 1 && new Set(ties.map(r => r.item.answer)).size > 1) return { conflict: true, candidates: ties.map(r => r.item), matches: ties[0].matches };
+    return results[0];
+  }
+  function validateFlow(flow) {
+    assert(words(flow.orderWords).length && words(flow.humanWords).length, '订单和人工路由关键词都不能为空');
+    clean(flow.orderWords, '订单路由词', 200); clean(flow.humanWords, '人工路由词', 200);
+    clean(flow.queue, '人工服务组', 30); clean(flow.prefix, '回答引导语', 150, false);
+    assert(['success', 'timeout'].includes(flow.queryMode), '查询模式无效');
+    assert(typeof flow.intakeEnabled === 'boolean', '售后受理开关无效');
+  }
+  const runtimeDefaults = { humanMode: 'online', capacity: 2, toolEnabled: true, reason: '初始演示配置' };
+  function capacityState(state) {
+    const occupied = state.sessions.filter(s => s.status === 'human').length;
+    return { ...state.runtime, occupied, full: state.runtime.humanMode === 'busy' || occupied >= state.runtime.capacity };
+  }
+  function runtimeStatus(runtime) { return runtime.humanMode === 'offline' ? 'offline' : 'waiting'; }
+  function handoffText(runtime, queue, reason) {
+    if (runtime.humanMode === 'offline') return `${reason}\n人工当前离线。可点击“提交问题”留单，处理进度在本窗口查看；本演示不会发送短信。`;
+    if (runtime.full || runtime.humanMode === 'busy') return `${reason}\n${queue}当前满载，已进入等待队列。可以补充信息、取消排队或提交问题留单；暂不估计等待分钟数。`;
+    return `${reason}\n已进入${queue}，等待坐席接管。接管前可以继续补充问题。`;
+  }
+  // 支持演示脚本中的固定表达。不是通用语义模型；歧义与无依据走澄清/人工。
+  function planRequests(text, context, flow) {
+    const id = text.match(/\bSO[A-Z0-9]+\b/i)?.[0]?.toUpperCase() || '';
+    const humanText = text.replace(/(不要|不用|不需要|无需|别)(再|先|帮我|给我|请|麻烦)?(转(接|给)?|找|联系|接通|安排)?(人工|客服专员)/g, '');
+    const wantsHuman = context.forceHandoff || words(flow.humanWords).some(w => humanText.toLowerCase().includes(w.toLowerCase()));
+    if (wantsHuman) return [{ type: 'other', title: '人工协助', key: 'human', request: text, objectId: id, status: 'needs_human', handoff: true }];
+    const pending = context.pendingItem;
+    const onlyId = /^\s*(订单号[是为：:]?\s*)?SO[A-Z0-9]+[。.!！]?\s*$/i.test(text);
+    if (pending && onlyId) return [{ ...pending, pendingId: pending.id, objectId: id, request: pending.request }];
+    const policy = /(规则|条件|政策|无理由|如何退|怎么退|退货运费|想了解|咨询一下)/.test(text) && /(退|售后)/.test(text);
+    const negatedIntake = /(不要|不想|不需要|暂不|先不|不打算).{0,6}(退货|退款|换货|申请|办理)/.test(text);
+    const intake = !negatedIntake && (/(申请|办理).{0,8}(退货|退款|换货|售后|补发)/.test(text) || /(想|要|需要|帮我)(退货|退款|换货|补发)/.test(text));
+    const explicitLookup = /(查|看|查询|进度|状态|到哪|在哪|什么时候|何时|催).{0,8}(订单|物流|快递|发货)/.test(text) || /(物流|快递|发货).{0,8}(查|看|进度|状态|到哪|在哪|何时)/.test(text);
+    const plainOrder = onlyId || /^(帮我|请|我想|我要)?(查一下|查询一下|查询|查)?(订单|物流|快递)[。?？!！]?$/.test(text.trim()) || (id && !intake && !policy && !/(保温杯|清洗|保养|材质|发票|礼品卡)/.test(text));
+    const keywordOrder = !policy && !intake && words(flow.orderWords).some(w => text.includes(w)) && !/(没有订单号|不查|不要查)/.test(text);
+    const requests = [];
+    if (explicitLookup || plainOrder || keywordOrder) requests.push({ type: 'order', key: 'order', title: '查询订单与物流', objectId: id, request: text });
+    if (intake) requests.push({ type: 'aftersales', key: 'aftersales', title: '申请售后处理', objectId: id, request: text });
+    // 从固定多事项示例中提取知识子句，避免让订单号抢占知识诉求。
+    if (/(清洗|保养|材质)/.test(text) && requests.length) requests.push({ type: 'knowledge', key: 'care', title: '商品材质与日常保养', query: '保温杯怎么清洗和保养', request: text });
+    if (policy && (!intake || /(再|还|同时|并|另外|以及)/.test(text))) requests.push({ type: 'knowledge', key: 'policy', title: '了解退货规则', query: '七天无理由退货规则', request: text });
+    if (!requests.length) requests.push({ type: 'knowledge', key: 'question:' + text, title: text.slice(0, 60), query: text, request: text });
+    return requests;
+  }
+  function simulate(query, context = {}, flow = defaults, knowledge = []) {
+    validateFlow(flow);
+    const text = clean(query, '消息', 2000), runtime = { ...runtimeDefaults, ...(context.runtime || {}) };
+    const result = { messages: [], trace: [], status: 'bot', pendingOrder: false, tasks: [], issues: [], issue: null };
+    const step = (node, label, detail, status = 'success') => result.trace.push({ node, label, detail, status });
+    const say = (value, task, extra = {}) => result.messages.push(makeMessage('bot', value, { taskIndex: result.tasks.indexOf(task), ...extra }));
+    const issue = (task, type, suggestion) => result.issues.push({ type, evidence: text, query: task.query || text, suggestion, taskIndex: result.tasks.indexOf(task) });
+    const handoff = (task, reason) => {
+      task.status = 'needs_human'; task.handoff = true; result.status = runtimeStatus(runtime);
+      step('human', '人工兜底', `${flow.queue} · ${runtime.humanMode === 'offline' ? '离线留单' : runtime.full || runtime.humanMode === 'busy' ? '容量已满，等待或留单' : '等待坐席接管'}`, 'waiting');
+      say(handoffText(runtime, flow.queue, reason), task);
+    };
+    step('start', '开始', `固定服务模板 · v${flow.version}；实时人工=${runtime.humanMode}，工具=${runtime.toolEnabled ? '可用样例' : '已停用'}`);
+    const plans = planRequests(text, context, flow);
+    step('router', '意图路由', context.forceHandoff ? '客户主动请求人工服务' : `${plans.length} 个服务事项：${plans.map(p => itemTypes[p.type]).join('、')}`);
+    for (const plan of plans) {
+      const task = { ...plan, status: 'clarifying', evidence: [] }; result.tasks.push(task);
+      if (plan.handoff) { handoff(task, '我会把当前事项、问题和聊天记录一起交给客服。'); continue; }
+      if (task.type === 'order' || task.type === 'aftersales') {
+        if (!task.objectId) {
           result.pendingOrder = true;
-          step('order', '订单查询', '缺少有效订单号，等待用户补充', 'waiting');
-          say('请提供以 SO 开头的订单号。你可以用演示订单 SO20260926001 试一试。');
-        } else if (flow.queryMode === 'timeout') {
-          step('order', '订单查询', `演示工具超时 · ${orderId}`, 'error');
-          result.issue = { type: '工具超时', evidence: text, suggestion: '检查订单查询工具与超时兜底' };
-          handoff('订单查询暂时没有返回结果。');
+          step('collect', '必要信息采集', `${itemTypes[task.type]}缺少订单号；可以先问其他问题，稍后继续`, 'waiting');
+          say(`为了${task.type === 'order' ? '查询订单' : '登记售后'}，请提供以 SO 开头的演示订单号。可以用 SO20260926001。也可以先咨询其他问题，再点击事项的“继续处理”。`, task);
+          continue;
+        }
+        if (task.type === 'aftersales') {
+          if (!flow.intakeEnabled) { handoff(task, '此流程未开放自助售后受理，需要人工协助。'); continue; }
+          task.status = 'processing';
+          step('intake', '售后受理预览', `已识别订单线索 ${task.objectId}，下一步填写问题并确认提交；未创建工单、未退款`);
+          say(`已记下订单 ${task.objectId} 的售后诉求。请点击下方“填写并确认售后申请”，核对订单和问题后再提交。这里只登记处理需求，不表示退款已批准或已到账。`, task, { intake: { objectId: task.objectId } });
+          continue;
+        }
+        if (context.customerId && context.customerId !== 'DEMO-CUSTOMER') {
+          issue(task, '归属校验未通过', '真实环境由服务端验证身份和订单归属');
+          step('order', '订单查询', '演示身份无权访问；不透露该订单是否存在', 'error');
+          handoff(task, '当前身份无法查询此订单，请从已授权入口联系人工核实。');
+        } else if (!runtime.toolEnabled || flow.queryMode === 'timeout') {
+          const type = runtime.toolEnabled ? '工具超时' : '工具已停用';
+          step('order', '订单查询', `${type} · ${task.objectId}`, 'error'); issue(task, type, '检查工具可用性与超时承接');
+          handoff(task, '订单查询暂未完成，已保留订单号。');
         } else {
-          const order = orders.find(o => o.id === orderId);
-          if (order) {
-            step('order', '订单查询', `返回本地样例 ${orderId}`);
-            say(`${flow.prefix}\n订单 ${orderId} 当前为“${order.status}”。`, { order: clone(order) });
+          const order = orders.find(o => o.id === task.objectId);
+          if (!order) {
+            step('order', '订单查询', `样例数据中没有 ${task.objectId}`, 'error'); issue(task, '订单未找到', '核对订单标识和样例范围');
+            say('演示订单中没有找到这个订单号。请更正订单号后继续，也可以转人工；本次查询尚未完成。', task);
           } else {
-            step('order', '订单查询', `样例数据中没有 ${orderId}`, 'error');
-            result.issue = { type: '订单未找到', evidence: text, suggestion: '核对订单号及查询范围' };
-            say('演示订单中没有找到这个订单号，请核对后重试。也可以点击“转人工”继续处理。');
+            task.status = 'awaiting_confirmation';
+            task.evidence = [{ kind: 'order', objectId: order.id, queriedAt: now(), source: '本地虚构订单样例', result: clone(order) }];
+            step('order', '订单查询', `返回本地样例 ${order.id}`);
+            say(`${flow.prefix}\n订单 ${order.id} 当前为“${order.status}”。仅完成查询，不表示其他售后事项已处理。`, task, { order: { ...clone(order), queriedAt: now() } });
           }
         }
       } else {
-        step('router', '意图路由', '进入知识问答分支');
-        const hit = findKnowledge(text, knowledge);
-        if (hit) {
-          const k = hit.item;
-          step('knowledge', '知识检索', `命中 ${hit.matches.length} 个关键词：${hit.matches.join('、')} · ${k.id} v${k.version}`);
-          say(`${flow.prefix}\n${k.answer}`, { citation: { id: k.id, title: k.title, version: k.version, answer: k.answer } });
+        const hit = findKnowledge(task.query || text, knowledge);
+        if (!hit || hit.conflict) {
+          const type = hit?.conflict ? '知识冲突' : '知识未命中';
+          step('knowledge', '知识检索', hit?.conflict ? `同等匹配但答案不同：${hit.candidates.map(k => k.id).join('、')}` : '没有适用且生效的已发布知识', 'warning');
+          issue(task, type, hit?.conflict ? '复核适用范围和内容冲突' : '补充经过审核的问答，不直接把未验证回答入库');
+          handoff(task, hit?.conflict ? '现有资料的回答存在冲突，需要人工核实。' : '现有知识里没有找到足够依据，我暂时无法准确回答。');
         } else {
-          step('knowledge', '知识检索', '已发布知识未匹配到关键词', 'warning');
-          result.issue = { type: '知识未命中', evidence: text, suggestion: '补充对应知识或增加匹配关键词' };
-          handoff('现有知识里没有找到足够的信息，我暂时无法准确回答。');
+          const k = hit.item;
+          task.key = 'knowledge:' + k.id; task.title = k.title; task.status = 'awaiting_confirmation';
+          const citation = { id: k.id, title: k.title, version: k.version, answer: k.answer, source: k.source, scope: k.scope, owner: k.owner, effectiveAt: k.effectiveAt, expiresAt: k.expiresAt };
+          task.evidence = [{ kind: 'knowledge', ...clone(citation) }];
+          step('knowledge', '知识检索', `${k.id} v${k.version} · ${hit.matches.join('、')}；已检查状态、范围和生效区间`);
+          say(`${flow.prefix}\n${k.answer}`, task, { citation });
         }
       }
     }
-    step('reply', '回复输出', result.status === 'bot' ? '输出回答、追问或业务卡片' : '输出转接结果');
-    step('end', '本轮结束', result.pendingOrder ? '保留订单信息采集状态' : '等待用户下一条消息');
+    result.issue = result.issues[0] || null;
+    step('reply', '回复与事项检查', '各事项独立记录；受理、转接和结束聊天均不等于解决');
+    step('end', '本轮结束', result.pendingOrder ? '保留待补充事项；插问不清空原字段' : '等待下一条消息或客户分项确认');
     return result;
   }
-  function getSession(state, id) {
-    const session = state.sessions.find(s => s.id === id);
-    if (!session) throw new Error('会话不存在，请重新选择');
-    return session;
+  function requestHandoff(state, session, reason, items) {
+    session.status = runtimeStatus(capacityState(state)); session.hadHandoff = true; session.queue = session.flow.queue; session.queuedAt ||= now();
+    for (const item of items) { item.humanTouched = true; if (!['resolved', 'cancelled'].includes(item.status)) changeItem(item, 'needs_human', reason); }
+    session.messages.push(makeMessage('system', handoffText(capacityState(state), session.queue, reason)));
   }
   function sendVisitor(state, id, query, options = {}) {
-    const session = getSession(state, id);
-    const text = query.trim();
-    if (!text) throw new Error('请输入消息');
-    if (text.length > 2000) throw new Error('单条消息请控制在 2,000 字以内');
-    if (session.status === 'ended') throw new Error('会话已结束，请新建会话');
-    session.messages.push(makeMessage('user', text));
-    session.summary = text;
-    if (session.status !== 'bot') return session;
-    const result = simulate(text, { ...session, forceHandoff: Boolean(options.forceHandoff) }, session.flow, state.knowledge);
-    session.messages.push(...result.messages);
-    session.status = result.status;
-    session.pendingOrder = result.pendingOrder;
-    session.summary = text;
-    session.runs.push({ id: uid(state, 'RUN'), time: now(), version: session.flow.version, trace: result.trace });
-    if (['waiting', 'offline'].includes(result.status)) session.hadHandoff = true;
-    if (result.issue) {
-      session.lastIssue = result.issue.type;
-      state.issues.unshift({ id: uid(state, 'QA'), sessionId: id, time: now(), status: '待复核', review: '', ...result.issue });
+    const session = getSession(state, id), text = clean(query, '消息', 2000);
+    assert(session.status !== 'ended', '会话已结束，请新建会话');
+    if (session.status !== 'bot') {
+      session.messages.push(makeMessage('user', text)); session.summary = text; return session;
+    }
+    const pendingItem = session.pendingItemId ? getItem(state, session.pendingItemId) : null;
+    const result = simulate(text, { customerId: session.customerId, pendingItem, forceHandoff: Boolean(options.forceHandoff), runtime: capacityState(state) }, session.flow, state.knowledge);
+    // 执行器校验成功后才写入本地会话，避免无效配置留下半次提交。
+    const messageIndex = session.messages.length;
+    session.messages.push(makeMessage('user', text)); session.summary = text;
+    // 转人工是一项接待动作：有未完成事项时接续当前事项，不额外虚增一项人工需求。
+    if (result.tasks.length === 1 && result.tasks[0].handoff && result.tasks[0].type === 'other') {
+      const open = sessionItems(state, session).filter(i => !['resolved', 'cancelled'].includes(i.status));
+      const current = open.find(i => i.id === session.pendingItemId) || open.at(-1);
+      if (current) Object.assign(result.tasks[0], { pendingId: current.id, type: current.type, title: current.title, key: current.key, objectId: current.objectId, request: current.request });
+    }
+    const affected = result.tasks.map(task => {
+      let item = task.pendingId ? getItem(state, task.pendingId) : sessionItems(state, session).find(i => i.key === task.key && i.objectId === (task.objectId || '') && !['resolved', 'cancelled'].includes(i.status));
+      if (!item) item = newItem(state, session, task);
+      item.objectId = task.objectId || item.objectId; item.key = task.key; item.title = task.title;
+      if (task.evidence.length) item.evidence = clone(task.evidence);
+      // 已存在的办理工单不能被后续问答覆盖为已完成。
+      const open = item.tickets.some(tid => !['已完成', '已撤销'].includes(getTicket(state, tid).status) || getTicket(state, tid).disputed);
+      if (!open) changeItem(item, task.status, '本轮处理结果');
+      if (task.handoff) item.humanTouched = true;
+      return item;
+    });
+    session.messages.push(...result.messages.map(m => ({ ...m, itemId: affected[m.taskIndex]?.id })));
+    if (result.tasks.some(t => t.handoff)) {
+      session.status = result.status; session.hadHandoff = true; session.queue = session.flow.queue; session.queuedAt ||= now();
+    }
+    const clarifying = sessionItems(state, session).filter(i => i.status === 'clarifying' && ['order', 'aftersales'].includes(i.type));
+    session.pendingItemId = clarifying.find(i => i.id === session.pendingItemId)?.id || clarifying[0]?.id || '';
+    session.pendingOrder = Boolean(session.pendingItemId);
+    const run = { id: uid(state, 'RUN'), time: now(), version: session.flow.version, itemIds: affected.map(i => i.id), messageIndex, trace: result.trace };
+    session.runs.push(run);
+    for (const problem of result.issues) {
+      session.lastIssue = problem.type;
+      state.issues.unshift({ id: uid(state, 'QA'), sessionId: id, itemId: affected[problem.taskIndex]?.id, runId: run.id, messageIndex, time: now(), status: '待复核', review: '', ...problem });
     }
     return session;
   }
-  function takeover(state, id) {
-    const s = getSession(state, id);
-    if (!['waiting', 'offline'].includes(s.status)) throw new Error('只有待接管或离线留言可以接管');
-    s.status = 'human'; s.hadHandoff = true;
-    s.messages.push(makeMessage('system', '客服小林已接入，接下来由人工为你服务。'));
+  function setRuntime(state, patch, reason) {
+    const next = { ...state.runtime, ...patch, reason: clean(reason, '运行状态变更原因', 300) };
+    assert(['online', 'busy', 'offline'].includes(next.humanMode), '人工运行状态无效');
+    assert(Number.isInteger(next.capacity) && next.capacity >= 1 && next.capacity <= 10, '演示接待容量为 1–10');
+    assert(typeof next.toolEnabled === 'boolean', '工具开关无效');
+    state.runtime = next; audit(state, 'runtime', 'service', next.reason, { configuration: clone(next) });
+    for (const s of state.sessions) {
+      if (s.status === 'human' && next.humanMode === 'offline') {
+        const former = s.owner; s.owner = ''; s.status = 'offline';
+        s.messages.push(makeMessage('system', `${former}已不可用，当前转为离线留单。已发消息和原工单保留；不会由机器人代办售后。`));
+        sessionItems(state, s).filter(i => !['resolved', 'cancelled'].includes(i.status)).forEach(i => changeItem(i, 'needs_human', '原坐席不可用，重新分派'));
+      } else if (['waiting', 'offline'].includes(s.status)) s.status = runtimeStatus(next);
+    }
+    return next;
   }
-  function sendAgent(state, id, query) {
-    const s = getSession(state, id), text = query.trim();
-    if (s.status !== 'human') throw new Error('请先接管会话');
-    if (!text || text.length > 2000) throw new Error('请填写 1–2,000 字的回复');
-    s.messages.push(makeMessage('agent', text));
+  function takeover(state, id, operator = state.operator) {
+    const s = getSession(state, id), runtime = capacityState(state);
+    assert(['waiting', 'offline'].includes(s.status), '只有待接管或离线留言可以接管；请刷新当前处理权');
+    assert(runtime.humanMode !== 'offline', '人工已离线，请先恢复在线状态');
+    assert(!runtime.full, '人工接待容量已满，请先释放容量或留单');
+    assert(state.agents.includes(operator), '请选择有效坐席');
+    s.status = 'human'; s.owner = operator; s.hadHandoff = true;
+    sessionItems(state, s).forEach(i => { if (!['resolved', 'cancelled'].includes(i.status)) i.humanTouched = true; });
+    s.messages.push(makeMessage('system', `${operator}已接入，接下来由人工为你服务。`));
+    audit(state, 'takeover', id, '本地单操作者接管', { owner: operator });
   }
-  function finish(state, id, by) {
-    const s = getSession(state, id);
-    if (s.status === 'ended') throw new Error('会话已经结束');
-    if (!['customer', 'agent', 'visitor'].includes(by)) throw new Error('结束方式无效');
-    if (by === 'customer' && !canResolve(s)) throw new Error('当前会话尚不能确认解决');
-    if (by === 'agent' && s.status !== 'human') throw new Error('请先接管会话再结束');
-    s.status = 'ended'; s.resolution = by;
-    s.messages.push(makeMessage('system', by === 'customer' ? '客户确认问题已解决，会话结束。' : by === 'agent' ? '人工客服已结束本次会话，关联工单仍按自身进度处理。' : '客户结束本次咨询，关联工单仍可继续处理。'));
-  }
-  function canResolve(session) {
-    const answer = [...session.messages].reverse().find(m => m.role === 'bot');
-    return session.status === 'bot' && !session.pendingOrder && Boolean(answer?.citation || answer?.order);
+  function sendAgent(state, id, query, operator = state.operator) {
+    const s = getSession(state, id), text = clean(query, '回复', 2000);
+    assert(s.status === 'human' && s.owner === operator, '请先取得此会话接管权；其他坐席仅可查看');
+    s.messages.push(makeMessage('agent', text, { agentName: operator }));
+    s.summary = text;
   }
   function resumeBot(state, id) {
     const s = getSession(state, id);
-    if (!['waiting', 'offline'].includes(s.status)) throw new Error('当前会话不能取消人工请求');
-    s.status = 'bot'; s.pendingOrder = false;
-    s.messages.push(makeMessage('system', '已取消人工请求，你可以继续向机器人咨询其他问题。'));
+    assert(['waiting', 'offline'].includes(s.status), '当前会话不能取消人工请求');
+    s.status = 'bot'; s.owner = '';
+    s.messages.push(makeMessage('system', '已取消当前排队，可以咨询其他问题。尚未解决的人工事项与工单仍保留，不会自动办理。'));
   }
-  function sessionSummary(session) {
-    const clip = (value, limit) => String(value).length > limit ? String(value).slice(0, limit - 5) + '…（节选）' : String(value);
+  function canConfirmItem(state, item) {
+    if (item.status !== 'awaiting_confirmation' || !item.evidence.length) return false;
+    if (item.tickets.some(id => { const t = getTicket(state, id); return !['已完成', '已撤销'].includes(t.status) || t.disputed; })) return false;
+    if (item.type === 'knowledge') return item.evidence.some(ev => {
+      if (ev.kind === 'knowledge') return state.knowledge.some(k => k.id === ev.id && isKnowledgeActive(k));
+      if (ev.kind !== 'ticket-result' || !item.tickets.includes(ev.ticketId)) return false;
+      const t = getTicket(state, ev.ticketId);
+      return t.itemId === item.id && t.status === '已完成' && !t.disputed && Boolean(t.resultEvidence) && ev.evidence === t.resultEvidence;
+    });
+    return true;
+  }
+  function confirmItem(state, id) {
+    const item = getItem(state, id);
+    assert(canConfirmItem(state, item), '此事项尚不能确认解决：需结果依据、全部关联工单完成，且没有待核异议');
+    changeItem(item, 'resolved', '客户明确确认', '客户'); item.resolvedAt = now(); item.confirmation = '客户明确确认（演示）';
+    for (const sid of item.sessionIds) getSession(state, sid).messages.push(makeMessage('system', `${item.title} · 客户确认这项已解决，其他事项保持原状态。`, { itemId: id }));
+    return item;
+  }
+  function canResolve(session, state) {
+    if (!state) return false; // 禁止仅凭最后一条消息判断整段服务解决。
+    const items = sessionItems(state, session);
+    return items.length > 0 && items.every(i => i.status === 'resolved' || canConfirmItem(state, i));
+  }
+  function finish(state, id, by) {
+    const s = getSession(state, id);
+    assert(s.status !== 'ended', '会话已经结束');
+    assert(['customer', 'agent', 'visitor'].includes(by), '结束方式无效');
+    if (by === 'agent') assert(s.status === 'human' && s.owner === state.operator, '请先接管会话再结束');
+    if (by === 'customer') { assert(canResolve(s, state), '当前会话尚不能确认全部解决'); sessionItems(state, s).filter(i => i.status !== 'resolved').forEach(i => confirmItem(state, i.id)); }
+    s.status = 'ended'; s.owner = ''; s.resolution = by;
+    s.messages.push(makeMessage('system', '本次咨询已结束。事项和工单按各自进度继续处理，结束聊天不计为问题解决。'));
+  }
+  function resumeItem(state, sessionId, itemId) {
+    const s = getSession(state, sessionId), i = getItem(state, itemId);
+    assert(s.itemIds.includes(itemId), '事项不属于当前会话');
+    assert(s.status === 'bot', '请在机器人接待时继续采集，或由人工接续');
+    if (i.status === 'clarifying') {
+      s.pendingItemId = i.id; s.pendingOrder = true;
+      s.messages.push(makeMessage('bot', `继续${i.title}，请补充订单号；之前的提问和资料仍保留。`, { itemId }));
+    } else if (i.type === 'aftersales' && !i.tickets.length) {
+      s.messages.push(makeMessage('bot', '请在此事项下填写并确认售后申请。尚未创建工单或执行退款。', { itemId, intake: { objectId: i.objectId } }));
+    } else requestHandoff(state, s, '继续处理未完成事项', [i]);
+  }
+  function needHelp(state, itemId, reason = '客户反馈仍需帮助') {
+    const item = getItem(state, itemId);
+    const completed = item.tickets.map(id => getTicket(state, id)).filter(t => t.status === '已完成');
+    if (completed.length) { completed.forEach(t => { if (!t.disputed) disputeTicket(state, t.id, reason); }); return item; }
+    item.humanTouched = true; changeItem(item, 'needs_human', reason, '客户');
+    const latest = [...item.sessionIds].reverse().map(id => getSession(state, id)).find(s => s.status !== 'ended');
+    if (latest && latest.status !== 'human') requestHandoff(state, latest, reason, [item]);
+    return item;
+  }
+  function sessionSummary(session, state) {
+    const clip = (text, n) => length(text) > n ? Array.from(String(text)).slice(0, n - 6).join('') + '…（节选）' : String(text);
     const users = session.messages.filter(m => m.role === 'user');
     const ids = [...new Set(users.flatMap(m => m.text.match(/\bSO[A-Z0-9]+\b/gi) || []).map(id => id.toUpperCase()))];
     const answer = [...session.messages].reverse().find(m => m.role === 'agent' || m.citation || m.order);
-    const business = session.runs.flatMap(run => run.trace.filter(step => ['knowledge', 'order'].includes(step.node)));
-    const latest = business.at(-1);
-    const history = [...new Set(business.filter(step => ['warning', 'error'].includes(step.status)).map(step => step.detail))].slice(-3);
-    const statuses = { bot: '机器人接待', waiting: '等待接管', human: '人工服务', offline: '人工离线', ended: '已结束' };
+    const steps = session.runs.flatMap(r => r.trace.filter(t => ['knowledge', 'order', 'intake'].includes(t.node)));
+    const latest = steps.at(-1), history = [...new Set(steps.filter(t => ['error', 'warning'].includes(t.status)).map(t => t.detail))].slice(-3);
     const summary = [
-      `最初问题：${clip(users[0]?.text || '尚未提问', 180)}`,
-      `最近补充：${users.slice(-3).map(m => clip(m.text, 120)).join(' / ') || '无'}`,
-      `订单线索：${ids.slice(-4).map(id => clip(id, 40)).join('、') || '未提供'}`,
-      `已有答复：${answer ? clip(answer.text, 350) : '尚无业务答案'}`,
-      `最近业务处理：${latest ? clip(latest.label + ' · ' + latest.detail, 160) : '尚未执行业务查询'}`,
-      `历史异常：${history.length ? history.map(item => clip(item, 120)).join(' / ') : '无'}`,
-      `当前状态：${statuses[session.status]}；共 ${users.length} 条客户消息；流程 v${session.flow.version}。`
-    ].join('\n');
-    return summary.length > 1800 ? summary.slice(0, 1770) + '\n（摘要已截断，详见关联会话）' : summary;
+      `最初问题：${clip(users[0]?.text || '尚未提问', 160)}`,
+      `最近补充：${users.slice(-3).map(m => clip(m.text, 100)).join(' / ') || '无'}`,
+      `订单线索：${ids.slice(-4).join('、') || '未提供'}`,
+      `已有答复：${clip(answer?.text || '尚无业务答案', 300)}`,
+      `最近业务处理：${latest ? clip(latest.label + ' · ' + latest.detail, 160) : '无'}`,
+      `历史异常：${history.map(h => clip(h, 100)).join(' / ') || '无'}`,
+      state ? `当前事项：${sessionItems(state, session).map(i => i.id + ' ' + i.title + '（' + itemNames[i.status] + '）').join('；')}` : '',
+      `关联工单：${session.tickets.join('、') || '无'}`,
+      `当前接待：${session.status}；流程 v${session.flow.version}。摘要之外请查看完整会话。`
+    ].filter(Boolean).join('\n');
+    return clip(summary, 1800);
   }
   function createTicket(state, values) {
-    const title = String(values.title || '').trim(), description = String(values.description || '').trim();
-    if (!title || !description) throw new Error('请填写工单标题和问题描述');
-    if (title.length > 80 || description.length > 2000) throw new Error('标题最多 80 字，问题描述最多 2,000 字');
-    if (!['售后服务', '订单物流', '知识咨询', '其他问题'].includes(values.category)) throw new Error('请选择有效的工单类型');
-    if (!['普通', '紧急'].includes(values.priority)) throw new Error('请选择有效的优先级');
-    const session = values.sessionId ? getSession(state, values.sessionId) : null;
-    if (session && state.tickets.some(t => t.sessionId === session.id && t.title === title && t.status !== '已完成')) throw new Error('该会话已有同名未完成工单，请查看已有工单');
-    const ticket = { id: uid(state, 'TK'), title, description, customerSubmitted: Boolean(values.customerSubmitted), category: values.category, priority: values.priority, sessionId: session?.id || '', owner: '', status: '待分配', created: now(), history: [{ time: now(), text: '工单已创建，等待分配' }] };
-    state.tickets.unshift(ticket);
-    if (session) { session.tickets.push(ticket.id); session.messages.push(makeMessage('system', `已登记演示工单 ${ticket.id}：${title}`, { ticketId: ticket.id })); }
+    const title = clean(values.title, '工单标题', 80), description = clean(values.description, '问题描述', 2000);
+    assert(['售后服务', '订单物流', '知识咨询', '其他问题'].includes(values.category), '请选择有效的工单类型');
+    assert(['普通', '较高', '紧急'].includes(values.priority), '请选择有效的优先级');
+    const s = values.sessionId ? getSession(state, values.sessionId) : null;
+    const requestFingerprint = JSON.stringify({ sessionId: values.sessionId || '', itemId: values.itemId || '', title, description, objectId: values.objectId || '', category: values.category, priority: values.customerSubmitted ? '普通' : values.priority, customerSubmitted: Boolean(values.customerSubmitted) });
+    if (values.requestKey) {
+      const previous = state.tickets.find(t => t.requestKey === values.requestKey);
+      if (previous) { assert(previous.requestFingerprint === requestFingerprint, '提交标识冲突：同一提交标识不能用于不同内容'); return previous; }
+    }
+    let item = values.itemId ? getItem(state, values.itemId) : null;
+    if (s && item) assert(s.itemIds.includes(item.id) && s.customerId === item.customerId, '归属事项与当前会话不一致');
+    if (s && !item) {
+      const open = sessionItems(state, s).filter(i => !['resolved', 'cancelled'].includes(i.status));
+      assert(open.length <= 1, '当前有多个未完成事项，请明确选择工单归属事项');
+      item = open[0];
+    }
+    if (item) {
+      assert(!['resolved', 'cancelled'].includes(item.status), '已结束的事项需先反馈仍需帮助，再继续受理');
+      const duplicate = item.tickets.map(id => getTicket(state, id)).find(t => !['已完成', '已撤销'].includes(t.status) || t.disputed);
+      assert(!duplicate, `该事项已有未完成工单 ${duplicate?.id || ''}，请查看已有进度，不重复提交`);
+    }
+    const objectId = clean(values.objectId || item?.objectId, '订单线索', 80, false);
+    if (values.customerSubmitted && (item?.type === 'aftersales' || values.category === '售后服务')) assert(s?.flow.intakeEnabled, '此会话未开放自助售后受理，请由客服协助登记');
+    if (item?.type === 'aftersales' || values.category === '售后服务') assert(objectId || !values.customerSubmitted, '请补充订单号；不清楚订单号时可转人工核实');
+    if (!item) item = newItem(state, s, { type: values.category === '售后服务' ? 'aftersales' : 'other', key: 'manual:' + title, title, request: description, objectId });
+    if (objectId && item.objectId && objectId !== item.objectId) {
+      item.history.push({ time: now(), fromObject: item.objectId, toObject: objectId, reason: '受理确认时更正订单线索，旧查询结果不再作为依据', actor: values.customerSubmitted ? '客户' : state.operator });
+      item.evidence = [];
+    }
+    if (objectId) item.objectId = objectId;
+    const ticket = { id: uid(state, 'TK'), itemId: item.id, title, description, objectId, requestFingerprint, requestKey: values.requestKey || '', customerSubmitted: Boolean(values.customerSubmitted), category: values.category, priority: values.customerSubmitted ? '普通' : values.priority, sessionId: s?.id || '', owner: '', status: '待分配', created: now(), disputed: false, resultEvidence: '', publicResult: '', history: [{ time: now(), text: '已受理处理需求，等待分配；尚未完成实际办理', internalNote: '', evidence: '' }] };
+    state.tickets.unshift(ticket); item.tickets.push(ticket.id); item.objectId ||= objectId; item.humanTouched = true; changeItem(item, 'needs_human', '已受理工单，待分配处理');
+    if (s) { s.tickets.push(ticket.id); s.messages.push(makeMessage('system', `已登记演示工单 ${ticket.id}：${title}。这是受理成功，不是退款或问题已解决。`, { ticketId: ticket.id, itemId: item.id })); }
+    audit(state, 'ticket-created', ticket.id, '确认后模拟受理', { itemId: item.id });
     return ticket;
   }
-  const transitions = { '待分配': ['处理中'], '处理中': ['待客户补充', '已完成'], '待客户补充': ['处理中'], '已完成': [] };
-  function advanceTicket(state, id, status, owner, note = '') {
-    const t = state.tickets.find(item => item.id === id);
-    if (!t) throw new Error('工单不存在');
-    if (!transitions[t.status].includes(status)) throw new Error('不支持该状态变更');
-    const nextOwner = String(owner || t.owner).trim();
-    if (!nextOwner) throw new Error('请先指定负责人');
-    const detail = String(note).trim();
-    if (['待客户补充', '已完成'].includes(status) && !detail) throw new Error('请说明需要客户补充的内容或处理结果');
-    if (detail.length > 1000) throw new Error('处理说明最多 1,000 字');
-    t.owner = nextOwner; t.status = status;
-    t.history.push({ time: now(), text: `${nextOwner} · ${status}${detail ? '：' + detail : ''}` });
-    if (t.sessionId) getSession(state, t.sessionId).messages.push(makeMessage('system', `工单 ${t.id} · ${status}${detail ? '：' + detail : ''}`, { ticketId: t.id }));
+  const transitions = { '待分配': ['处理中', '已撤销'], '处理中': ['待客户补充', '已完成', '待分配', '已撤销'], '待客户补充': ['处理中', '待分配', '已撤销'], '已完成': [], '已撤销': [] };
+  function ticketMessage(state, ticket, text) {
+    const item = getItem(state, ticket.itemId);
+    for (const sid of item.sessionIds) {
+      const s = getSession(state, sid); if (!s.tickets.includes(ticket.id)) s.tickets.push(ticket.id);
+      s.messages.push(makeMessage('system', `工单 ${ticket.id} · ${text}`, { ticketId: ticket.id, itemId: item.id }));
+    }
+  }
+  function advanceTicket(state, id, status, owner, note = '', extra = {}) {
+    const t = getTicket(state, id), item = getItem(state, t.itemId);
+    assert(transitions[t.status]?.includes(status), '不支持该状态变更');
+    assert(!t.disputed, '请先复核工单异议');
+    const nextOwner = status === '待分配' ? '' : String(owner || t.owner || '').trim();
+    if (!['已撤销', '待分配'].includes(status)) assert(state.agents.includes(nextOwner), '请先指定有效负责人');
+    const detail = clean(note, '客户可见处理说明', 1000, ['待客户补充', '已完成', '已撤销', '待分配'].includes(status));
+    const internalNote = clean(extra.internalNote, '内部备注', 1000, false);
+    const evidence = clean(extra.evidence, '结果证据', 1000, status === '已完成');
+    const old = t.status; t.owner = nextOwner; t.status = status;
+    t.history.push({ time: now(), text: `${status}${detail ? '：' + detail : ''}`, internalNote, evidence, operator: state.operator, from: old });
+    if (status === '已完成') {
+      t.resultEvidence = evidence; t.publicResult = detail;
+      item.evidence.push({ kind: 'ticket-result', ticketId: id, evidence, publicResult: detail, time: now(), operator: state.operator });
+      const others = item.tickets.map(id => getTicket(state, id)).filter(x => !['已完成', '已撤销'].includes(x.status) || x.disputed);
+      changeItem(item, others.length ? 'needs_human' : 'awaiting_confirmation', '工单处理完成，需核验并确认事项结果');
+    } else if (status === '已撤销') {
+      // 只撤销此执行记录，不替客户撤销原需求。
+      changeItem(item, 'needs_human', '工单已撤销，原事项仍需确认处理去向');
+    } else changeItem(item, status === '待客户补充' ? 'needs_customer' : status === '待分配' ? 'needs_human' : 'processing', '工单状态更新');
+    ticketMessage(state, t, t.history.at(-1).text);
     return t;
   }
-  function validateFlow(flow) {
-    if (!words(flow.orderWords).length || !words(flow.humanWords).length) throw new Error('订单和人工路由关键词都不能为空');
-    if (!flow.queue.trim()) throw new Error('请填写人工服务组');
-    if (!['success', 'timeout'].includes(flow.queryMode)) throw new Error('查询模式无效');
-  }
   function addTicketReply(state, id, text) {
-    const ticket = state.tickets.find(t => t.id === id), detail = String(text).trim();
-    if (!ticket || ticket.status !== '待客户补充') throw new Error('此工单当前不需要补充材料');
-    if (!detail || detail.length > 1000) throw new Error('请填写 1–1,000 字的补充说明');
-    ticket.status = '处理中';
-    ticket.history.push({ time: now(), text: `客户补充：${detail}；已转回处理中` });
-    if (ticket.sessionId) {
-      const session = getSession(state, ticket.sessionId);
-      session.messages.push(makeMessage('system', `工单 ${ticket.id} · 客户补充：${detail}，已转回处理中。`, { ticketId: ticket.id }));
-      session.summary = `工单补充：${detail}`;
+    const t = getTicket(state, id), detail = clean(text, '补充说明', 1000);
+    assert(t.status === '待客户补充', '此工单当前不需要补充材料');
+    t.status = t.owner && state.runtime.humanMode !== 'offline' ? '处理中' : '待分配';
+    if (t.status === '待分配') t.owner = '';
+    t.history.push({ time: now(), text: `客户补充：${detail}；已转回${t.status}`, internalNote: '', evidence: '' });
+    changeItem(getItem(state, t.itemId), t.status === '处理中' ? 'processing' : 'needs_human', '客户补充已提交，重新检查负责人可用性');
+    ticketMessage(state, t, t.history.at(-1).text); return t;
+  }
+  function disputeTicket(state, id, reason) {
+    const t = getTicket(state, id), item = getItem(state, t.itemId), detail = clean(reason, '异议说明', 1000);
+    assert(t.status === '已完成' && !t.disputed, '仅已完成且无待核异议的工单可以提出异议');
+    const pending = item.tickets.map(id => getTicket(state, id)).find(other => other.disputed);
+    t.disputeSnapshot = pending ? clone(pending.disputeSnapshot) : { itemStatus: item.status, resolvedAt: item.resolvedAt, confirmation: item.confirmation, reopenedTicketIds: [] };
+    t.disputed = true; t.disputeReason = detail;
+    t.history.push({ time: now(), text: `客户提出未解决异议：${detail}；已进入复核`, internalNote: '', evidence: '' });
+    item.humanTouched = true; changeItem(item, 'needs_human', '已完成工单收到未解决异议，立即重开事项', '客户');
+    ticketMessage(state, t, '异议待核，原事项已回到待人工'); return t;
+  }
+  function reviewDispute(state, id, decision, reason, evidence) {
+    const t = getTicket(state, id), item = getItem(state, t.itemId);
+    assert(t.disputed && t.status === '已完成', '没有待核异议');
+    assert(['reopen', 'dismiss'].includes(decision), '请选择重开或维持原结果');
+    const detail = clean(reason, '复核说明', 1000), proof = clean(evidence, '复核证据', 1000);
+    if (decision === 'reopen') {
+      for (const other of item.tickets.map(id => getTicket(state, id)).filter(other => other.disputed)) {
+        other.disputeSnapshot.reopenedTicketIds = [...new Set([...(other.disputeSnapshot.reopenedTicketIds || []), id])];
+      }
+      t.status = t.owner && state.runtime.humanMode !== 'offline' ? '处理中' : '待分配';
+      if (t.status === '待分配') t.owner = '';
+      changeItem(item, t.status === '处理中' ? 'processing' : 'needs_human', '异议成立，重开原工单');
+    } else {
+      const snapshot = t.disputeSnapshot;
+      const otherOpen = item.tickets.map(id => getTicket(state, id)).some(x => x.id !== t.id && (!['已完成', '已撤销'].includes(x.status) || x.disputed));
+      const reopened = (snapshot.reopenedTicketIds || []).map(id => getTicket(state, id));
+      const restoredStatus = reopened.length ? (reopened.every(other => other.status === '已完成' && (!other.disputed || other.id === t.id)) ? 'awaiting_confirmation' : 'needs_human') : snapshot.itemStatus;
+      changeItem(item, otherOpen ? 'needs_human' : restoredStatus, '经证据复核维持原结果');
+      if (!otherOpen && restoredStatus === 'resolved') { item.resolvedAt = snapshot.resolvedAt; item.confirmation = snapshot.confirmation; }
     }
-    return ticket;
+    t.disputed = false; t.history.push({ time: now(), text: `${decision === 'reopen' ? '异议成立，重开处理' : '维持原结果'}：${detail}`, evidence: proof, internalNote: '', operator: state.operator });
+    ticketMessage(state, t, t.history.at(-1).text); return t;
   }
-  function flowChanged(state) {
-    return Object.keys(defaults).filter(key => key !== 'version').some(key => state.draft[key] !== state.published[key]);
-  }
-  function publishFlow(state) {
-    validateFlow(state.draft);
-    if (!flowChanged(state)) throw new Error('流程没有修改，无需重复发布');
-    state.published = clone({ ...state.draft, version: state.published.version + 1 });
-    state.draft = clone(state.published);
-    return state.published.version;
+  const knowledgeFields = ['title', 'standardQuestion', 'keywords', 'answer', 'category', 'scope', 'source', 'owner', 'effectiveAt', 'expiresAt'];
+  function knowledgeContent(k) { return Object.fromEntries(knowledgeFields.map(f => [f, k[f] || ''])); }
+  function validateKnowledge(k) {
+    clean(k.title, '知识标题', 80); clean(k.standardQuestion, '标准问题', 200); clean(k.answer, '标准答案', 2000);
+    clean(k.source, '来源说明', 1000); clean(k.owner, '维护人', 80); clean(k.scope, '适用范围', 80); clean(k.category, '分类', 80);
+    assert(words(k.keywords).length, '请填写匹配关键词'); clean(k.keywords, '关键词', 200);
+    assert(Number.isFinite(Date.parse(k.effectiveAt)), '请填写有效的生效时间');
+    assert(!k.expiresAt || Number.isFinite(Date.parse(k.expiresAt)) && Date.parse(k.expiresAt) > Date.parse(k.effectiveAt), '失效时间必须晚于生效时间');
   }
   function saveKnowledge(state, values) {
-    const title = String(values.title || '').trim(), keywords = String(values.keywords || '').trim(), answer = String(values.answer || '').trim();
-    if (!title || !words(keywords).length || !answer) throw new Error('请填写知识标题、匹配关键词和答案');
-    if (title.length > 80 || answer.length > 2000 || keywords.length > 200) throw new Error('内容过长，请缩短标题、答案或关键词');
     let item = values.id ? state.knowledge.find(k => k.id === values.id) : null;
-    if (values.id && !item) throw new Error('知识条目不存在');
-    const content = { title, keywords, answer, category: values.category || '通用服务' };
+    if (values.id) assert(item, '知识条目不存在');
+    const content = { ...(item ? knowledgeContent(item.draft || item) : {}), ...Object.fromEntries(knowledgeFields.filter(f => f in values).map(f => [f, String(values[f]).trim()])) };
+    content.keywords = words(content.keywords).join(','); validateKnowledge(content);
+    let linkedIssue = null;
+    if (values.issueId) { linkedIssue = state.issues.find(q => q.id === values.issueId); assert(linkedIssue?.status === '已确认' && linkedIssue.remediation, '先确认质量问题、原因与责任人，再关联整改知识'); }
     if (item && item.status !== 'draft') {
-      const changed = Object.keys(content).some(key => content[key] !== item[key]);
-      if (changed) item.draft = { ...content, version: item.version + 1 };
+      if (JSON.stringify(content) !== JSON.stringify(knowledgeContent(item))) item.draft = { ...content, version: item.version + 1 };
       else delete item.draft;
     } else if (item) Object.assign(item, content);
-    else { item = { id: uid(state, 'KB'), ...content, status: 'draft', version: 1 }; state.knowledge.unshift(item); }
+    else { item = { id: uid(state, 'KB'), ...content, version: 1, status: 'draft', history: [] }; state.knowledge.unshift(item); }
     item.updated = now();
+    if (linkedIssue) { linkedIssue.remediation.knowledgeId = item.id; linkedIssue.remediation.status = '处理中'; delete linkedIssue.remediation.validation; }
     return item;
+  }
+  function candidateKnowledge(state, id) {
+    return state.knowledge.map(k => k.id === id ? { ...k, ...(k.draft || {}), status: 'published' } : k);
+  }
+  function checkKnowledgeConflict(state, candidate) {
+    const normalized = value => String(value).replace(/[\s，,。.!！?？]/g, '').toLowerCase();
+    const overlap = (a, b) => Date.parse(a.effectiveAt) < (b.expiresAt ? Date.parse(b.expiresAt) : Infinity) && Date.parse(b.effectiveAt) < (a.expiresAt ? Date.parse(a.expiresAt) : Infinity);
+    assert(!state.knowledge.some(k => k.id !== candidate.id && k.status === 'published' && k.scope === candidate.scope && normalized(k.standardQuestion) === normalized(candidate.standardQuestion) && overlap(k, candidate)), '同范围、同标准问题已有生效区间重叠的发布内容，请修改原条目或处理冲突');
+  }
+  function fingerprint(flow, knowledge) {
+    // 保存精确输入快照而非模型自评得分；用于判断结论是否仍对应当前配置。
+    return JSON.stringify({ flow, knowledge: knowledge.map(k => ({ id: k.id, status: k.status, version: k.version, active: isKnowledgeActive(k), ...knowledgeContent(k) })).sort((a, b) => a.id.localeCompare(b.id)), sampleVersion: 'local-orders-v1', suiteVersion: 'service-invariants-v3' });
+  }
+  function testCases(flow, knowledge, custom = []) {
+    const cases = [];
+    const add = (id, query, check, expected, context = {}) => {
+      try { const result = simulate(query, { customerId: 'DEMO-CUSTOMER', runtime: runtimeDefaults, ...context }, flow, knowledge); cases.push({ id, query, expected, pass: Boolean(check(result)), actual: result.tasks.map(t => `${itemTypes[t.type]} / ${itemNames[t.status]}`).join('；'), trace: result.trace }); }
+      catch (err) { cases.push({ id, query, expected, pass: false, actual: err.message }); }
+    };
+    add('R01', '不要转人工，我只问退货规则', r => r.tasks.every(t => t.type === 'knowledge') && !r.trace.some(t => t.node === 'order'), '识别否定；不被人工/订单关键词劫持');
+    add('R02', '没有订单号，想了解退货条件', r => r.tasks.every(t => t.type === 'knowledge') && !r.pendingOrder, '通用规则不索要订单号');
+    add('R03', '帮我查订单', r => r.tasks.length === 1 && r.tasks[0].status === 'clarifying' && !r.messages.some(m => m.order), '缺参数先采集，不伪造卡片');
+    add('R04', '查物流 SO20260926001，再申请退货', r => r.tasks.some(t => t.type === 'order') && r.tasks.some(t => t.type === 'aftersales' && t.status !== 'awaiting_confirmation'), '查询与办理拆成两个事项；办理不能被判完成');
+    add('R05', '查询订单 SO20260926001', r => flow.queryMode === 'timeout' ? r.status === 'waiting' && !r.messages.some(m => m.order) : r.messages.some(m => m.order?.id === 'SO20260926001'), flow.queryMode === 'timeout' ? '配置为超时：安全转接且无结果卡' : '配置为正常：返回对应样例');
+    add('R06', '查询订单 SO00000000000', r => !r.messages.some(m => m.order) && !r.tasks.some(t => t.status === 'awaiting_confirmation'), '未知对象不生成结果');
+    add('R07', '查物流 SO20260926001，再告诉我保温杯怎么清洗', r => r.tasks.some(t => t.type === 'order') && r.tasks.some(t => t.type === 'knowledge'), '多事项不遗漏知识咨询');
+    add('R08', '需要人工', r => r.status === 'offline', '实时离线必须留单', { forceHandoff: true, runtime: { ...runtimeDefaults, humanMode: 'offline' } });
+    add('R09', '查询订单 SO20260926001', r => !r.messages.some(m => m.order) && r.tasks[0]?.status === 'needs_human', '工具停用即时阻断旧流程查询', { runtime: { ...runtimeDefaults, toolEnabled: false } });
+    add('R10', '查询订单 SO20260926001', r => !r.messages.some(m => m.order) && r.tasks[0]?.status === 'needs_human', '演示归属负例不泄露订单', { customerId: 'OTHER-DEMO-CUSTOMER' });
+    for (const c of custom) add(c.id, c.query, r => r.messages.some(m => m.citation?.id === c.knowledgeId), `回答引用指定知识 ${c.knowledgeId}`);
+    return cases;
+  }
+  function evaluationCurrent(state, record) {
+    if (!record) return false;
+    if (record.scope === 'flow') return record.fingerprint === fingerprint(state.draft, state.knowledge);
+    if (record.scope === 'knowledge') return record.fingerprint === fingerprint(state.published, candidateKnowledge(state, record.knowledgeId));
+    return record.fingerprint === fingerprint(state.published, state.knowledge);
+  }
+  function evaluateFlow(state) {
+    validateFlow(state.draft);
+    const cases = testCases(state.draft, state.knowledge);
+    const record = { id: uid(state, 'TEST'), scope: 'flow', time: now(), fingerprint: fingerprint(state.draft, state.knowledge), passed: cases.every(c => c.pass), cases };
+    state.flowValidation = record; state.evaluations.push(record); return record;
+  }
+  function evaluateKnowledge(state, id) {
+    const k = state.knowledge.find(k => k.id === id); assert(k, '知识不存在');
+    const candidate = candidateKnowledge(state, id), target = candidate.find(k => k.id === id);
+    validateKnowledge(target); checkKnowledgeConflict(state, target);
+    assert(isKnowledgeActive(target), '该内容尚未生效、已经过期或不在当前演示范围；不能作为当前发布测试依据');
+    const custom = [{ id: 'K01', query: target.standardQuestion, knowledgeId: id }, ...state.issues.filter(q => q.remediation?.knowledgeId === id).map(q => ({ id: q.id, query: q.query || q.evidence, knowledgeId: id }))];
+    const cases = testCases(state.published, candidate, custom);
+    const record = { id: uid(state, 'TEST'), scope: 'knowledge', knowledgeId: id, time: now(), fingerprint: fingerprint(state.published, candidate), passed: cases.every(c => c.pass), cases };
+    k.validation = record; state.evaluations.push(record); return record;
+  }
+  function flowChanged(state) { return Object.keys(defaults).filter(key => key !== 'version').some(key => state.draft[key] !== state.published[key]); }
+  function publishFlow(state, reason = '') {
+    validateFlow(state.draft); assert(flowChanged(state), '流程没有修改，无需重复发布');
+    assert(state.flowValidation?.passed && state.flowValidation.fingerprint === fingerprint(state.draft, state.knowledge), '当前草稿尚未通过完整回归，或配置/知识已变化，请重新运行发布回归');
+    const note = clean(reason || state.rollbackReason || '服务模板参数更新', '发布说明', 300);
+    const validationId = state.flowValidation.id;
+    state.published = clone({ ...state.draft, version: state.published.version + 1 }); state.draft = clone(state.published);
+    state.releases.push({ version: state.published.version, time: now(), reason: note, operator: state.operator, validationId, config: clone(state.published) });
+    state.rollbackReason = ''; state.flowValidation = null;
+    audit(state, 'flow-publish', String(state.published.version), note, { validationId }); return state.published.version;
+  }
+  function prepareRollback(state, version) {
+    const old = state.releases.find(r => r.version === Number(version)); assert(old, '历史发布版本不存在');
+    state.draft = { ...clone(old.config), version: state.published.version }; state.rollbackReason = `回滚至 v${version} 的配置`;
+    state.flowValidation = null; return state.draft;
   }
   function publishKnowledge(state, id) {
-    const item = state.knowledge.find(k => k.id === id);
-    if (!item) throw new Error('知识不存在');
-    if (item.status === 'published' && !item.draft) throw new Error('知识没有待发布修改');
+    const item = state.knowledge.find(k => k.id === id); assert(item, '知识不存在');
+    assert(item.status !== 'published' || item.draft, '知识没有待发布修改');
+    const candidate = candidateKnowledge(state, id), target = candidate.find(k => k.id === id);
+    validateKnowledge(target); checkKnowledgeConflict(state, target);
+    assert(isKnowledgeActive(target), '知识当前不在生效区间或适用范围');
+    assert(item.validation?.passed && item.validation.fingerprint === fingerprint(state.published, candidate), '当前知识未通过匹配的草稿回归，或知识/流程已改变，请重新测试');
+    const testId = item.validation.id;
+    if (item.status === 'published' || item.history.length) item.history.push({ ...knowledgeContent(item), version: item.version, status: item.status, time: now() });
     if (item.draft) { Object.assign(item, item.draft); delete item.draft; }
-    item.status = 'published'; item.updated = now();
-    return item;
+    item.status = 'published'; item.updated = now(); item.publishedTest = testId;
+    audit(state, 'knowledge-publish', id, `模拟发布 v${item.version}`, { testId }); return item;
+  }
+  function disableKnowledge(state, id, reason) {
+    const k = state.knowledge.find(k => k.id === id); assert(k?.status === 'published', '当前知识不在发布状态');
+    k.disabledReason = clean(reason, '停用原因', 300); k.status = 'disabled'; k.updated = now();
+    audit(state, 'knowledge-disabled', id, k.disabledReason);
+    return k;
+  }
+  function citationStatus(state, citation) {
+    const k = state.knowledge.find(k => k.id === citation.id);
+    if (!k || !isKnowledgeActive(k)) return '原知识已停用、过期或不再适用，请重新核实；历史原文保留';
+    return k.version !== citation.version ? `历史引用 v${citation.version}；当前已更新至 v${k.version}` : '回答时引用的知识快照';
+  }
+  function reviewIssue(state, id, values) {
+    const q = state.issues.find(q => q.id === id); assert(q, '问题不存在');
+    assert(['待复核', '已确认', '已排除', '信息不足'].includes(values.status), '复核状态无效');
+    const review = clean(values.review, '复核依据', 1000);
+    if (q.remediation?.status === '已关闭') assert(values.status === '已确认', '已关闭整改不能通过修改线索结论撤销，请保留原记录');
+    let remediation = q.remediation;
+    if (values.status === '已确认') {
+      const owner = clean(values.owner || remediation?.owner, '整改责任人', 80), cause = clean(values.cause || remediation?.cause, '根因判断', 300);
+      remediation = { ...(remediation || {}), owner, cause, status: remediation?.status || '处理中', scope: '演示范围问题' };
+    }
+    q.status = values.status; q.review = review; q.reviewer = state.operator; q.reviewedAt = now(); q.remediation = remediation;
+    audit(state, 'issue-review', id, review, { verdict: q.status }); return q;
+  }
+  function verifyRemediation(state, id) {
+    const q = state.issues.find(q => q.id === id); assert(q?.status === '已确认' && q.remediation, '请先确认问题并分派责任人');
+    const k = state.knowledge.find(k => k.id === q.remediation.knowledgeId);
+    assert(k && isKnowledgeActive(k) && !k.draft, '本版仅验收知识类整改：请先关联并发布修订知识，不能有未发布草稿');
+    const cases = testCases(state.published, state.knowledge, [{ id: 'ORIGINAL', query: q.query || q.evidence, knowledgeId: k.id }]);
+    const record = { id: uid(state, 'VERIFY'), time: now(), fingerprint: fingerprint(state.published, state.knowledge), knowledgeId: k.id, version: k.version, passed: cases.every(c => c.pass), cases };
+    q.remediation.validation = record; q.remediation.status = record.passed ? '待验收' : '处理中';
+    state.evaluations.push(record); return record;
+  }
+  function closeRemediation(state, id, acceptance) {
+    const q = state.issues.find(q => q.id === id), r = q?.remediation;
+    assert(q?.status === '已确认' && r?.status === '待验收' && r.validation?.passed, '缺少已发布整改措施及匹配的验证记录，不能关闭');
+    assert(r.validation.fingerprint === fingerprint(state.published, state.knowledge), '验证后配置或知识已变化，请重新验证');
+    r.acceptance = clean(acceptance, '验收说明', 1000); r.acceptedBy = state.operator; r.closedAt = now(); r.status = '已关闭';
+    audit(state, 'remediation-closed', id, r.acceptance, { validationId: r.validation.id, scope: '仅本地演示，不代表生产缺陷验收' }); return q;
   }
   function metrics(state) {
-    return {
-      total: state.sessions.length,
-      aiResolved: state.sessions.filter(s => s.status === 'ended' && s.resolution === 'customer' && !s.hadHandoff).length,
-      waiting: state.sessions.filter(s => s.status === 'waiting').length,
-      tickets: state.tickets.filter(t => t.status !== '已完成').length,
-      knowledge: state.knowledge.filter(k => k.status === 'published').length,
-      issues: state.issues.filter(q => q.status === '待复核').length
-    };
+    const resolved = state.items.filter(i => i.status === 'resolved');
+    return { total: state.sessions.length, itemTotal: state.items.length, confirmed: resolved.length, unassistedConfirmed: resolved.filter(i => !i.humanTouched).length, pendingItems: state.items.filter(i => !['resolved', 'cancelled'].includes(i.status)).length, awaiting: state.items.filter(i => i.status === 'awaiting_confirmation').length, waiting: state.sessions.filter(s => s.status === 'waiting').length, tickets: state.tickets.filter(t => !['已完成', '已撤销'].includes(t.status) || t.disputed).length, knowledge: state.knowledge.filter(k => isKnowledgeActive(k)).length, issues: state.issues.filter(q => ['待复核', '信息不足'].includes(q.status)).length, corrections: state.issues.filter(q => q.status === '已确认' && q.remediation?.status !== '已关闭').length };
   }
-  function newState() {
-    const state = { schema: 1, counter: 100, robot: { name: '青禾小助', greeting: '你好，我是青禾小助。关于商品、订单和售后，都可以在这里问我。', description: '青禾生活 · 在线服务' }, draft: clone(defaults), published: clone(defaults), sessions: [], tickets: [], issues: [], knowledge: [
-      { id: 'KB001', title: '七天无理由退货规则', category: '售后政策', keywords: '退货,无理由,七天,退款', answer: '青禾生活演示规则：签收后七天内，商品未使用且包装与配件完整，可登记退货申请。定制商品不适用此规则。是否符合条件由人工结合订单核实，当前演示不会实际退款。', status: 'published', version: 2 },
-      { id: 'KB002', title: '商品材质与日常保养', category: '产品知识', keywords: '材质,保温杯,保养,清洗', answer: '演示商品保温杯采用不锈钢内胆，建议使用软布和中性清洁剂清洗。首次使用前请充分清洁，避免放入微波炉加热。', status: 'published', version: 1 },
-      { id: 'KB003', title: '服务时间与人工支持', category: '通用服务', keywords: '服务时间,营业时间,几点', answer: '本演示的服务时间示例为每天 09:00–21:00。你可以随时留言；需要人工时点击转人工，离线时可登记工单。', status: 'published', version: 1 },
-      { id: 'KB004', title: '会员积分使用说明', category: '会员权益', keywords: '积分,会员', answer: '演示积分可在会员中心查看。可抵扣范围以活动规则为准，本演示不执行积分兑换。', status: 'draft', version: 1 },
-      { id: 'KB005', title: '历史活动规则', category: '活动规则', keywords: '周年庆,活动', answer: '历史活动已结束，请关注最新公告。', status: 'disabled', version: 1 }
+  function newState(options = {}) {
+    const state = { schema: 3, counter: 100, operator: '客服小林', agents: ['客服小林', '客服小周'], runtime: clone(runtimeDefaults), robot: { name: '青禾小助', greeting: '你好，我是青禾小助。你可以咨询商品与服务规则、查询订单，或提交售后问题。需要人工时会带上当前信息转接。这里是演示环境，请勿输入真实隐私信息。', description: '青禾生活 · 在线服务（演示）' }, draft: clone(defaults), published: clone(defaults), sessions: [], items: [], tickets: [], issues: [], audit: [], evaluations: [], releases: [{ version: 1, time: now(), reason: '初始演示模板', operator: '演示配置', validationId: 'seed', config: clone(defaults) }], knowledge: [
+      { id: 'KB001', title: '七天无理由退货规则', standardQuestion: '七天无理由退货有什么条件？', category: '售后政策', keywords: '退货,无理由,七天,退款', answer: '青禾生活演示规则：签收后七天内，商品未使用且包装与配件完整，可登记退货申请。定制商品不适用此规则。是否符合条件由人工结合订单核实，当前演示不会实际退款。', status: 'published', version: 2 },
+      { id: 'KB002', title: '商品材质与日常保养', standardQuestion: '保温杯怎么清洗？', category: '产品知识', keywords: '材质,保温杯,保养,清洗', answer: '演示商品保温杯采用不锈钢内胆，建议使用软布和中性清洁剂清洗。首次使用前请充分清洁，避免放入微波炉加热。', status: 'published', version: 1 },
+      { id: 'KB003', title: '服务时间与人工支持', standardQuestion: '服务时间是几点？', category: '通用服务', keywords: '服务时间,营业时间,几点', answer: '本演示的服务时间示例为每天 09:00–21:00。运行状态以页面实时显示为准。你可以随时留言；离线时可登记工单。未接通知服务，仅在本站查看进度。', status: 'published', version: 1 },
+      { id: 'KB004', title: '会员积分使用说明', standardQuestion: '会员积分怎么使用？', category: '会员权益', keywords: '积分,会员', answer: '演示积分可在会员中心查看。可抵扣范围以活动规则为准，本演示不执行积分兑换。', status: 'draft', version: 1 },
+      { id: 'KB005', title: '历史活动规则', standardQuestion: '周年庆活动是什么？', category: '活动规则', keywords: '周年庆,活动', answer: '历史活动已结束，请关注最新公告。', status: 'disabled', version: 1 }
     ] };
-    let s = newSession(state, '陈一诺'); sendVisitor(state, s.id, '七天无理由退货有什么条件？'); finish(state, s.id, 'customer');
-    s = newSession(state, '周安'); sendVisitor(state, s.id, '保温杯怎么清洗？'); finish(state, s.id, 'customer');
-    s = newSession(state, '许晨'); sendVisitor(state, s.id, '帮我查订单 SO20260926002');
-    s = newSession(state, '林沐'); sendVisitor(state, s.id, '请帮我转人工，包裹外盒有破损');
-    s = newSession(state, '苏语'); sendVisitor(state, s.id, '礼品卡可以分多次使用吗？');
-    const ticket = createTicket(state, { title: '包裹外盒破损核实', category: '售后服务', priority: '普通', description: '演示客户反馈外盒破损，需客服核对商品情况与后续处理方式。', sessionId: state.sessions.find(x => x.name === '林沐').id });
-    advanceTicket(state, ticket.id, '处理中', '客服小林');
+    state.knowledge.forEach(k => Object.assign(k, { scope: '青禾生活', source: `青禾生活虚构演示资料 / ${k.category}，不对应真实商家政策`, owner: '客服运营', effectiveAt: '2026-01-01T00:00:00.000Z', expiresAt: '', updated: now(), history: [] }));
+    if (options.seed === false) return state;
+    let s = newSession(state, '陈一诺', { sample: true }); sendVisitor(state, s.id, '七天无理由退货有什么条件？'); confirmItem(state, s.itemIds[0]); finish(state, s.id, 'visitor');
+    s = newSession(state, '周安', { sample: true }); sendVisitor(state, s.id, '保温杯怎么清洗？'); confirmItem(state, s.itemIds[0]); finish(state, s.id, 'visitor');
+    s = newSession(state, '许晨', { sample: true }); sendVisitor(state, s.id, '帮我查订单 SO20260926002');
+    s = newSession(state, '林沐', { sample: true }); sendVisitor(state, s.id, '我要申请退货 SO20260926001');
+    const t = createTicket(state, { title: '包裹外盒破损核实', category: '售后服务', priority: '普通', description: '演示客户反馈外盒破损，需客服核对商品情况与后续处理方式。', sessionId: s.id, itemId: s.itemIds[0] });
+    advanceTicket(state, t.id, '处理中', '客服小林');
+    s = newSession(state, '苏语', { sample: true }); sendVisitor(state, s.id, '礼品卡可以分多次使用吗？');
     return state;
   }
-  const api = { clone, words, defaults, orders, now, makeMessage, newState, newSession, findKnowledge, simulate, getSession, sendVisitor, takeover, sendAgent, finish, canResolve, resumeBot, sessionSummary, createTicket, transitions, advanceTicket, addTicketReply, validateFlow, flowChanged, publishFlow, saveKnowledge, publishKnowledge, metrics };
-  if (typeof module !== 'undefined' && module.exports) module.exports = api;
-  else root.CustomerDemo = api;
+  const api = { clone, now, words, defaults, orders, length, clean, uid, makeMessage, itemNames, itemTypes, runtimeDefaults, newState, newSession, getSession, getItem, getTicket, sessionItems, findKnowledge, isKnowledgeActive, simulate, planRequests, sendVisitor, capacityState, setRuntime, takeover, sendAgent, finish, canResolve, canConfirmItem, confirmItem, resumeBot, resumeItem, needHelp, sessionSummary, createTicket, transitions, advanceTicket, addTicketReply, disputeTicket, reviewDispute, validateFlow, flowChanged, publishFlow, prepareRollback, saveKnowledge, publishKnowledge, disableKnowledge, citationStatus, evaluateFlow, evaluateKnowledge, evaluationCurrent, fingerprint, reviewIssue, verifyRemediation, closeRemediation, metrics };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.CustomerDemo = api;
 })(typeof window !== 'undefined' ? window : this);
