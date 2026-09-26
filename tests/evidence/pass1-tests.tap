@@ -1,0 +1,448 @@
+TAP version 13
+# Subtest: 初始样例结构完整，事项计数与会话计数分开
+ok 1 - 初始样例结构完整，事项计数与会话计数分开
+  ---
+  duration_ms: 8.167899
+  type: 'test'
+  ...
+# Subtest: 空消息不写入会话或执行记录
+ok 2 - 空消息不写入会话或执行记录
+  ---
+  duration_ms: 0.481308
+  type: 'test'
+  ...
+# Subtest: 空白或超长消息校验采用Unicode码点
+ok 3 - 空白或超长消息校验采用Unicode码点
+  ---
+  duration_ms: 19.992411
+  type: 'test'
+  ...
+# Subtest: A01 不要转人工不触发人工分支
+ok 4 - A01 不要转人工不触发人工分支
+  ---
+  duration_ms: 0.364011
+  type: 'test'
+  ...
+# Subtest: A02 通用政策不强制索要订单号
+ok 5 - A02 通用政策不强制索要订单号
+  ---
+  duration_ms: 0.388057
+  type: 'test'
+  ...
+# Subtest: A03 退款诉求不能被订单号劫持为查询
+ok 6 - A03 退款诉求不能被订单号劫持为查询
+  ---
+  duration_ms: 1.042076
+  type: 'test'
+  ...
+# Subtest: A04 订单查询和商品知识作为两件事响应
+ok 7 - A04 订单查询和商品知识作为两件事响应
+  ---
+  duration_ms: 1.098031
+  type: 'test'
+  ...
+# Subtest: 物流与售后申请同时保留，受理前没有工单
+ok 8 - 物流与售后申请同时保留，受理前没有工单
+  ---
+  duration_ms: 0.384111
+  type: 'test'
+  ...
+# Subtest: 明确不想退款只回答咨询，不能创建申请
+ok 9 - 明确不想退款只回答咨询，不能创建申请
+  ---
+  duration_ms: 0.379714
+  type: 'test'
+  ...
+# Subtest: 单纯进入页面不属于引擎创单行为
+ok 10 - 单纯进入页面不属于引擎创单行为
+  ---
+  duration_ms: 0.354506
+  type: 'test'
+  ...
+# Subtest: 查询缺订单号时先采集
+ok 11 - 查询缺订单号时先采集
+  ---
+  duration_ms: 0.245121
+  type: 'test'
+  ...
+# Subtest: 插问不会清空原采集事项，补订单号仍回到原事项
+ok 12 - 插问不会清空原采集事项，补订单号仍回到原事项
+  ---
+  duration_ms: 0.386445
+  type: 'test'
+  ...
+# Subtest: 跨轮采集结果经JSON还原仍可继续
+ok 13 - 跨轮采集结果经JSON还原仍可继续
+  ---
+  duration_ms: 0.292783
+  type: 'test'
+  ...
+# Subtest: 未知订单不伪造卡片，保留可复核线索
+ok 14 - 未知订单不伪造卡片，保留可复核线索
+  ---
+  duration_ms: 0.229788
+  type: 'test'
+  ...
+# Subtest: 查询出错后直接更正订单号复用同一采集事项
+ok 15 - 查询出错后直接更正订单号复用同一采集事项
+  ---
+  duration_ms: 0.228525
+  type: 'test'
+  ...
+# Subtest: 未知知识合理拒答，不能计为已解决
+ok 16 - 未知知识合理拒答，不能计为已解决
+  ---
+  duration_ms: 0.196337
+  type: 'test'
+  ...
+# Subtest: 人工与等待期间只保留消息，机器人不抢答
+ok 17 - 人工与等待期间只保留消息，机器人不抢答
+  ---
+  duration_ms: 0.358383
+  type: 'test'
+  ...
+# Subtest: 未接管不能回复，另一坐席不能代当前坐席回复
+ok 18 - 未接管不能回复，另一坐席不能代当前坐席回复
+  ---
+  duration_ms: 0.400125
+  type: 'test'
+  ...
+# Subtest: 满载拒绝接管，保留等待和留单出口
+ok 19 - 满载拒绝接管，保留等待和留单出口
+  ---
+  duration_ms: 0.342618
+  type: 'test'
+  ...
+# Subtest: 真实本地占用达到容量后不能继续接管
+ok 20 - 真实本地占用达到容量后不能继续接管
+  ---
+  duration_ms: 0.229868
+  type: 'test'
+  ...
+# Subtest: A07 旧会话转人工读取实时离线而非流程快照
+ok 21 - A07 旧会话转人工读取实时离线而非流程快照
+  ---
+  duration_ms: 0.487828
+  type: 'test'
+  ...
+# Subtest: 接管后离线释放处理权，旧坐席不能继续发送
+ok 22 - 接管后离线释放处理权，旧坐席不能继续发送
+  ---
+  duration_ms: 0.279283
+  type: 'test'
+  ...
+# Subtest: 重复接管只会成功一次
+ok 23 - 重复接管只会成功一次
+  ---
+  duration_ms: 0.190258
+  type: 'test'
+  ...
+# Subtest: 取消排队不取消人工事项，也不清除人工介入历史
+ok 24 - 取消排队不取消人工事项，也不清除人工介入历史
+  ---
+  duration_ms: 0.223347
+  type: 'test'
+  ...
+# Subtest: 未完成事项不能因结束聊天被解决
+ok 25 - 未完成事项不能因结束聊天被解决
+  ---
+  duration_ms: 0.197469
+  type: 'test'
+  ...
+# Subtest: 分项确认仅改变当前事项，办理仍未解决
+ok 26 - 分项确认仅改变当前事项，办理仍未解决
+  ---
+  duration_ms: 0.200733
+  type: 'test'
+  ...
+# Subtest: A05 未完成工单阻止该事项确认，整体确认不能越过待办
+ok 27 - A05 未完成工单阻止该事项确认，整体确认不能越过待办
+  ---
+  duration_ms: 0.29097
+  type: 'test'
+  ...
+# Subtest: 没有结果依据不显示可确认状态
+ok 28 - 没有结果依据不显示可确认状态
+  ---
+  duration_ms: 0.154384
+  type: 'test'
+  ...
+# Subtest: 已结束咨询拒绝普通消息，不会隐式重开
+ok 29 - 已结束咨询拒绝普通消息，不会隐式重开
+  ---
+  duration_ms: 0.143587
+  type: 'test'
+  ...
+# Subtest: 跨会话关联保留原事项与首次受理时间
+ok 30 - 跨会话关联保留原事项与首次受理时间
+  ---
+  duration_ms: 0.246583
+  type: 'test'
+  ...
+# Subtest: 跨客户关联的本地负例被拒绝，非真实安全验收
+ok 31 - 跨客户关联的本地负例被拒绝，非真实安全验收
+  ---
+  duration_ms: 0.220784
+  type: 'test'
+  ...
+# Subtest: 售后申请未确认前仅是预览，不自动建单
+ok 32 - 售后申请未确认前仅是预览，不自动建单
+  ---
+  duration_ms: 0.179892
+  type: 'test'
+  ...
+# Subtest: 工单必须归属明确事项，多事项不默认合并
+ok 33 - 工单必须归属明确事项，多事项不默认合并
+  ---
+  duration_ms: 0.208015
+  type: 'test'
+  ...
+# Subtest: 重复受理按事项拦截，不靠同名标题
+ok 34 - 重复受理按事项拦截，不靠同名标题
+  ---
+  duration_ms: 0.237219
+  type: 'test'
+  ...
+# Subtest: 无效标题或工单归属失败不创建业务对象
+ok 35 - 无效标题或工单归属失败不创建业务对象
+  ---
+  duration_ms: 0.272453
+  type: 'test'
+  ...
+# Subtest: 工单必须指定负责人，不能从待分配直接完成
+ok 36 - 工单必须指定负责人，不能从待分配直接完成
+  ---
+  duration_ms: 0.304631
+  type: 'test'
+  ...
+# Subtest: 完成必须有结果证据，不能只点击完成按钮
+ok 37 - 完成必须有结果证据，不能只点击完成按钮
+  ---
+  duration_ms: 0.228186
+  type: 'test'
+  ...
+# Subtest: 工单完成后事项待确认，只有客户确认才解决
+ok 38 - 工单完成后事项待确认，只有客户确认才解决
+  ---
+  duration_ms: 0.330109
+  type: 'test'
+  ...
+# Subtest: 内部备注和内部证据不写入客户消息
+ok 39 - 内部备注和内部证据不写入客户消息
+  ---
+  duration_ms: 0.27809
+  type: 'test'
+  ...
+# Subtest: A09 结束咨询后仍可补工单，聊天保持结束
+ok 40 - A09 结束咨询后仍可补工单，聊天保持结束
+  ---
+  duration_ms: 1.298946
+  type: 'test'
+  ...
+# Subtest: 原负责人离线，客户补充后回到待分配并保留材料
+ok 41 - 原负责人离线，客户补充后回到待分配并保留材料
+  ---
+  duration_ms: 1.34807
+  type: 'test'
+  ...
+# Subtest: 重复补充不能重复推进工单状态
+ok 42 - 重复补充不能重复推进工单状态
+  ---
+  duration_ms: 0.283819
+  type: 'test'
+  ...
+# Subtest: 撤销工单不会自动撤销或解决原服务需求
+ok 43 - 撤销工单不会自动撤销或解决原服务需求
+  ---
+  duration_ms: 0.23117
+  type: 'test'
+  ...
+# Subtest: A11 未解决异议立即重开事项，工单标异议待核
+ok 44 - A11 未解决异议立即重开事项，工单标异议待核
+  ---
+  duration_ms: 0.392233
+  type: 'test'
+  ...
+# Subtest: 异议成立重开原工单不增加工单或受理量
+ok 45 - 异议成立重开原工单不增加工单或受理量
+  ---
+  duration_ms: 0.300845
+  type: 'test'
+  ...
+# Subtest: 异议不成立恢复原解决时间，不增加一次解决
+ok 46 - 异议不成立恢复原解决时间，不增加一次解决
+  ---
+  duration_ms: 0.368248
+  type: 'test'
+  ...
+# Subtest: 草稿、停用、未来和过期知识不参与正式检索
+ok 47 - 草稿、停用、未来和过期知识不参与正式检索
+  ---
+  duration_ms: 0.424743
+  type: 'test'
+  ...
+# Subtest: 适用范围不匹配的知识不进入答案
+ok 48 - 适用范围不匹配的知识不进入答案
+  ---
+  duration_ms: 0.15175
+  type: 'test'
+  ...
+# Subtest: 同等匹配且答案冲突时拒绝选第一条答案
+ok 49 - 同等匹配且答案冲突时拒绝选第一条答案
+  ---
+  duration_ms: 2.198266
+  type: 'test'
+  ...
+# Subtest: 编辑知识仅保存草稿，不改变历史答案或现行内容
+ok 50 - 编辑知识仅保存草稿，不改变历史答案或现行内容
+  ---
+  duration_ms: 0.260304
+  type: 'test'
+  ...
+# Subtest: 知识无变化保存不增版本
+ok 51 - 知识无变化保存不增版本
+  ---
+  duration_ms: 0.160262
+  type: 'test'
+  ...
+# Subtest: 知识必需来源、维护人和有效时效
+ok 52 - 知识必需来源、维护人和有效时效
+  ---
+  duration_ms: 0.175445
+  type: 'test'
+  ...
+# Subtest: 知识必须回归后发布，发布后前台命中
+ok 53 - 知识必须回归后发布，发布后前台命中
+  ---
+  duration_ms: 1.818742
+  type: 'test'
+  ...
+# Subtest: 知识测试后修改答案导致发布依据失效
+ok 54 - 知识测试后修改答案导致发布依据失效
+  ---
+  duration_ms: 0.754682
+  type: 'test'
+  ...
+# Subtest: 重复标准问题与重叠时效不能直接发布
+ok 55 - 重复标准问题与重叠时效不能直接发布
+  ---
+  duration_ms: 0.25112
+  type: 'test'
+  ...
+# Subtest: A06 紧急停用对旧会话下一问立即生效，历史原文保留
+ok 56 - A06 紧急停用对旧会话下一问立即生效，历史原文保留
+  ---
+  duration_ms: 0.30402
+  type: 'test'
+  ...
+# Subtest: 已撤销依据不能继续确认此前的知识事项
+ok 57 - 已撤销依据不能继续确认此前的知识事项
+  ---
+  duration_ms: 0.237319
+  type: 'test'
+  ...
+# Subtest: 流程草稿不影响已发布会话，草稿试验不产生服务数据
+ok 58 - 流程草稿不影响已发布会话，草稿试验不产生服务数据
+  ---
+  duration_ms: 0.233043
+  type: 'test'
+  ...
+# Subtest: 发布必须有当前草稿完整回归，单条simulate不算
+ok 59 - 发布必须有当前草稿完整回归，单条simulate不算
+  ---
+  duration_ms: 0.241065
+  type: 'test'
+  ...
+# Subtest: A13 回归后改流程参数，旧依据失效
+ok 60 - A13 回归后改流程参数，旧依据失效
+  ---
+  duration_ms: 0.48213
+  type: 'test'
+  ...
+# Subtest: 发布后新会话绑定新流程，旧会话仍保留旧流程
+ok 61 - 发布后新会话绑定新流程，旧会话仍保留旧流程
+  ---
+  duration_ms: 0.552456
+  type: 'test'
+  ...
+# Subtest: 售后受理配置关闭后新会话不开放自助申请
+ok 62 - 售后受理配置关闭后新会话不开放自助申请
+  ---
+  duration_ms: 0.965832
+  type: 'test'
+  ...
+# Subtest: 流程回滚生成新版本并保留历史，不覆盖旧记录
+ok 63 - 流程回滚生成新版本并保留历史，不覆盖旧记录
+  ---
+  duration_ms: 0.787822
+  type: 'test'
+  ...
+# Subtest: 无变化禁止重复发布，无效配置不会写半次消息
+ok 64 - 无变化禁止重复发布，无效配置不会写半次消息
+  ---
+  duration_ms: 0.19819
+  type: 'test'
+  ...
+# Subtest: 紧急停用工具即时阻断旧流程，不伪造成功结果
+ok 65 - 紧急停用工具即时阻断旧流程，不伪造成功结果
+  ---
+  duration_ms: 0.41011
+  type: 'test'
+  ...
+# Subtest: 本地归属负例不暴露订单存在性
+ok 66 - 本地归属负例不暴露订单存在性
+  ---
+  duration_ms: 0.248025
+  type: 'test'
+  ...
+# Subtest: 确认质量问题必须填写根因和责任人
+ok 67 - 确认质量问题必须填写根因和责任人
+  ---
+  duration_ms: 0.258492
+  type: 'test'
+  ...
+# Subtest: A10 无整改措施及验证不能关闭质量问题
+ok 68 - A10 无整改措施及验证不能关闭质量问题
+  ---
+  duration_ms: 0.24484
+  type: 'test'
+  ...
+# Subtest: 知识整改：线索→分派→草稿→回归→发布→原问题验证→验收
+ok 69 - 知识整改：线索→分派→草稿→回归→发布→原问题验证→验收
+  ---
+  duration_ms: 1.161468
+  type: 'test'
+  ...
+# Subtest: 验证后知识停用，整改验收依据失效
+ok 70 - 验证后知识停用，整改验收依据失效
+  ---
+  duration_ms: 0.966552
+  type: 'test'
+  ...
+# Subtest: 本地发布回归完整执行且不创建业务事项
+ok 71 - 本地发布回归完整执行且不创建业务事项
+  ---
+  duration_ms: 0.342989
+  type: 'test'
+  ...
+# Subtest: 无结果依据、无反馈保持待确认，不冒充生产解决率
+ok 72 - 无结果依据、无反馈保持待确认，不冒充生产解决率
+  ---
+  duration_ms: 0.604335
+  type: 'test'
+  ...
+# Subtest: 转接摘要包含独立事项、工单与原始信息
+ok 73 - 转接摘要包含独立事项、工单与原始信息
+  ---
+  duration_ms: 0.528821
+  type: 'test'
+  ...
+1..73
+# tests 73
+# suites 0
+# pass 73
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 131.887632

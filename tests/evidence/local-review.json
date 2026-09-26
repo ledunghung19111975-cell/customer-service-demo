@@ -1,0 +1,62 @@
+{
+  "producer": "Codex",
+  "date": "2026-09-26",
+  "engine_tests": 85,
+  "ui_logic_tests": 3,
+  "passed": 88,
+  "failed": 0,
+  "ui_test_adapter": "Node vm minimal DOM; not a real browser",
+  "browser": {
+    "kind": "Codex in-app browser",
+    "http_origin": "http://127.0.0.1:8770/",
+    "runtime_regression_origin": "http://localhost:8770/",
+    "delivery_origin": "http://127.0.0.1:8768/",
+    "desktop_width": 1280,
+    "pages": 10,
+    "horizontal_overflow": false,
+    "checks": [
+      "FAQ negation",
+      "multi-service query/intake",
+      "intake confirmation",
+      "ticket assignment/completion",
+      "internal evidence hidden from customer",
+      "customer item confirmation",
+      "actual reload persistence",
+      "runtime-dependent flow test invalidation",
+      "flow regression and simulated release",
+      "disabled self-service hidden in new session"
+    ],
+    "console_errors_or_warnings": 0
+  },
+  "review": {
+    "independent_agents": 2,
+    "candidate_count": 5,
+    "deduplicated_issues": 4,
+    "severity": {
+      "P0": 0,
+      "P1": 0,
+      "P2": 4
+    },
+    "unresolved": 0,
+    "cost_vs_rework": "low"
+  },
+  "historical_evidence": "Other V3 reports are supplied history; the 12-case Python offline suite was not rerun here. PNG files remain local only.",
+  "excluded": [
+    "real models",
+    "RAG",
+    "backend permissions",
+    "real business actions",
+    "multiple tabs/concurrent agents",
+    "cross-browser",
+    "complete mobile layout coverage"
+  ],
+  "node": "v26.7.0",
+  "sha256": {
+    "app.js": "1f0e2a33a96cfc9b01ad178fa878e84ab49fab92fa5023c0bcd6329832493505",
+    "engine.js": "7ee13566396d809c5a301a97f882264d8579c0796bfbced02b15ccb2106a00ec",
+    "index.html": "4716f145781dc6af106ff7c7dc2fe332ab21162e256fbd2650e3b3ebb45afbb4",
+    "styles.css": "769069f0ff7c5b60103ce6752af3e33c11e7886b2ba9ec9d08aaebbe1f690259",
+    "tests/engine.test.cjs": "0a97e8bbe7de20a8003f29e46a3d02e245bb5d84dae81c7360b66b4f1abed325",
+    "tests/ui.test.cjs": "447f29c5721da0e2212f10ba31d7da104ef30fa5a8caa026022e0fea70fb3adb"
+  }
+}

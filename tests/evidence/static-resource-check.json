@@ -1,0 +1,45 @@
+{
+  "kind": "HTTP resource fetch with Python, not browser navigation",
+  "checks": [
+    {
+      "path": "index.html",
+      "status": 200,
+      "matches_local_file": true
+    },
+    {
+      "path": "styles.css",
+      "status": 200,
+      "matches_local_file": true
+    },
+    {
+      "path": "engine.js",
+      "status": 200,
+      "matches_local_file": true
+    },
+    {
+      "path": "app.js",
+      "status": 200,
+      "matches_local_file": true
+    },
+    {
+      "path": "方案文档.md",
+      "status": 200,
+      "matches_local_file": true
+    },
+    {
+      "path": "docs/演示脚本.md",
+      "status": 200,
+      "matches_local_file": true
+    },
+    {
+      "path": "docs/验收矩阵.md",
+      "status": 200,
+      "matches_local_file": true
+    },
+    {
+      "path": "docs/交付与应用说明.md",
+      "status": 200,
+      "matches_local_file": true
+    }
+  ]
+}

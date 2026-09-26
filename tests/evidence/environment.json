@@ -1,0 +1,36 @@
+{
+  "testedAtUTC": "2026-09-26T15:43:18.965877+00:00",
+  "baseGitHubCommit": "b66f260776f4c39d3d18a3b9e084b9c2e0f49cc2",
+  "node": "v22.16.0",
+  "python": "3.13.5",
+  "playwright": "1.57.0",
+  "chromium": "Chromium 144.0.7559.96 built on Debian GNU/Linux 13 (trixie)",
+  "logicTests": {
+    "passed": 78,
+    "failed": 0
+  },
+  "browserScenarios": {
+    "passed": 12,
+    "failed": 0,
+    "mode": "offline mount of actual HTML/CSS/JS",
+    "storage": "explicit simulated adapter",
+    "pageErrors": []
+  },
+  "notVerified": [
+    "real browser HTTP navigation",
+    "real browser Origin persistence",
+    "multi-tab or multi-user concurrency",
+    "real model or RAG",
+    "server authorization",
+    "real business tools and payments",
+    "production metrics"
+  ],
+  "sha256AtTest": {
+    "engine.js": "ab998f4edfe177a6c09de652da33711786f2760c9ca6e6d928da0773508f90e2",
+    "app.js": "fd7b3cdc7e8721f9a9436f355b9fb91fa439538f09e493c84745a19598b303ee",
+    "index.html": "0c26b38b452775a39d8994b55c9ace4ed19c9b44c745ffb4bb5d33930fcd3674",
+    "styles.css": "769069f0ff7c5b60103ce6752af3e33c11e7886b2ba9ec9d08aaebbe1f690259",
+    "tests/engine.test.cjs": "19f459f6a2bface53b53b7d9eb053ccc8761d33b754734d1af155373098d5c3c",
+    "tests/browser_smoke.py": "9feba6c5740249ac25fe35f3d028beb055e6d8e164f3c5ce17f45bc2fd11e205"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "mode": "offline assets + simulated localStorage",
+  "results": [
+    {
+      "scenario": "B01 十页导航与桌面布局；浏览不自动新增会话",
+      "pass": true
+    },
+    {
+      "scenario": "B02 客户入口、先填后发、隐藏后台演示视角",
+      "pass": true
+    },
+    {
+      "scenario": "B03 端到端：多事项→预览确认→结束聊天→工单补充→证据完成→客户确认→异议重开",
+      "pass": true
+    },
+    {
+      "scenario": "B04 人工接续、单处理权与中途离线",
+      "pass": true
+    },
+    {
+      "scenario": "B05 流程：单条测试不替代发布回归，新旧版本与失效提示",
+      "pass": true
+    },
+    {
+      "scenario": "B06 知识整改：人工复核→FAQ草稿→测试发布→原问题回归→验收",
+      "pass": true
+    },
+    {
+      "scenario": "B07 知识测试失败不关闭表单或丢失已保存草稿",
+      "pass": true
+    },
+    {
+      "scenario": "B08 文本按文本渲染，不执行用户HTML",
+      "pass": true
+    },
+    {
+      "scenario": "B09 跨页草稿保留，推荐问题替换前确认",
+      "pass": true
+    },
+    {
+      "scenario": "B10 390px客户窗口与事项入口无横向溢出",
+      "pass": true
+    },
+    {
+      "scenario": "B11 模拟存储失败时提示仅本页有效，主服务仍可操作",
+      "pass": true
+    },
+    {
+      "scenario": "B12 模拟存储恢复采集；V3不覆盖V1数据",
+      "pass": true
+    }
+  ],
+  "pageErrors": [],
+  "passed": true
+}

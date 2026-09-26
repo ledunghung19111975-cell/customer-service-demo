@@ -1,0 +1,105 @@
+[
+  {
+    "query": "不要转人工，我只问退货规则",
+    "status": "waiting",
+    "messages": [
+      {
+        "role": "user",
+        "text": "不要转人工，我只问退货规则",
+        "time": "2026-09-26T15:11:56.856Z"
+      },
+      {
+        "role": "bot",
+        "text": "我会把当前问题和聊天记录一起交给客服。\n已为你转接售后服务组，人工接管前可以继续补充问题。",
+        "time": "2026-09-26T15:11:56.856Z"
+      }
+    ],
+    "hasItems": false,
+    "canResolve": false
+  },
+  {
+    "query": "没有订单号，想了解退货条件",
+    "status": "bot",
+    "messages": [
+      {
+        "role": "user",
+        "text": "没有订单号，想了解退货条件",
+        "time": "2026-09-26T15:11:56.856Z"
+      },
+      {
+        "role": "bot",
+        "text": "请提供以 SO 开头的订单号。你可以用演示订单 SO20260926001 试一试。",
+        "time": "2026-09-26T15:11:56.856Z"
+      }
+    ],
+    "hasItems": false,
+    "canResolve": false
+  },
+  {
+    "query": "订单 SO20260926001 想退款，怎么处理",
+    "status": "bot",
+    "messages": [
+      {
+        "role": "user",
+        "text": "订单 SO20260926001 想退款，怎么处理",
+        "time": "2026-09-26T15:11:56.856Z"
+      },
+      {
+        "role": "bot",
+        "text": "为你查到以下信息：\n订单 SO20260926001 当前为“运输中”。",
+        "time": "2026-09-26T15:11:56.856Z",
+        "order": {
+          "id": "SO20260926001",
+          "product": "原木便携保温杯 · 雾白",
+          "price": "129.00",
+          "status": "运输中",
+          "delivery": "演示快递 · 已到达配送站",
+          "receiver": "林** · 138****0618",
+          "date": "2026-09-25",
+          "icon": "◒"
+        }
+      }
+    ],
+    "hasItems": false,
+    "canResolve": true
+  },
+  {
+    "query": "查物流 SO20260926001，再告诉我保温杯怎么清洗",
+    "status": "bot",
+    "messages": [
+      {
+        "role": "user",
+        "text": "查物流 SO20260926001，再告诉我保温杯怎么清洗",
+        "time": "2026-09-26T15:11:56.856Z"
+      },
+      {
+        "role": "bot",
+        "text": "为你查到以下信息：\n订单 SO20260926001 当前为“运输中”。",
+        "time": "2026-09-26T15:11:56.856Z",
+        "order": {
+          "id": "SO20260926001",
+          "product": "原木便携保温杯 · 雾白",
+          "price": "129.00",
+          "status": "运输中",
+          "delivery": "演示快递 · 已到达配送站",
+          "receiver": "林** · 138****0618",
+          "date": "2026-09-25",
+          "icon": "◒"
+        }
+      }
+    ],
+    "hasItems": false,
+    "canResolve": true
+  },
+  {
+    "case": "未完成工单与会话级解决混算",
+    "ticketStatus": "待分配",
+    "sessionStatus": "ended",
+    "aiResolved": 3
+  },
+  {
+    "case": "旧会话冻结在线状态",
+    "currentPublishedOnline": false,
+    "oldSessionStatus": "waiting"
+  }
+]
