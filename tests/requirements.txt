@@ -1,0 +1,3 @@
+# Optional browser-test dependency, matching the version used for this review.
+# Running the static Demo does not require this package.
+playwright==1.57.0
