@@ -66,9 +66,9 @@ test('撤销工单不会自动撤销或解决原服务需求',()=>{const x=intak
 test('A11 未解决异议立即重开事项，工单标异议待核',()=>{const x=intake(),t=createT(x);complete(x.state,t);C.confirmItem(x.state,x.item.id);const time=x.item.created;C.disputeTicket(x.state,t.id,'问题仍在');assert.equal(t.status,'已完成');assert.equal(t.disputed,true);assert.equal(x.item.status,'needs_human');assert.equal(x.item.created,time);assert.equal(C.metrics(x.state).confirmed,0);});
 test('异议成立重开原工单不增加工单或受理量',()=>{const x=intake(),t=createT(x);complete(x.state,t);C.disputeTicket(x.state,t.id,'仍未解决');C.reviewDispute(x.state,t.id,'reopen','继续核实','DEMO-REVIEW');assert.equal(t.status,'处理中');assert.equal(x.state.tickets.length,1);assert.equal(t.disputed,false);});
 test('异议不成立恢复原解决时间，不增加一次解决',()=>{const x=intake(),t=createT(x);complete(x.state,t);C.confirmItem(x.state,x.item.id);const original=x.item.resolvedAt;C.disputeTicket(x.state,t.id,'误以为未完成');C.reviewDispute(x.state,t.id,'dismiss','核实已完成','DEMO-REVIEW');assert.equal(x.item.status,'resolved');assert.equal(x.item.resolvedAt,original);assert.equal(C.metrics(x.state).confirmed,1);});
-test('草稿、停用、未来和过期知识不参与正式检索',()=>{const {state}=fresh();assert.equal(C.findKnowledge('会员积分',state.knowledge),null);assert.equal(C.findKnowledge('周年庆',state.knowledge),null);const k=createKb(state);k.status='published';k.effectiveAt='2099-01-01';assert.equal(C.findKnowledge('礼品卡',state.knowledge),null);k.effectiveAt='2000-01-01';k.expiresAt='2001-01-01';assert.equal(C.findKnowledge('礼品卡',state.knowledge),null);});
-test('适用范围不匹配的知识不进入答案',()=>{const {state}=fresh();const k=createKb(state,{scope:'另一商家'});k.status='published';assert.equal(C.findKnowledge('礼品卡',state.knowledge),null);});
-test('同等匹配且答案冲突时拒绝选第一条答案',()=>{const {state,s}=fresh();const a=createKb(state);a.status='published';const b=createKb(state,{title:'礼品卡另一规则',standardQuestion:'礼品卡支持什么',answer:'完全不同的政策'});b.status='published';C.sendVisitor(state,s.id,'礼品卡');assert.equal(s.status,'waiting');assert.equal(state.issues[0].type,'知识冲突');assert.equal(s.messages.some(m=>m.citation),false);});
+test('草稿、停用、未来和过期知识不参与正式检索',()=>{const {state}=fresh();assert.equal(C.findKnowledge('会员积分',state.knowledge),null);assert.equal(C.findKnowledge('周年庆活动',state.knowledge),null);const k=createKb(state),q='礼品卡可以分多次使用吗？';k.status='published';assert.equal(C.findKnowledge(q,state.knowledge).item.id,k.id);k.effectiveAt='2099-01-01';assert.equal(C.findKnowledge(q,state.knowledge),null);k.effectiveAt='2000-01-01';k.expiresAt='2001-01-01';assert.equal(C.findKnowledge(q,state.knowledge),null);});
+test('适用范围不匹配的知识不进入答案',()=>{const {state}=fresh();const k=createKb(state,{scope:'另一商家'}),q='礼品卡可以分多次使用吗？';k.status='published';assert.equal(C.findKnowledge(q,state.knowledge),null);assert.equal(C.findKnowledge(q,state.knowledge,{scope:'另一商家'}).item.id,k.id);});
+test('同等匹配且答案冲突时拒绝选第一条答案',()=>{const {state,s}=fresh();const a=createKb(state);a.status='published';const b=createKb(state,{title:'礼品卡另一规则',standardQuestion:'礼品卡支持什么',answer:'完全不同的政策'});b.status='published';C.sendVisitor(state,s.id,'礼品卡分次使用');assert.equal(s.status,'waiting');assert.equal(state.issues[0].type,'知识冲突');assert.equal(s.messages.some(m=>m.citation),false);});
 test('编辑知识仅保存草稿，不改变历史答案或现行内容',()=>{const {state,s}=send('退货规则');const old=s.messages.at(-1).citation.answer,k=state.knowledge[0];C.saveKnowledge(state,{...k,answer:'更改后的虚构政策'});assert.equal(k.answer,old);assert.equal(k.draft.answer,'更改后的虚构政策');assert.equal(s.messages.at(-1).citation.answer,old);});
 test('知识无变化保存不增版本',()=>{const {state}=fresh(),k=state.knowledge[0];C.saveKnowledge(state,{...k});assert.equal(k.version,2);assert.equal(k.draft,undefined);});
 test('知识必需来源、维护人和有效时效',()=>{const {state}=fresh();assert.throws(()=>createKb(state,{source:''}),/来源/);assert.throws(()=>createKb(state,{expiresAt:'2020-01-01'}),/失效时间/);assert.equal(state.knowledge.length,5);});
@@ -90,7 +90,7 @@ test('确认质量问题必须填写根因和责任人',()=>{const {state}=send(
 test('A10 无整改措施及验证不能关闭质量问题',()=>{const {state}=send('礼品卡可以分多次使用吗？'),q=state.issues[0];C.reviewIssue(state,q.id,{status:'已确认',review:'业务确认该问题应可回答',owner:'知识运营',cause:'知识缺失'});assert.throws(()=>C.closeRemediation(state,q.id,'直接关闭'),/验证记录/);});
 test('知识整改：线索→分派→草稿→回归→发布→原问题验证→验收',()=>{const {state}=send('礼品卡可以分多次使用吗？'),q=state.issues[0];C.reviewIssue(state,q.id,{status:'已确认',review:'应覆盖高频规则',owner:'知识运营',cause:'知识缺口，不是合理拒答违规'});const k=createKb(state,{issueId:q.id});assert.equal(q.remediation.knowledgeId,k.id);assert.throws(()=>C.verifyRemediation(state,q.id),/发布/);assert.ok(C.evaluateKnowledge(state,k.id).passed);C.publishKnowledge(state,k.id);const r=C.verifyRemediation(state,q.id);assert.ok(r.passed);C.closeRemediation(state,q.id,'原问题命中，边界回归通过，仅限演示');assert.equal(q.remediation.status,'已关闭');assert.ok(q.remediation.validation.id);});
 test('验证后知识停用，整改验收依据失效',()=>{const {state}=send('礼品卡可以分多次使用吗？'),q=state.issues[0];C.reviewIssue(state,q.id,{status:'已确认',review:'缺口',owner:'运营',cause:'知识缺口'});const k=createKb(state,{issueId:q.id});C.evaluateKnowledge(state,k.id);C.publishKnowledge(state,k.id);C.verifyRemediation(state,q.id);C.disableKnowledge(state,k.id,'待核');assert.throws(()=>C.closeRemediation(state,q.id,'关闭'),/重新验证/);});
-test('本地发布回归完整执行且不创建业务事项',()=>{const {state}=fresh(),count=state.items.length,r=C.evaluateFlow(state);assert.equal(r.cases.length,10);assert.equal(r.passed,true);assert.equal(state.items.length,count);});
+test('本地发布回归完整执行且不创建业务事项',()=>{const {state}=fresh(),count=state.items.length,r=C.evaluateFlow(state);assert.equal(r.cases.filter(c=>/^R\d+$/.test(c.id)).length,10);assert.equal(r.cases.filter(c=>/^S\d+$/.test(c.id)).length,6);assert.equal(r.passed,true);assert.equal(state.items.length,count);});
 test('无结果依据、无反馈保持待确认，不冒充生产解决率',()=>{const {state}=send('退货规则'),m=C.metrics(state);assert.equal(m.confirmed,0);assert.equal(m.awaiting,1);assert.equal('resolutionRate' in m,false);});
 test('转接摘要包含独立事项、工单与原始信息',()=>{const x=intake(),t=createT(x);const summary=C.sessionSummary(x.s,x.state);assert.match(summary,/SO20260926001/);assert.match(summary,new RegExp(x.item.id));assert.match(summary,new RegExp(t.id));assert.ok(C.length(summary)<=1800);});
 
@@ -136,7 +136,8 @@ test('关闭自助售后不影响其他问题留单和旧会话的已发布配�
 
 function twoCompletedTickets() {
   const x=intake(),first=createT(x);complete(x.state,first);
-  const second=createT(x);complete(x.state,second);C.confirmItem(x.state,x.item.id);
+  const second=C.createTicket(x.state,{sessionId:x.s.id,itemId:x.item.id,title:'补充处理',description:'客服核实后继续办理',category:'售后服务',priority:'普通'});
+  complete(x.state,second);C.confirmItem(x.state,x.item.id);
   return {...x,first,second};
 }
 
@@ -181,4 +182,71 @@ test('重新完成的工单再次收到异议，最后复核该工单仍可等�
   C.reviewDispute(x.state,x.first.id,'dismiss','新结果有效','DEMO-REVIEW-1');
   assert.equal(x.item.status,'awaiting_confirmation');assert.equal(x.item.resolvedAt,null);
   assert.equal(C.canConfirmItem(x.state,x.item),true);
+});
+
+// 三轮复审（2026-09-28）：路由与知识治理的 5 项 P1，复现输入见 00_工作台/交接记录/2026-09-27-T138客服Demo代码审查.md。
+const cites = s => s.messages.filter(m=>m.citation).map(m=>m.citation.id);
+
+test('三轮复审：否定转人工的常见说法不进入人工队列',()=>{
+  for (const q of ['不想转人工，我只问退货规则','不转人工，帮我看下退货规则','人工就不用了，我问下退货规则','我不想投诉，只想了解退货规则']) {
+    const {s}=send(q);assert.equal(s.status,'bot',q);assert.deepEqual(cites(s),['KB001'],q);
+  }
+  for (const q of ['我要转人工','转人工不需要排队吧']) {const {state,s}=send(q);assert.equal(s.status,'waiting',q);assert.deepEqual(items(state,s).map(i=>i.type),['other'],q);}
+});
+
+test('三轮复审：人工智能、人工费等构词不是转人工诉求',()=>{
+  for (const q of ['你们是人工智能吗','人工费怎么算']) assert.deepEqual(C.planRequests(q,{},C.defaults).map(p=>p.type),['knowledge'],q);
+  const {state,s}=fresh(),k=createKb(state,{title:'机器人身份说明',standardQuestion:'你们是人工智能吗？',keywords:'人工智能,机器人',answer:'虚构演示：这里是规则机器人，需要时可以转人工。'});k.status='published';
+  C.sendVisitor(state,s.id,'你们是人工智能吗？');assert.equal(s.status,'bot');assert.deepEqual(cites(s),[k.id]);
+});
+
+test('三轮复审：只命中一个泛关键词不作答，转为未命中线索',()=>{
+  for (const q of ['退款多久到账','保温杯可以放洗碗机吗']) {
+    const {state,s}=send(q);assert.deepEqual(cites(s),[],q);assert.equal(state.issues[0].type,'知识未命中',q);assert.equal(items(state,s)[0].status,'needs_human',q);
+  }
+  assert.deepEqual(cites(send('保温杯平时怎么保养').s),['KB002']);
+});
+
+test('三轮复审：售后政策类新 FAQ 可回归、可发布、可命中',()=>{
+  const {state,s}=fresh(),k=createKb(state,{title:'退货运费说明',standardQuestion:'退货运费谁承担？',keywords:'运费,退货运费',answer:'虚构演示：质量问题由商家承担退货运费，其余情况由买家承担。',category:'售后政策'});
+  const r=C.evaluateKnowledge(state,k.id);assert.ok(r.passed,JSON.stringify(r.cases.filter(c=>!c.pass)));C.publishKnowledge(state,k.id);
+  C.sendVisitor(state,s.id,'退货运费谁出');assert.deepEqual(cites(s),[k.id]);
+});
+
+test('三轮复审：多事项里的商品咨询按原句检索，不套用固定商品',()=>{
+  const {state,s}=send('查物流 SO20260926001，再问下收纳袋怎么清洗');
+  assert.ok(s.messages.some(m=>m.order));assert.deepEqual(cites(s),[]);assert.ok(items(state,s).some(i=>i.type==='knowledge'&&i.status==='needs_human'));
+});
+
+test('三轮复审：新 FAQ 抢答存量问句时草稿回归不通过，不能发布',()=>{
+  const {state}=fresh(),k=createKb(state,{title:'退货须知（新）',standardQuestion:'七天无理由退货规则条件',keywords:'退货,规则,七天,无理由,条件',answer:'【错误示例】所有商品一律不支持退货。',category:'售后政策'});
+  const r=C.evaluateKnowledge(state,k.id);assert.equal(r.passed,false);
+  assert.ok(r.cases.some(c=>!c.pass&&/KB001/.test(c.expected)),JSON.stringify(r.cases.map(c=>[c.id,c.pass,c.expected])));
+  assert.throws(()=>C.publishKnowledge(state,k.id),/回归/);
+});
+
+test('三轮复审：流程改动让存量 FAQ 失效时发布回归不通过',()=>{
+  const {state}=fresh();state.draft.humanWords='人工,投诉,客服专员,几点';
+  const r=C.evaluateFlow(state);assert.equal(r.passed,false);assert.ok(r.cases.some(c=>!c.pass&&/KB003/.test(c.expected)));
+  assert.throws(()=>C.publishFlow(state),/完整回归/);
+});
+
+test('三轮复审：补订单号的自然说法回填原查询事项',()=>{
+  for (const q of ['我的订单号是SO20260926001','SO20260926001 麻烦查一下','查物流 SO20260926001']) {
+    const {state,s}=send('帮我查一下订单'),first=s.itemIds[0];C.sendVisitor(state,s.id,q);
+    assert.deepEqual(s.itemIds,[first],q);assert.equal(C.getItem(state,first).status,'awaiting_confirmation',q);assert.equal(C.getItem(state,first).objectId,'SO20260926001',q);assert.equal(s.pendingItemId,'',q);
+  }
+});
+
+test('三轮复审：待补订单号的售后事项接收订单号，不另建事项',()=>{
+  for (const q of ['我的订单号是SO20260926001','我要申请退货 SO20260926001']) {
+    const {state,s}=send('我要申请退货'),first=s.itemIds[0];C.sendVisitor(state,s.id,q);
+    assert.deepEqual(s.itemIds,[first],q);const item=C.getItem(state,first);assert.equal(item.type,'aftersales',q);assert.equal(item.status,'processing',q);assert.equal(item.objectId,'SO20260926001',q);assert.ok(s.messages.at(-1).intake,q);
+  }
+  const {state,s}=send('我要申请退货');C.sendVisitor(state,s.id,'查物流 SO20260926001');
+  assert.deepEqual(items(state,s).map(i=>[i.type,i.status]),[['aftersales','clarifying'],['order','awaiting_confirmation']]);
+});
+
+test('三轮复审：质问或反问要人工仍然转人工，只有明确拒绝才不转',()=>{
+  for (const q of ['为什么不转人工','怎么还不给我转人工','不给我转人工吗？','要不要转人工','是不是要转人工才行']) {const {state,s}=send(q);assert.equal(s.status,'waiting',q);assert.deepEqual(items(state,s).map(i=>i.type),['other'],q);}
 });

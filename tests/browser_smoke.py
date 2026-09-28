@@ -107,8 +107,8 @@ with sync_playwright() as p:
                 setItem(k,v) { if (fail) throw new Error('simulated quota'); this._data[k]=String(v); },
                 removeItem(k) { delete this._data[k]; } }
             })""", {'stored': stored, 'fail': fail_storage})
-            page.add_script_tag(content=ROOT.joinpath('engine.js').read_text())
-            page.add_script_tag(content=ROOT.joinpath('app.js').read_text())
+            for script in ('flow-graph.js', 'engine.js', 'flow-editor.js', 'app.js'):
+                page.add_script_tag(content=ROOT.joinpath(script).read_text())
         else:
             page.goto(args.url)
         return page
@@ -230,15 +230,14 @@ with sync_playwright() as p:
     def flow(page):
         old_sid=start(page)
         nav(page,'workflow')
-        page.locator('[data-action="select-node"][data-id="order"]').click()
+        page.locator('[data-graph-node="order"]').press('Enter')
         page.get_by_label('查询结果模式',exact=True).select_option('timeout')
         page.get_by_role('button',name=re.compile('^运行测试')).click()
         assert '暂未完成' in page.locator('#flow-test-result').inner_text()
         assert snapshot(page)['published']['version']==1
         page.get_by_role('button',name='模拟发布流程',exact=True).click()
-        accept(page)
         assert snapshot(page)['published']['version']==1
-        assert '完整回归' in page.locator('#toast').inner_text()
+        assert '发布回归' in page.locator('#toast').inner_text()
         page.get_by_role('button',name='运行发布回归',exact=True).first.click()
         assert snapshot(page)['flowValidation']['passed']
         shot(page, '06-workflow-release.png')
@@ -256,8 +255,8 @@ with sync_playwright() as p:
         page.locator('[data-action="rollback-flow"][data-id="1"]').click()
         accept(page)
         page.get_by_role('button',name='运行发布回归',exact=True).first.click()
-        page.locator('[data-action="select-node"][data-id="reply"]').click()
-        page.get_by_label('回答引导语',exact=True).fill('新的演示引导语')
+        page.locator('[data-graph-node="reply"]').press('Enter')
+        page.get_by_label('结果引导语（留空则无引导语）',exact=True).fill('新的演示引导语')
         assert '已失效' in page.locator('.evaluation .badge').first.inner_text()
     run('B05 流程：单条测试不替代发布回归，新旧版本与失效提示',flow)
 
