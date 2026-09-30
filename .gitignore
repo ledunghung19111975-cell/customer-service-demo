@@ -1,0 +1,15 @@
+# Local configuration and runtime files
+.DS_Store
+.env
+.env.*
+!.env.example
+!.env.*.example
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+
+# Local records and delivery assets are not published to GitHub
+/工作记录.md
+/交付包/
+/tests/evidence/*.png
