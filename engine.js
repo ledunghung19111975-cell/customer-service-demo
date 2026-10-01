@@ -23,7 +23,7 @@
   const itemNames = { clarifying: '待澄清', processing: '处理中', needs_human: '待人工', needs_customer: '待客户补充', awaiting_confirmation: '待结果确认', resolved: '已解决', cancelled: '已撤销' };
   const itemTypes = { knowledge: '知识咨询', order: '订单查询', aftersales: '售后申请', other: '人工协助' };
   const orders = [
-    { id: 'SO20260926001', customerId: 'DEMO-CUSTOMER', product: '原木便携保温杯 · 雾白', price: '129.00', status: '运输中', delivery: '演示快递 · 已到达配送站', receiver: '林** · 138****0618', date: '2026-09-25', icon: '◒' },
+    { id: 'SO20260926001', customerId: 'DEMO-CUSTOMER', product: '原木便携保温杯 · 雾白', price: '129.00', status: '运输中', delivery: '包裹已到达配送站', receiver: '林** · 138****0618', date: '2026-09-25', icon: '◒' },
     { id: 'SO20260926002', customerId: 'DEMO-CUSTOMER', product: '棉麻收纳袋 · 自然色', price: '49.00', status: '待发货', delivery: '仓库正在备货，发出后更新物流', receiver: '林** · 138****0618', date: '2026-09-26', icon: '▧' }
   ];
   const getSession = (state, id) => { const s = state.sessions.find(s => s.id === id); assert(s, '会话不存在，请重新选择'); return s; };
@@ -53,7 +53,7 @@
     }
     return session;
   }
-  function changeItem(item, status, reason, actor = '系统模拟') {
+  function changeItem(item, status, reason, actor = '系统') {
     assert(itemNames[status], '事项状态无效');
     if (item.status !== status) item.history.push({ time: now(), from: item.status, to: status, reason, actor });
     if (item.status === 'resolved' && status !== 'resolved') {
@@ -100,14 +100,14 @@
     const errors = Graph.check(Graph.graphFor(flow));
     assert(!errors.length, errors.map(e => e.message).slice(0, 3).join('；'));
   }
-  const runtimeDefaults = { humanMode: 'online', capacity: 2, toolEnabled: true, reason: '初始演示配置' };
+  const runtimeDefaults = { humanMode: 'online', capacity: 2, toolEnabled: true, reason: '初始接待配置' };
   function capacityState(state) {
     const occupied = state.sessions.filter(s => s.status === 'human').length;
     return { ...state.runtime, occupied, full: state.runtime.humanMode === 'busy' || occupied >= state.runtime.capacity };
   }
   function runtimeStatus(runtime) { return runtime.humanMode === 'offline' ? 'offline' : 'waiting'; }
   function handoffText(runtime, queue, reason) {
-    if (runtime.humanMode === 'offline') return `${reason}\n人工当前离线。可点击“提交问题”留单，处理进度在本窗口查看；本演示不会发送短信。`;
+    if (runtime.humanMode === 'offline') return `${reason}\n人工客服当前离线。可点击“提交问题”留言，处理进度在本窗口查看。`;
     if (runtime.full || runtime.humanMode === 'busy') return `${reason}\n${queue}当前满载，已进入等待队列。可以补充信息、取消排队或提交问题留单；暂不估计等待分钟数。`;
     return `${reason}\n已进入${queue}，等待坐席接管。接管前可以继续补充问题。`;
   }
@@ -202,11 +202,11 @@
             port = 'missing';
             if (!task.objectId) {
               result.pendingOrder = true; status = 'waiting'; detail = '缺少订单号，进入信息补充分支';
-              pending = { text: '为了查询订单，请提供以 SO 开头的演示订单号。可以用 SO20260926001。也可以先咨询其他问题，再点击事项的“继续处理”。', status: 'clarifying' };
+              pending = { text: '请提供需要查询的订单号。你也可以在“我的订单”中选择订单。', status: 'clarifying' };
             } else if (context.customerId && context.customerId !== 'DEMO-CUSTOMER') {
-              port = 'failure'; status = 'error'; detail = '演示归属校验未通过，不透露订单是否存在';
+              port = 'failure'; status = 'error'; detail = '归属校验未通过，不透露订单是否存在';
               reason = '当前身份无法查询此订单，请从已授权入口联系人工核实。'; pending = { text: reason, status: 'clarifying' };
-              issue('归属校验未通过', '真实环境由服务端验证身份和订单归属');
+              issue('归属校验未通过', '核实客户身份与订单归属');
             } else if (!runtime.toolEnabled || (c.queryMode || flow.queryMode) === 'timeout') {
               const type = runtime.toolEnabled ? '工具超时' : '工具已停用';
               port = 'failure'; status = 'error'; detail = `${type} · ${task.objectId}`;
@@ -215,13 +215,13 @@
             } else {
               lastOrder = orders.find(o => o.id === task.objectId) || null;
               if (!lastOrder) {
-                detail = `样例数据中没有 ${task.objectId}`; status = 'warning';
-                pending = { text: '演示订单中没有找到这个订单号。请更正订单号后继续，也可以转人工；本次查询尚未完成。', status: 'clarifying' };
-                issue('订单未找到', '核对订单标识和样例范围');
+                detail = `未查询到订单 ${task.objectId}`; status = 'warning';
+                pending = { text: '没有找到这个订单号，请核对后重试，或联系人工客服协助查询。', status: 'clarifying' };
+                issue('订单未找到', '核对订单编号与查询范围');
               } else {
-                port = 'success'; detail = `返回本地样例 ${lastOrder.id}`;
+                port = 'success'; detail = `订单查询成功 ${lastOrder.id}`;
                 pending = { text: `订单 ${lastOrder.id} 当前为“${lastOrder.status}”。仅完成查询，不表示其他售后事项已处理。`, status: task.type === 'order' ? 'awaiting_confirmation' : 'clarifying', prefix: true,
-                  evidence: [{ kind: 'order', objectId: lastOrder.id, queriedAt: now(), source: '本地虚构订单样例', result: clone(lastOrder) }], extra: { order: { ...clone(lastOrder), queriedAt: now() } } };
+                  evidence: [{ kind: 'order', objectId: lastOrder.id, queriedAt: now(), source: '订单服务', result: clone(lastOrder) }], extra: { order: { ...clone(lastOrder), queriedAt: now() } } };
               }
             }
             break;
@@ -229,7 +229,7 @@
           case 'intake':
             if (!task.objectId) {
               port = 'missing'; status = 'waiting'; result.pendingOrder = true; detail = '缺少订单号，需客户补充';
-              pending = { text: '为了登记售后，请提供以 SO 开头的演示订单号。可以用 SO20260926001。', status: 'clarifying' };
+              pending = { text: '请提供需要售后的订单号，也可以在“我的订单”中选择订单。', status: 'clarifying' };
             } else if (!flow.intakeEnabled || c.enabled === false || task.type !== 'aftersales') {
               port = 'manual'; reason = '此流程未开放当前事项的自助售后受理，需要人工协助。'; detail = reason;
               pending = { text: reason, status: 'clarifying' };
@@ -360,7 +360,7 @@
     s.status = 'human'; s.owner = operator; s.hadHandoff = true;
     sessionItems(state, s).forEach(i => { if (!['resolved', 'cancelled'].includes(i.status)) i.humanTouched = true; });
     s.messages.push(makeMessage('system', `${operator}已接入，接下来由人工为你服务。`));
-    audit(state, 'takeover', id, '本地单操作者接管', { owner: operator });
+    audit(state, 'takeover', id, '坐席接管会话', { owner: operator });
   }
   function sendAgent(state, id, query, operator = state.operator) {
     const s = getSession(state, id), text = clean(query, '回复', 2000);
@@ -388,7 +388,7 @@
   function confirmItem(state, id) {
     const item = getItem(state, id);
     assert(canConfirmItem(state, item), '此事项尚不能确认解决：需结果依据、全部关联工单完成，且没有待核异议');
-    changeItem(item, 'resolved', '客户明确确认', '客户'); item.resolvedAt = now(); item.confirmation = '客户明确确认（演示）';
+    changeItem(item, 'resolved', '客户明确确认', '客户'); item.resolvedAt = now(); item.confirmation = '客户明确确认';
     for (const sid of item.sessionIds) getSession(state, sid).messages.push(makeMessage('system', `${item.title} · 客户确认这项已解决，其他事项保持原状态。`, { itemId: id }));
     return item;
   }
@@ -482,8 +482,8 @@
     if (objectId) item.objectId = objectId;
     const ticket = { id: uid(state, 'TK'), itemId: item.id, title, description, objectId, requestFingerprint, requestKey: values.requestKey || '', customerSubmitted: Boolean(values.customerSubmitted), category: values.category, priority: values.customerSubmitted ? '普通' : values.priority, sessionId: s?.id || '', owner: '', status: '待分配', created: now(), disputed: false, resultEvidence: '', publicResult: '', history: [{ time: now(), text: '已受理处理需求，等待分配；尚未完成实际办理', internalNote: '', evidence: '' }] };
     state.tickets.unshift(ticket); item.tickets.push(ticket.id); item.objectId ||= objectId; item.humanTouched = true; changeItem(item, 'needs_human', '已受理工单，待分配处理');
-    if (s) { s.tickets.push(ticket.id); s.messages.push(makeMessage('system', `已登记演示工单 ${ticket.id}：${title}。这是受理成功，不是退款或问题已解决。`, { ticketId: ticket.id, itemId: item.id })); }
-    audit(state, 'ticket-created', ticket.id, '确认后模拟受理', { itemId: item.id });
+    if (s) { s.tickets.push(ticket.id); s.messages.push(makeMessage('system', `已受理工单 ${ticket.id}：${title}。客服将继续核实处理，请在工单中查看进度。`, { ticketId: ticket.id, itemId: item.id })); }
+    audit(state, 'ticket-created', ticket.id, '确认后受理', { itemId: item.id });
     return ticket;
   }
   const transitions = { '待分配': ['处理中', '已撤销'], '处理中': ['待客户补充', '已完成', '待分配', '已撤销'], '待客户补充': ['处理中', '待分配', '已撤销'], '已完成': [], '已撤销': [] };
@@ -606,12 +606,12 @@
     add('R02', '没有订单号，想了解退货条件', r => r.tasks.every(t => t.type === 'knowledge') && !r.pendingOrder, '通用规则不索要订单号');
     add('R03', '帮我查订单', r => r.tasks.length === 1 && r.tasks[0].status === 'clarifying' && !r.messages.some(m => m.order), '缺参数先采集，不伪造卡片');
     add('R04', '查物流 SO20260926001，再申请退货', r => r.tasks.some(t => t.type === 'order') && r.tasks.some(t => t.type === 'aftersales' && t.status !== 'awaiting_confirmation'), '查询与办理拆成两个事项；办理不能被判完成');
-    add('R05', '查询订单 SO20260926001', r => r.messages.some(m => m.order?.id === 'SO20260926001') || (r.tasks[0]?.handoff && ['waiting','offline'].includes(r.status)), '正常查询返回样例，或沿配置分支明确转人工承接');
+    add('R05', '查询订单 SO20260926001', r => r.messages.some(m => m.order?.id === 'SO20260926001') || (r.tasks[0]?.handoff && ['waiting','offline'].includes(r.status)), '正常查询返回订单，或沿配置分支明确转人工承接');
     add('R06', '查询订单 SO00000000000', r => !r.messages.some(m => m.order) && !r.tasks.some(t => t.status === 'awaiting_confirmation'), '未知对象不生成结果');
     add('R07', '查物流 SO20260926001，再告诉我保温杯怎么清洗', r => r.tasks.some(t => t.type === 'order') && r.tasks.some(t => t.type === 'knowledge'), '多事项不遗漏知识咨询');
     add('R08', '需要人工', r => r.status === 'offline', '实时离线必须留单', { forceHandoff: true, runtime: { ...runtimeDefaults, humanMode: 'offline' } });
     add('R09', '查询订单 SO20260926001', r => !r.messages.some(m => m.order) && r.tasks[0]?.status === 'needs_human', '工具停用即时阻断旧流程查询', { runtime: { ...runtimeDefaults, toolEnabled: false } });
-    add('R10', '查询订单 SO20260926001', r => !r.messages.some(m => m.order) && r.tasks[0]?.status === 'needs_human', '演示归属负例不泄露订单', { customerId: 'OTHER-DEMO-CUSTOMER' });
+    add('R10', '查询订单 SO20260926001', r => !r.messages.some(m => m.order) && r.tasks[0]?.status === 'needs_human', '归属校验负例不泄露订单', { customerId: 'OTHER-DEMO-CUSTOMER' });
     for (const c of custom) add(c.id, c.query, r => r.messages.some(m => m.citation?.id === c.knowledgeId), `回答引用指定知识 ${c.knowledgeId}`);
     // 答案来源稳定性：回归问句和全部已发布 FAQ 的标准问题，改动前后必须引用同一知识，拦住新知识抢答或流程改动让存量 FAQ 失效。
     if (baseline) {
@@ -674,7 +674,7 @@
     if (item.status === 'published' || item.history.length) item.history.push({ ...knowledgeContent(item), version: item.version, status: item.status, time: now() });
     if (item.draft) { Object.assign(item, item.draft); delete item.draft; }
     item.status = 'published'; item.updated = now(); item.publishedTest = testId;
-    audit(state, 'knowledge-publish', id, `模拟发布 v${item.version}`, { testId }); return item;
+    audit(state, 'knowledge-publish', id, `发布 v${item.version}`, { testId }); return item;
   }
   function disableKnowledge(state, id, reason) {
     const k = state.knowledge.find(k => k.id === id); assert(k?.status === 'published', '当前知识不在发布状态');
@@ -695,7 +695,7 @@
     let remediation = q.remediation;
     if (values.status === '已确认') {
       const owner = clean(values.owner || remediation?.owner, '整改责任人', 80), cause = clean(values.cause || remediation?.cause, '根因判断', 300);
-      remediation = { ...(remediation || {}), owner, cause, status: remediation?.status || '处理中', scope: '演示范围问题' };
+      remediation = { ...(remediation || {}), owner, cause, status: remediation?.status || '处理中', scope: '知识服务问题' };
     }
     q.status = values.status; q.review = review; q.reviewer = state.operator; q.reviewedAt = now(); q.remediation = remediation;
     audit(state, 'issue-review', id, review, { verdict: q.status }); return q;
@@ -714,27 +714,27 @@
     assert(q?.status === '已确认' && r?.status === '待验收' && r.validation?.passed, '缺少已发布整改措施及匹配的验证记录，不能关闭');
     assert(r.validation.fingerprint === fingerprint(state.published, state.knowledge), '验证后配置或知识已变化，请重新验证');
     r.acceptance = clean(acceptance, '验收说明', 1000); r.acceptedBy = state.operator; r.closedAt = now(); r.status = '已关闭';
-    audit(state, 'remediation-closed', id, r.acceptance, { validationId: r.validation.id, scope: '仅本地演示，不代表生产缺陷验收' }); return q;
+    audit(state, 'remediation-closed', id, r.acceptance, { validationId: r.validation.id, scope: '知识与服务流程回归' }); return q;
   }
   function metrics(state) {
     const resolved = state.items.filter(i => i.status === 'resolved');
     return { total: state.sessions.length, itemTotal: state.items.length, confirmed: resolved.length, unassistedConfirmed: resolved.filter(i => !i.humanTouched).length, pendingItems: state.items.filter(i => !['resolved', 'cancelled'].includes(i.status)).length, awaiting: state.items.filter(i => i.status === 'awaiting_confirmation').length, waiting: state.sessions.filter(s => s.status === 'waiting').length, tickets: state.tickets.filter(t => !['已完成', '已撤销'].includes(t.status) || t.disputed).length, knowledge: state.knowledge.filter(k => isKnowledgeActive(k)).length, issues: state.issues.filter(q => ['待复核', '信息不足'].includes(q.status)).length, corrections: state.issues.filter(q => q.status === '已确认' && q.remediation?.status !== '已关闭').length };
   }
   function newState(options = {}) {
-    const state = { schema: 3, counter: 100, operator: '客服小林', agents: ['客服小林', '客服小周'], runtime: clone(runtimeDefaults), robot: { name: '青禾小助', greeting: '你好，我是青禾小助。你可以咨询商品与服务规则、查询订单，或提交售后问题。需要人工时会带上当前信息转接。这里是演示环境，请勿输入真实隐私信息。', description: '青禾生活 · 在线服务（演示）' }, draft: clone(defaults), published: clone(defaults), sessions: [], items: [], tickets: [], issues: [], audit: [], evaluations: [], releases: [{ version: 1, time: now(), reason: '初始演示模板', operator: '演示配置', validationId: 'seed', config: clone(defaults) }], knowledge: [
-      { id: 'KB001', title: '七天无理由退货规则', standardQuestion: '七天无理由退货有什么条件？', category: '售后政策', keywords: '退货,无理由,七天,退款,规则,条件,政策', answer: '青禾生活演示规则：签收后七天内，商品未使用且包装与配件完整，可登记退货申请。定制商品不适用此规则。是否符合条件由人工结合订单核实，当前演示不会实际退款。', status: 'published', version: 2 },
-      { id: 'KB002', title: '商品材质与日常保养', standardQuestion: '保温杯怎么清洗？', category: '产品知识', keywords: '材质,保温杯,保养,清洗', answer: '演示商品保温杯采用不锈钢内胆，建议使用软布和中性清洁剂清洗。首次使用前请充分清洁，避免放入微波炉加热。', status: 'published', version: 1 },
-      { id: 'KB003', title: '服务时间与人工支持', standardQuestion: '服务时间是几点？', category: '通用服务', keywords: '服务时间,营业时间,几点', answer: '本演示的服务时间示例为每天 09:00–21:00。运行状态以页面实时显示为准。你可以随时留言；离线时可登记工单。未接通知服务，仅在本站查看进度。', status: 'published', version: 1 },
-      { id: 'KB004', title: '会员积分使用说明', standardQuestion: '会员积分怎么使用？', category: '会员权益', keywords: '积分,会员', answer: '演示积分可在会员中心查看。可抵扣范围以活动规则为准，本演示不执行积分兑换。', status: 'draft', version: 1 },
+    const state = { schema: 3, counter: 100, operator: '客服小林', agents: ['客服小林', '客服小周'], runtime: clone(runtimeDefaults), robot: { name: '青禾小助', greeting: '你好，我是青禾小助。你可以咨询商品与服务规则、查询订单，或提交售后问题。需要人工时会带上当前信息转接。请勿提供密码、验证码或完整银行卡信息。', description: '青禾生活 · 在线服务' }, draft: clone(defaults), published: clone(defaults), sessions: [], items: [], tickets: [], issues: [], audit: [], evaluations: [], releases: [{ version: 1, time: now(), reason: '初始接待流程', operator: '系统', validationId: 'seed', config: clone(defaults) }], knowledge: [
+      { id: 'KB001', title: '七天无理由退货规则', standardQuestion: '七天无理由退货有什么条件？', category: '售后政策', keywords: '退货,无理由,七天,退款,规则,条件,政策', answer: '签收后七天内，商品未使用且包装与配件完整，可登记退货申请。定制商品不适用此规则。具体资格与处理结果由客服结合订单核实。', status: 'published', version: 2 },
+      { id: 'KB002', title: '商品材质与日常保养', standardQuestion: '保温杯怎么清洗？', category: '产品知识', keywords: '材质,保温杯,保养,清洗', answer: '保温杯采用不锈钢内胆，建议使用软布和中性清洁剂清洗。首次使用前请充分清洁，避免放入微波炉加热。', status: 'published', version: 1 },
+      { id: 'KB003', title: '服务时间与人工支持', standardQuestion: '服务时间是几点？', category: '通用服务', keywords: '服务时间,营业时间,几点', answer: '人工服务时间为每天 09:00–21:00，是否在线以当前接待状态为准。你可以随时提交问题，并在咨询窗口查看处理进度。', status: 'published', version: 1 },
+      { id: 'KB004', title: '会员积分使用说明', standardQuestion: '会员积分怎么使用？', category: '会员权益', keywords: '积分,会员', answer: '积分抵扣范围以会员活动规则为准，相关问题可联系人工客服核实。', status: 'draft', version: 1 },
       { id: 'KB005', title: '历史活动规则', standardQuestion: '周年庆活动是什么？', category: '活动规则', keywords: '周年庆,活动', answer: '历史活动已结束，请关注最新公告。', status: 'disabled', version: 1 }
     ] };
-    state.knowledge.forEach(k => Object.assign(k, { scope: '青禾生活', source: `青禾生活虚构演示资料 / ${k.category}，不对应真实商家政策`, owner: '客服运营', effectiveAt: '2026-01-01T00:00:00.000Z', expiresAt: '', updated: now(), history: [] }));
+    state.knowledge.forEach(k => Object.assign(k, { scope: '青禾生活', source: `青禾生活客服知识库 / ${k.category}`, owner: '客服运营', effectiveAt: '2026-01-01T00:00:00.000Z', expiresAt: '', updated: now(), history: [] }));
     if (options.seed === false) return state;
     let s = newSession(state, '陈一诺', { sample: true }); sendVisitor(state, s.id, '七天无理由退货有什么条件？'); confirmItem(state, s.itemIds[0]); finish(state, s.id, 'visitor');
     s = newSession(state, '周安', { sample: true }); sendVisitor(state, s.id, '保温杯怎么清洗？'); confirmItem(state, s.itemIds[0]); finish(state, s.id, 'visitor');
     s = newSession(state, '许晨', { sample: true }); sendVisitor(state, s.id, '帮我查订单 SO20260926002');
     s = newSession(state, '林沐', { sample: true }); sendVisitor(state, s.id, '我要申请退货 SO20260926001');
-    const t = createTicket(state, { title: '包裹外盒破损核实', category: '售后服务', priority: '普通', description: '演示客户反馈外盒破损，需客服核对商品情况与后续处理方式。', sessionId: s.id, itemId: s.itemIds[0] });
+    const t = createTicket(state, { title: '包裹外盒破损核实', category: '售后服务', priority: '普通', description: '客户反馈外盒破损，需客服核对商品情况与后续处理方式。', sessionId: s.id, itemId: s.itemIds[0] });
     advanceTicket(state, t.id, '处理中', '客服小林');
     s = newSession(state, '苏语', { sample: true }); sendVisitor(state, s.id, '礼品卡可以分多次使用吗？');
     return state;

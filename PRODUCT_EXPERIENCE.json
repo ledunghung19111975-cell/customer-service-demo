@@ -1,0 +1,24 @@
+{
+  "patch_id": "zhixu-product-experience-1",
+  "base_blobs": {
+    "index.html": "e44795527c5d0a8b5b0ec554be8bbf6cc54e21c9",
+    "app.js": "aac77422ce2dde657c7615bb7bdaba4bf99ce11b",
+    "engine.js": "d1fbf995cec704b35765042fbecfb87f14c4e556",
+    "flow-editor.js": "0923b5819c9fc25e8ed874f886eecda3fbfcabbb",
+    "README.md": "d94cfc315580c0127e7cd1d1d1921010ace9919e",
+    "MANIFEST.sha256": "050603cfee7096e45467cc3823c50c2074d639f1"
+  },
+  "outputs": {
+    "app.js": "3421b428b62b0d1489148dee1067485dcc1b49c3b6f609144123631aa24fb549",
+    "engine.js": "020ac1d595aa392a8548dd63351ae11e47698a0d0ed1524a9fad4986dd71b468",
+    "flow-editor.js": "493b6615e5f3ff28c3e7e6a0974fed0a78b2beb9a7f5b1bab54b2acc9d728f3e",
+    "index.html": "cfea5cb12e8b7697bdb4a000f730eb76802b1d5a1fbb1ae76569001993a0847e",
+    "product.css": "2a703462092f1fe4ebea10899665faff6302d75e863b22a18c58f79898b249ff",
+    "product-copy.js": "f1e0c739738ea827c54ce4157baa380be86b7136999ae3274cfb452f63de2b1d",
+    "README.md": "36a048eca1501151848eeac58decbea0c019df67bf8acd58c884b6e38837107a",
+    "docs/产品体验调整.md": "98bcf3509fcdf675c62cfcec51f5709e109c8a73540a90654c077d5a05ba84f9",
+    "tests/product-experience.test.cjs": "17c4cb522cd6b29940288acd7c05ad526847c552f83442128caa4d25ff211611",
+    "tests/product_browser_smoke.py": "b66b2a55d850791b7838467cca2fd297ee2a622379432c3fc751f21fb69dd0a2"
+  },
+  "review_revision": "2026-10-01"
+}

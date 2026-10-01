@@ -2,8 +2,9 @@
 
 产出 Agent：Codex（V3.2 图编排验收，2026-09-28）；Claude（V3.1 历史本地复核）；外部修订包原产出平台未提供。
 
-- `local-review.json` 与 `local-tests.tap`：当前 V3.2 的本机复核，产出 Agent：Codex。V3.1 的同名记录保留在本轮起点 `b08339e` 的本地桌面 Git 历史，V3 记录保留于本地桌面提交 `f9baa97`。
+- `product-review.json` 与 `product-tests.tap`：2026-10-01 产品体验版验收，138 项逻辑测试与实际 HTTP 控件检查；浏览器下载落盘未确认，Python 套件未执行。
+- `local-review.json` 与 `local-tests.tap`：历史 V3.2 的本机复核，产出 Agent：Codex。V3.1 的同名记录保留在本轮起点 `b08339e` 的本地桌面 Git 历史，V3 记录保留于本地桌面提交 `f9baa97`。
 - 其他 JSON、TAP、TXT：用户提供的 V3 包历史报告，哈希与数量对应其原始基线，未在本轮重新生成。
 - PNG：历史界面截图，仅保留于本地项目和交付 ZIP，不代表 V3.2 画布当前界面，也未同步至公开 GitHub。
 
-当前 HTTP 检查使用内置浏览器和真实存储，具体操作见 `local-review.json`。历史 12 项浏览器报告使用离线挂载和模拟存储，两种范围分别记录，不相加为一个测试集。当前 Python 浏览器脚本通过语法和依赖加载检查，未实跑套件。
+当前 HTTP 检查使用内置浏览器和真实存储，具体操作见 `product-review.json`。历史 12 项浏览器报告使用离线挂载和模拟存储，两种范围分别记录，不相加为一个测试集。当前 Python 浏览器脚本通过语法和依赖加载检查，未实跑套件。

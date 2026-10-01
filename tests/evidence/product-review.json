@@ -1,0 +1,75 @@
+{
+  "date": "2026-10-01",
+  "producer": "Codex",
+  "base_commit": "fb488929d5f5e0b53cfd1e58e2f55e3624f7885f",
+  "source": "用户提供 customer-service-product-experience.zip；补丁原产出平台未提供；Codex 审查修复并整合",
+  "unit_tests": {
+    "command": "node --test --test-reporter=tap tests/*.test.cjs",
+    "passed": 138,
+    "failed": 0,
+    "core": 95,
+    "graph": 25,
+    "ui": 12,
+    "product": 6,
+    "report": "product-tests.tap"
+  },
+  "browser": {
+    "surface": "Codex 内置浏览器",
+    "url": "http://127.0.0.1:8878/",
+    "http": true,
+    "checks": [
+      "后台工作台与客户独立入口",
+      "售后弹窗、预览、明确确认、工单受理",
+      "刷新保留工单",
+      "后台分配、完成证据、客户确认结果",
+      "结束咨询后新建咨询并返回旧工单",
+      "草稿超时沿异常路径转人工",
+      "375px 客户页无横向溢出，scrollWidth=375",
+      "控制台 error/warn 为0"
+    ],
+    "download": "页面显示发起导出，等待 download 事件超时；未确认实际下载落盘。正常JSON及异常原始副本的Blob内容由Node测试核对。"
+  },
+  "review": {
+    "trigger": "跨文件行为耦合、历史数据迁移、公开推送",
+    "roles": [
+      "正确性、边界与隐藏假设",
+      "范围、复杂度与证据质量"
+    ],
+    "downgraded": false,
+    "found": {
+      "P0": 0,
+      "P1": 1,
+      "P2": 3
+    },
+    "unique_valid": 4,
+    "fixed": [
+      "新咨询后旧工单入口丢失",
+      "异常存储导出错误副本",
+      "自定义FAQ历史引用被改写",
+      "使用文档指向删除入口"
+    ],
+    "remaining": {
+      "P0": 0,
+      "P1": 0,
+      "P2": 0
+    },
+    "cost_vs_rework": "低",
+    "mutation_evidence": "恒等Copy导致新增迁移/备份测试失败；原补丁Copy导致KB999引用保留测试失败"
+  },
+  "limitations": [
+    "Python product_browser_smoke.py 仅语法检查",
+    "未做真实下载文件落盘验收",
+    "真实模型/订单/通知/退款/后端鉴权/多人并发未接入或验收",
+    "测试只覆盖明确固定场景"
+  ],
+  "sha256": {
+    "app.js": "3421b428b62b0d1489148dee1067485dcc1b49c3b6f609144123631aa24fb549",
+    "engine.js": "020ac1d595aa392a8548dd63351ae11e47698a0d0ed1524a9fad4986dd71b468",
+    "flow-editor.js": "493b6615e5f3ff28c3e7e6a0974fed0a78b2beb9a7f5b1bab54b2acc9d728f3e",
+    "index.html": "cfea5cb12e8b7697bdb4a000f730eb76802b1d5a1fbb1ae76569001993a0847e",
+    "product-copy.js": "f1e0c739738ea827c54ce4157baa380be86b7136999ae3274cfb452f63de2b1d",
+    "product.css": "2a703462092f1fe4ebea10899665faff6302d75e863b22a18c58f79898b249ff",
+    "tests/ui.test.cjs": "a1d6740c26212a9ee24db851dfaf4953b6809e3c43a67895de6375c4a96757ed",
+    "tests/product-experience.test.cjs": "17c4cb522cd6b29940288acd7c05ad526847c552f83442128caa4d25ff211611"
+  }
+}

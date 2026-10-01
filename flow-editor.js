@@ -27,7 +27,7 @@
         html += select('knowledgeId', '检索范围', choices, c.knowledgeId || '');
         html += `<p class="help">至少命中 ${root.CustomerDemo.minKeywordHits} 个关键词，或问题包含标准问题。继续检查状态、时效与冲突；未命中走对应分支。</p>`; break;
       }
-      case 'order': html += select('queryMode', '查询结果模式', [['inherit','沿用通用设置'],['success','正常返回样例'],['timeout','模拟超时']], c.queryMode || 'inherit') + '<p class="help">实时工具停用和归属检查始终有效。查询结果由下游“回复消息”输出。</p>'; break;
+      case 'order': html += '<p class="help">查询订单与配送进度，失败时沿异常分支处理。故障响应可在下方草稿测试中验证，不写入发布配置。</p>'; break;
       case 'intake': html += select('enabled', '自助受理', [['inherit','沿用通用设置'],['true','允许预览申请'],['false','转人工办理']], c.enabled === undefined ? 'inherit' : String(c.enabled)) + '<p class="help">通用设置关闭时，本节点不能开启受理。必须经过回复节点显示预览，再由客户确认提交。</p>'; break;
       case 'reply':
         html += select('mode', '回复方式', [['result','输出上游结果'],['text','自定义文本']], c.mode);
@@ -40,7 +40,7 @@
   }
   function globalForm(state) {
     const d = state.draft;
-    return `<details class="graph-settings"><summary>通用接待设置</summary><form data-form="node">${area('orderWords','订单触发词',d.orderWords,200)}${area('humanWords','人工触发词',d.humanWords,200)}${select('queryMode','默认查询模式',[['success','正常返回样例'],['timeout','模拟超时']],d.queryMode)}${select('intakeEnabled','允许自助售后',[['true','允许'],['false','仅人工受理']],String(d.intakeEnabled))}${input('queue','默认人工服务组',d.queue,30)}${area('prefix','默认回答引导语',d.prefix,150)}</form></details>`.replace(/(for|id)="gn-/g, '$1="gf-');
+    return `<details class="graph-settings"><summary>通用接待设置</summary><form data-form="node">${area('orderWords','订单触发词',d.orderWords,200)}${area('humanWords','人工触发词',d.humanWords,200)}${select('intakeEnabled','允许自助售后',[['true','允许'],['false','仅人工受理']],String(d.intakeEnabled))}${input('queue','默认人工服务组',d.queue,30)}${area('prefix','默认回答引导语',d.prefix,150)}</form></details>`.replace(/(for|id)="gn-/g, '$1="gf-');
   }
   function anchors(graph, edge) {
     const a = graph.nodes.find(n => n.id === edge.source), b = graph.nodes.find(n => n.id === edge.target);
