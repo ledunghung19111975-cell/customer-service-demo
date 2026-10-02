@@ -1,0 +1,192 @@
+{
+  "producer": "Codex",
+  "date": "2026-10-03",
+  "baselineCommit": "2551a52",
+  "applicationBaselineCommit": "3e8a952",
+  "runtimeSha256": {
+    "index.html": "60144010a375ea88f14b2d07720b8d0d1f7e04892d812c69d96f26c5f1c2661f",
+    "build_single.py": "863ed3c41416314c1309721400cd8639f32241b265dcc852b87a5d95585bee76",
+    "src/app.js": "fe270a50f8af8f4bfe4501c609d89e58fb52a20da2c2435f7b226e40854cbcb7",
+    "src/copy.js": "9711a2c51cb4010a18da8648b61da958cc40c595567f3f4d880efcaa9b0de159",
+    "src/domain.js": "6f659a7cb2efea4cc212958e01518f00bba9304be22bed27ae38aeb046655d5d",
+    "src/forms.css": "438666592113704287ed7c43c8080dccd75ba996be7dce80d857bfdce709168f",
+    "src/mobile.css": "b27a268a16fa15e672a2dba0c65727266f4aee55fef5bc7f25df8e10baef3a18",
+    "src/seed.js": "a08594cdf790610ed49d7158ba364f9996258a392f3a90f365139e26b4d7b15b",
+    "src/store.js": "07f727c87cb9f28c2492e7fa3338243e80c9ffae32e46f3c217ac4516b2b3346",
+    "src/styles.css": "2172d1f2d6017769a0f9dab2dad00143ad55e7bb19a68a2485bbac46dba1e5d3",
+    "src/views/customer.js": "d868d23a24785f4a843543cff498ed1ceb0e97dcd9779eab95eb8ec8da0f39fd",
+    "src/views/desk.js": "304d5014c67dc2bc71d2d1b9143fb67675b2b192f51a53df6dca253579caf78a",
+    "src/views/mobile.js": "b0657f113fa5c222b004eca5bdff45c87aed8af250272dc68ec32f1b35220631",
+    "src/views/operations.js": "baf09048cd5aaddec604956dcec8ae80666c027672d5db7f1b41d2110e51e263",
+    "src/views/shared.js": "532dea7e8cfb0a3f6037e475c2303d4e054a6ea5cb3bd18be4fdb5d28f4e9e8e",
+    "src/workbench-app.js": "172e594206844f83f23cc8258d8a9824065671a61b407a05c2468ee2c277977a",
+    "src/workbench.css": "7a8ab81039694dfd17e601c6c8d592830a3fe89a29dc4d2979555ead952619c3",
+    "dist/智能客服.html": "1fff7d5674a48340ae67a3885f50ea1876bc5c7cbff3535755dc6ac18d73f088"
+  },
+  "tests": {
+    "all": 297,
+    "v4": 159,
+    "legacy": 138,
+    "domain": 70,
+    "copy": 20,
+    "workflow": 48,
+    "entryUI": 7,
+    "workbenchUI": 9,
+    "reviewUI": 5,
+    "passed": true
+  },
+  "browser": {
+    "surface": "Codex in-app Browser",
+    "url": "http://127.0.0.1:8769/",
+    "storage": "isolated test origin; original 8768 records not reset",
+    "checks": [
+      {
+        "id": "B01",
+        "result": "pass",
+        "behavior": "手机端为客户展示模式；与桌面客户页共享咨询与未发送草稿，跨 Tab 保留文本。"
+      },
+      {
+        "id": "B02",
+        "result": "pass",
+        "behavior": "手机模拟离线保持可编辑草稿并禁用发送；恢复在线后可继续。"
+      },
+      {
+        "id": "B03",
+        "result": "pass",
+        "behavior": "手机订单抽屉→售后申请→换货要求→预览→返回修改→确认；字段保留，生成 TK00145。"
+      },
+      {
+        "id": "B04",
+        "result": "pass",
+        "behavior": "1440×1000 桌面：客服两菜单保留、SOP 8节点及4子步骤、页面无横向溢出；会话与右侧分别滚动。"
+      },
+      {
+        "id": "B05",
+        "result": "pass",
+        "behavior": "1280×960 手机展示：页面无横向溢出，右侧零子元素且无文本，订单弹层边界在手机内。"
+      },
+      {
+        "id": "B06",
+        "result": "pass",
+        "behavior": "390×844 可用宽度：页面无横向溢出，右侧空白，订单弹层在手机内，实际输入并发送成功；手机框可随外层页面纵向滚动。"
+      },
+      {
+        "id": "B07",
+        "result": "pass",
+        "behavior": "人工开启 AI 续答，真实等待30秒后发送1轮并显示AI协助，剩余1轮，人工首响计时继续。两轮上限另由确定性时钟域测试验证。"
+      },
+      {
+        "id": "B08",
+        "result": "pass",
+        "behavior": "人工开始输入后按钮恢复“开启续答”；草稿保留。写入失败时的本地抑制与刷新保护由可控计时器事件测试验证。"
+      },
+      {
+        "id": "B09",
+        "result": "pass",
+        "behavior": "动态知识建议提供来源v1；已有手写草稿时打开追加/替换/取消选择，实际追加保留原文。"
+      },
+      {
+        "id": "B10",
+        "result": "pass",
+        "behavior": "关闭会话逐项填写未完成原因、原工单与目标，保存回访计划后会话移入历史。"
+      },
+      {
+        "id": "B11",
+        "result": "pass",
+        "behavior": "关闭记录展示保存时的节点状态、原负责人、回访目的及北京时间，不用当前回访覆盖原快照。"
+      },
+      {
+        "id": "B12",
+        "result": "pass",
+        "behavior": "工单待回访筛选显示计划；转派给客服02后客服01无执行入口，客服02可登记回访。"
+      },
+      {
+        "id": "B13",
+        "result": "pass",
+        "behavior": "未接通且缺下次回访时间时显示错误，补未来时间后保存并更新列表。"
+      },
+      {
+        "id": "B14",
+        "result": "pass",
+        "behavior": "关闭咨询后客户继续发送，原工单及原关闭消息仍保留，重新进入人工队列。"
+      },
+      {
+        "id": "B15",
+        "result": "pass",
+        "behavior": "无订单换货诉求关闭时仅生成跟进票TK00178，历史SOP仍待核对订单、待登记受理，四子步骤未被冒充完成。"
+      },
+      {
+        "id": "B16",
+        "result": "pass",
+        "behavior": "自包含HTML经HTTP打开手机页并操作订单弹层，实际DOM重复ID=0，控制台error/warn=0。"
+      }
+    ],
+    "geometry": {
+      "desktop1440": {
+        "width": 1440,
+        "height": 1000,
+        "nodes": 8,
+        "substeps": 4,
+        "horizontalOverflow": false
+      },
+      "phone1280": {
+        "width": 1280,
+        "height": 960,
+        "horizontalOverflow": false,
+        "dialogContained": true,
+        "rightBlank": true
+      },
+      "phone390": {
+        "width": 390,
+        "height": 844,
+        "horizontalOverflow": false,
+        "dialogContained": true,
+        "rightBlank": true
+      }
+    },
+    "consoleWarningsAndErrors": 0
+  },
+  "static": {
+    "inlineScripts": 11,
+    "syntaxPassed": true,
+    "localResources": 15,
+    "actualStaticDuplicateIds": 0,
+    "genericChecker": "False positives: dynamic IDs in JavaScript templates and exclusive customer/mobile views. Independently checked static HTML with HTMLParser and active rendered DOM.",
+    "shellHttpProbe": "Sandbox denied socket access; no HTTP status claim from shell. Browser HTTP loaded the source and bundled runtime."
+  },
+  "review": {
+    "trigger": "Coupled state, role, persistence, timer and UI changes",
+    "roles": [
+      "Correctness and edge cases",
+      "Scope, complexity and evidence"
+    ],
+    "downgraded": false,
+    "deduplicatedFindings": {
+      "P0": 0,
+      "P1": 1,
+      "P2": 7
+    },
+    "unresolved": {
+      "P0": 0,
+      "P1": 0,
+      "P2": 0
+    },
+    "costVsRework": "low",
+    "fixes": [
+      "followupOnly does not imply intake completion; atomic upgrade preserves record",
+      "sent recommendation citation snapshot",
+      "one shared ticket target time",
+      "historical SOP and callback display",
+      "case-specific SOP drafts",
+      "human input suppresses AI even when persistence fails",
+      "deferred chat render after phone dialog closes",
+      "saved close node is completed while business states remain factual"
+    ]
+  },
+  "unverified": [
+    "Real iOS keyboard and device network",
+    "Production model, RAG, backend authentication and external order/refund APIs",
+    "Browser download bytes and file:// storage",
+    "Actual multiprocess/multidevice concurrency"
+  ]
+}

@@ -1,0 +1,964 @@
+TAP version 13
+# Subtest: new defaults use neutral identities and greeting
+ok 1 - new defaults use neutral identities and greeting
+  ---
+  duration_ms: 7.233166
+  type: 'test'
+  ...
+# Subtest: fresh customer greeting has no made-up personal salutation
+ok 2 - fresh customer greeting has no made-up personal salutation
+  ---
+  duration_ms: 0.237583
+  type: 'test'
+  ...
+# Subtest: legacy defaults update without mutating the input
+ok 3 - legacy defaults update without mutating the input
+  ---
+  duration_ms: 1.688709
+  type: 'test'
+  ...
+# Subtest: copy update preserves record identities, ownership, timestamps and statuses
+ok 4 - copy update preserves record identities, ownership, timestamps and statuses
+  ---
+  duration_ms: 1.28325
+  type: 'test'
+  ...
+# Subtest: customer and staff text is never globally replaced
+ok 5 - customer and staff text is never globally replaced
+  ---
+  duration_ms: 0.545125
+  type: 'test'
+  ...
+# Subtest: only first bot welcome is replaced, not quoted or authored copies
+ok 6 - only first bot welcome is replaced, not quoted or authored copies
+  ---
+  duration_ms: 0.474333
+  type: 'test'
+  ...
+# Subtest: custom names, email, knowledge drafts and sources are preserved
+ok 7 - custom names, email, knowledge drafts and sources are preserved
+  ---
+  duration_ms: 0.486208
+  type: 'test'
+  ...
+# Subtest: non-bundled customer records are not relabeled
+ok 8 - non-bundled customer records are not relabeled
+  ---
+  duration_ms: 0.440042
+  type: 'test'
+  ...
+# Subtest: copy upgrade is idempotent and preserves current seeds
+ok 9 - copy upgrade is idempotent and preserves current seeds
+  ---
+  duration_ms: 1.886125
+  type: 'test'
+  ...
+# Subtest: default knowledge source changes invalidate affected cached publish tests
+ok 10 - default knowledge source changes invalidate affected cached publish tests
+  ---
+  duration_ms: 0.633791
+  type: 'test'
+  ...
+# Subtest: store preserves a byte-exact backup before updating saved defaults
+ok 11 - store preserves a byte-exact backup before updating saved defaults
+  ---
+  duration_ms: 1.487542
+  type: 'test'
+  ...
+# Subtest: backup failure blocks migration without replacing existing records
+ok 12 - backup failure blocks migration without replacing existing records
+  ---
+  duration_ms: 0.723625
+  type: 'test'
+  ...
+# Subtest: save failure retains original state and backup
+ok 13 - save failure retains original state and backup
+  ---
+  duration_ms: 0.88125
+  type: 'test'
+  ...
+# Subtest: a conflicting tab change prevents migration overwrite
+ok 14 - a conflicting tab change prevents migration overwrite
+  ---
+  duration_ms: 0.373167
+  type: 'test'
+  ...
+# Subtest: unrelated storage and draft keys are not touched
+ok 15 - unrelated storage and draft keys are not touched
+  ---
+  duration_ms: 0.247959
+  type: 'test'
+  ...
+# Subtest: runtime templates contain no old branding or fake salutations
+ok 16 - runtime templates contain no old branding or fake salutations
+  ---
+  duration_ms: 0.476084
+  type: 'test'
+  ...
+# Subtest: retry after a failed migration backs up the latest original without replacing an earlier backup
+ok 17 - retry after a failed migration backs up the latest original without replacing an earlier backup
+  ---
+  duration_ms: 0.514125
+  type: 'test'
+  ...
+# Subtest: same-name custom identities retain their audit attribution and ambiguous labels are preserved
+ok 18 - same-name custom identities retain their audit attribution and ambiguous labels are preserved
+  ---
+  duration_ms: 0.180167
+  type: 'test'
+  ...
+# Subtest: changing bundled knowledge dependencies invalidates other article checks without editing drafts
+ok 19 - changing bundled knowledge dependencies invalidates other article checks without editing drafts
+  ---
+  duration_ms: 1.006583
+  type: 'test'
+  ...
+# Subtest: custom author names matching object properties survive serialization
+ok 20 - custom author names matching object properties survive serialization
+  ---
+  duration_ms: 0.973875
+  type: 'test'
+  ...
+# Subtest: new request after an agent result remains actionable (closed=false)
+ok 21 - new request after an agent result remains actionable (closed=false)
+  ---
+  duration_ms: 5.814333
+  type: 'test'
+  ...
+# Subtest: new request after an agent result remains actionable (closed=true)
+ok 22 - new request after an agent result remains actionable (closed=true)
+  ---
+  duration_ms: 0.503875
+  type: 'test'
+  ...
+# Subtest: collected order reuses original aftersales issue and ticket: SO20260926001
+ok 23 - collected order reuses original aftersales issue and ticket: SO20260926001
+  ---
+  duration_ms: 1.415334
+  type: 'test'
+  ...
+# Subtest: collected order reuses original aftersales issue and ticket: 申请退货 SO20260926001
+ok 24 - collected order reuses original aftersales issue and ticket: 申请退货 SO20260926001
+  ---
+  duration_ms: 0.936583
+  type: 'test'
+  ...
+# Subtest: seed and empty workspaces are valid
+ok 25 - seed and empty workspaces are valid
+  ---
+  duration_ms: 1.171375
+  type: 'test'
+  ...
+# Subtest: broken or foreign pending case references block loading without replacing saved data
+ok 26 - broken or foreign pending case references block loading without replacing saved data
+  ---
+  duration_ms: 0.435667
+  type: 'test'
+  ...
+# Subtest: ticket command rejects a second active aftersales case for the same customer order
+ok 27 - ticket command rejects a second active aftersales case for the same customer order
+  ---
+  duration_ms: 0.594
+  type: 'test'
+  ...
+# Subtest: order collection stops after agent completeCase
+ok 28 - order collection stops after agent completeCase
+  ---
+  duration_ms: 1.16775
+  type: 'test'
+  ...
+# Subtest: order collection stops after agent createTicket
+ok 29 - order collection stops after agent createTicket
+  ---
+  duration_ms: 1.65525
+  type: 'test'
+  ...
+# Subtest: deterministic regression reports 12 real checks passing
+ok 30 - deterministic regression reports 12 real checks passing
+  ---
+  duration_ms: 0.786667
+  type: 'test'
+  ...
+# Subtest: FAQ completes a case without making a ticket or fabricating customer confirmation
+ok 31 - FAQ completes a case without making a ticket or fabricating customer confirmation
+  ---
+  duration_ms: 0.157916
+  type: 'test'
+  ...
+# Subtest: customer explicitly confirms FAQ separately
+ok 32 - customer explicitly confirms FAQ separately
+  ---
+  duration_ms: 0.135958
+  type: 'test'
+  ...
+# Subtest: declining human handoff is not routed to a human
+ok 33 - declining human handoff is not routed to a human
+  ---
+  duration_ms: 0.085458
+  type: 'test'
+  ...
+# Subtest: explicit handoff has precedence over order lookup
+ok 34 - explicit handoff has precedence over order lookup
+  ---
+  duration_ms: 0.090084
+  type: 'test'
+  ...
+# Subtest: keyword compounds are not mistaken for handoff intent
+ok 35 - keyword compounds are not mistaken for handoff intent
+  ---
+  duration_ms: 0.041333
+  type: 'test'
+  ...
+# Subtest: multiple requests create separate issues but no unconfirmed ticket
+ok 36 - multiple requests create separate issues but no unconfirmed ticket
+  ---
+  duration_ms: 0.097333
+  type: 'test'
+  ...
+# Subtest: requests for different orders require manual matching instead of binding both to the first
+ok 37 - requests for different orders require manual matching instead of binding both to the first
+  ---
+  duration_ms: 0.130167
+  type: 'test'
+  ...
+# Subtest: order lookup can continue after a knowledge interruption
+ok 38 - order lookup can continue after a knowledge interruption
+  ---
+  duration_ms: 0.143334
+  type: 'test'
+  ...
+# Subtest: aftersales order collection continues after knowledge interruption
+ok 39 - aftersales order collection continues after knowledge interruption
+  ---
+  duration_ms: 0.145
+  type: 'test'
+  ...
+# Subtest: other customer orders are denied, not exposed
+ok 40 - other customer orders are denied, not exposed
+  ---
+  duration_ms: 0.245916
+  type: 'test'
+  ...
+# Subtest: read-only test faults return orderFailure without business mutation
+ok 41 - read-only test faults return orderFailure without business mutation
+  ---
+  duration_ms: 0.080208
+  type: 'test'
+  ...
+# Subtest: ambiguous competing knowledge escalates, not random selection
+ok 42 - ambiguous competing knowledge escalates, not random selection
+  ---
+  duration_ms: 0.082917
+  type: 'test'
+  ...
+# Subtest: expired knowledge cannot answer
+ok 43 - expired knowledge cannot answer
+  ---
+  duration_ms: 0.048791
+  type: 'test'
+  ...
+# Subtest: unpublished knowledge cannot answer
+ok 44 - unpublished knowledge cannot answer
+  ---
+  duration_ms: 0.184292
+  type: 'test'
+  ...
+# Subtest: no robot replies once human owns the conversation
+ok 45 - no robot replies once human owns the conversation
+  ---
+  duration_ms: 0.1825
+  type: 'test'
+  ...
+# Subtest: queued messages remain available without robot interference
+ok 46 - queued messages remain available without robot interference
+  ---
+  duration_ms: 0.111625
+  type: 'test'
+  ...
+# Subtest: another agent cannot reply to an owned conversation
+ok 47 - another agent cannot reply to an owned conversation
+  ---
+  duration_ms: 0.217458
+  type: 'test'
+  ...
+# Subtest: duplicate conversation claim is denied
+ok 48 - duplicate conversation claim is denied
+  ---
+  duration_ms: 0.430167
+  type: 'test'
+  ...
+# Subtest: internal note does not count as first human response
+ok 49 - internal note does not count as first human response
+  ---
+  duration_ms: 0.140625
+  type: 'test'
+  ...
+# Subtest: public reply alone cannot complete a case
+ok 50 - public reply alone cannot complete a case
+  ---
+  duration_ms: 0.190875
+  type: 'test'
+  ...
+# Subtest: recorded human outcome requires both conclusion and private evidence
+ok 51 - recorded human outcome requires both conclusion and private evidence
+  ---
+  duration_ms: 0.201708
+  type: 'test'
+  ...
+# Subtest: closing keeps historic ownership instead of losing My History
+ok 52 - closing keeps historic ownership instead of losing My History
+  ---
+  duration_ms: 0.246375
+  type: 'test'
+  ...
+# Subtest: new handoff cycle resets SLA first response and retains historic case
+ok 53 - new handoff cycle resets SLA first response and retains historic case
+  ---
+  duration_ms: 0.158417
+  type: 'test'
+  ...
+# Subtest: role command boundaries: agents cannot publish and operators cannot reply
+ok 54 - role command boundaries: agents cannot publish and operators cannot reply
+  ---
+  duration_ms: 0.138542
+  type: 'test'
+  ...
+# Subtest: role impersonation mismatching staff record is denied
+ok 55 - role impersonation mismatching staff record is denied
+  ---
+  duration_ms: 0.506833
+  type: 'test'
+  ...
+# Subtest: all customer write commands reject foreign records
+ok 56 - all customer write commands reject foreign records
+  ---
+  duration_ms: 0.453584
+  type: 'test'
+  ...
+# Subtest: ticket creation requires explicit final confirmation
+ok 57 - ticket creation requires explicit final confirmation
+  ---
+  duration_ms: 0.145541
+  type: 'test'
+  ...
+# Subtest: customer cannot submit an unverified order
+ok 58 - customer cannot submit an unverified order
+  ---
+  duration_ms: 0.149417
+  type: 'test'
+  ...
+# Subtest: ticket same request key is idempotent
+ok 59 - ticket same request key is idempotent
+  ---
+  duration_ms: 0.123542
+  type: 'test'
+  ...
+# Subtest: same request key cannot be reused for different content
+ok 60 - same request key cannot be reused for different content
+  ---
+  duration_ms: 0.173959
+  type: 'test'
+  ...
+# Subtest: same issue keeps its active ticket even with a different request key
+ok 61 - same issue keeps its active ticket even with a different request key
+  ---
+  duration_ms: 0.411041
+  type: 'test'
+  ...
+# Subtest: repeat aftersales request in a new conversation reuses the original issue
+ok 62 - repeat aftersales request in a new conversation reuses the original issue
+  ---
+  duration_ms: 0.161125
+  type: 'test'
+  ...
+# Subtest: ticket claimant owns modifications; another agent is denied
+ok 63 - ticket claimant owns modifications; another agent is denied
+  ---
+  duration_ms: 0.220667
+  type: 'test'
+  ...
+# Subtest: manager reassignment changes rights, not original receipt time
+ok 64 - manager reassignment changes rights, not original receipt time
+  ---
+  duration_ms: 0.275625
+  type: 'test'
+  ...
+# Subtest: conversation reassignment prevents former owner from replying
+ok 65 - conversation reassignment prevents former owner from replying
+  ---
+  duration_ms: 0.210625
+  type: 'test'
+  ...
+# Subtest: customer supplements a waiting ticket without creating a new one
+ok 66 - customer supplements a waiting ticket without creating a new one
+  ---
+  duration_ms: 0.170375
+  type: 'test'
+  ...
+# Subtest: ticket completion requires evidence and is not automatic customer confirmation
+ok 67 - ticket completion requires evidence and is not automatic customer confirmation
+  ---
+  duration_ms: 0.232583
+  type: 'test'
+  ...
+# Subtest: customer dispute reopens same ticket and preserves receipt time and outcome
+ok 68 - customer dispute reopens same ticket and preserves receipt time and outcome
+  ---
+  duration_ms: 0.207083
+  type: 'test'
+  ...
+# Subtest: customer projection strips private notes, result evidence and unrelated data
+ok 69 - customer projection strips private notes, result evidence and unrelated data
+  ---
+  duration_ms: 0.158667
+  type: 'test'
+  ...
+# Subtest: ticket history public projection strips internal fields
+ok 70 - ticket history public projection strips internal fields
+  ---
+  duration_ms: 0.193333
+  type: 'test'
+  ...
+# Subtest: no bypassing an existing ticket via conversation completion
+ok 71 - no bypassing an existing ticket via conversation completion
+  ---
+  duration_ms: 0.221583
+  type: 'test'
+  ...
+# Subtest: independent staff ticket does not fabricate a conversation
+ok 72 - independent staff ticket does not fabricate a conversation
+  ---
+  duration_ms: 0.050667
+  type: 'test'
+  ...
+# Subtest: capacity and offline availability prevent claims
+ok 73 - capacity and offline availability prevent claims
+  ---
+  duration_ms: 0.301125
+  type: 'test'
+  ...
+# Subtest: team data scope is enforced for commands and projections
+ok 74 - team data scope is enforced for commands and projections
+  ---
+  duration_ms: 0.2095
+  type: 'test'
+  ...
+# Subtest: related tickets owned by a colleague are visible only as linked context
+ok 75 - related tickets owned by a colleague are visible only as linked context
+  ---
+  duration_ms: 0.796417
+  type: 'test'
+  ...
+# Subtest: knowledge publication requires testing and preserves previous answer snapshot
+ok 76 - knowledge publication requires testing and preserves previous answer snapshot
+  ---
+  duration_ms: 1.342625
+  type: 'test'
+  ...
+# Subtest: changing dependency invalidates an earlier publication test
+ok 77 - changing dependency invalidates an earlier publication test
+  ---
+  duration_ms: 0.749333
+  type: 'test'
+  ...
+# Subtest: failed negative test blocks knowledge publication
+ok 78 - failed negative test blocks knowledge publication
+  ---
+  duration_ms: 0.344916
+  type: 'test'
+  ...
+# Subtest: flow publication affects new conversations, not existing snapshots
+ok 79 - flow publication affects new conversations, not existing snapshots
+  ---
+  duration_ms: 0.274084
+  type: 'test'
+  ...
+# Subtest: required explicit-human boundary cannot be disabled
+ok 80 - required explicit-human boundary cannot be disabled
+  ---
+  duration_ms: 0.132542
+  type: 'test'
+  ...
+# Subtest: quality closure needs original query replay and published revised knowledge
+ok 81 - quality closure needs original query replay and published revised knowledge
+  ---
+  duration_ms: 0.970833
+  type: 'test'
+  ...
+# Subtest: quality cannot link unreviewed gap or accept unrelated knowledge
+ok 82 - quality cannot link unreviewed gap or accept unrelated knowledge
+  ---
+  duration_ms: 0.342459
+  type: 'test'
+  ...
+# Subtest: read-only export does not mutate audit or revision
+ok 83 - read-only export does not mutate audit or revision
+  ---
+  duration_ms: 0.114208
+  type: 'test'
+  ...
+# Subtest: saved workspace roundtrip preserves business identities
+ok 84 - saved workspace roundtrip preserves business identities
+  ---
+  duration_ms: 0.263375
+  type: 'test'
+  ...
+# Subtest: storage failure leaves memory and saved data unchanged
+ok 85 - storage failure leaves memory and saved data unchanged
+  ---
+  duration_ms: 0.111375
+  type: 'test'
+  ...
+# Subtest: stale-tab writes fail instead of replacing another tab change
+ok 86 - stale-tab writes fail instead of replacing another tab change
+  ---
+  duration_ms: 0.106917
+  type: 'test'
+  ...
+# Subtest: invalid JSON is preserved and no new seed overwrites it
+ok 87 - invalid JSON is preserved and no new seed overwrites it
+  ---
+  duration_ms: 0.060375
+  type: 'test'
+  ...
+# Subtest: invalid relationships are rejected, not rendered with invented missing data
+ok 88 - invalid relationships are rejected, not rendered with invented missing data
+  ---
+  duration_ms: 0.874792
+  type: 'test'
+  ...
+# Subtest: old version storage is never overwritten or silently migrated
+ok 89 - old version storage is never overwritten or silently migrated
+  ---
+  duration_ms: 0.150333
+  type: 'test'
+  ...
+# Subtest: storage permission failures become a blocked workspace
+ok 90 - storage permission failures become a blocked workspace
+  ---
+  duration_ms: 0.060334
+  type: 'test'
+  ...
+# Subtest: default entry loads its actual assets and standalone customer routing hides internal navigation
+ok 91 - default entry loads its actual assets and standalone customer routing hides internal navigation
+  ---
+  duration_ms: 40.476125
+  type: 'test'
+  ...
+# Subtest: confirmed answers and tickets retain a working dispute entry
+ok 92 - confirmed answers and tickets retain a working dispute entry
+  ---
+  duration_ms: 19.584375
+  type: 'test'
+  ...
+# Subtest: unsubmitted reply and note drafts stay with their author across reassignment and reload
+ok 93 - unsubmitted reply and note drafts stay with their author across reassignment and reload
+  ---
+  duration_ms: 23.85225
+  type: 'test'
+  ...
+# Subtest: customer and staff service-application drafts do not share a case key
+ok 94 - customer and staff service-application drafts do not share a case key
+  ---
+  duration_ms: 16.770708
+  type: 'test'
+  ...
+# Subtest: service settings restore after page changes and refresh without writing business configuration
+ok 95 - service settings restore after page changes and refresh without writing business configuration
+  ---
+  duration_ms: 5.685334
+  type: 'test'
+  ...
+# Subtest: cancelled disable, assignment, remediation link and acceptance forms restore their fields
+ok 96 - cancelled disable, assignment, remediation link and acceptance forms restore their fields
+  ---
+  duration_ms: 16.955
+  type: 'test'
+  ...
+# Subtest: unsaved flow blocks single tests at the button and submit handler; edits remove old results
+ok 97 - unsaved flow blocks single tests at the button and submit handler; edits remove old results
+  ---
+  duration_ms: 11.012833
+  type: 'test'
+  ...
+# Subtest: AI received during a phone modal becomes visible on close and respects scroll position (readingHistory=true)
+ok 98 - AI received during a phone modal becomes visible on close and respects scroll position (readingHistory=true)
+  ---
+  duration_ms: 33.344417
+  type: 'test'
+  ...
+# Subtest: AI received during a phone modal becomes visible on close and respects scroll position (readingHistory=false)
+ok 99 - AI received during a phone modal becomes visible on close and respects scroll position (readingHistory=false)
+  ---
+  duration_ms: 10.754459
+  type: 'test'
+  ...
+# Subtest: close history renders the saved node and callback snapshot after current plans and ownership change
+ok 100 - close history renders the saved node and callback snapshot after current plans and ownership change
+  ---
+  duration_ms: 10.440708
+  type: 'test'
+  ...
+# Subtest: SOP reasons for the same node stay isolated by customer issue through cancel, reload and submit
+ok 101 - SOP reasons for the same node stay isolated by customer issue through cancel, reload and submit
+  ---
+  duration_ms: 40.509166
+  type: 'test'
+  ...
+# Subtest: a failed pause save suppresses the next AI timer and stays suppressed after reload without claiming a persisted pause
+ok 102 - a failed pause save suppresses the next AI timer and stays suppressed after reload without claiming a persisted pause
+  ---
+  duration_ms: 11.614167
+  type: 'test'
+  ...
+# Subtest: mobile and desktop share the current customer conversation and unsent draft through reload
+ok 103 - mobile and desktop share the current customer conversation and unsent draft through reload
+  ---
+  duration_ms: 46.944084
+  type: 'test'
+  ...
+# Subtest: mobile routes an operations-origin session to the real customer identity and public records only
+ok 104 - mobile routes an operations-origin session to the real customer identity and public records only
+  ---
+  duration_ms: 10.256917
+  type: 'test'
+  ...
+# Subtest: mobile moves the existing dialog inside the phone with show and restores the desktop modal
+ok 105 - mobile moves the existing dialog inside the phone with show and restores the desktop modal
+  ---
+  duration_ms: 10.1185
+  type: 'test'
+  ...
+# Subtest: offline mobile keeps editable input and rejects forced submit until connection resumes
+ok 106 - offline mobile keeps editable input and rejects forced submit until connection resumes
+  ---
+  duration_ms: 8.897334
+  type: 'test'
+  ...
+# Subtest: structured application preview and cancel make no business write and keep all editable fields
+ok 107 - structured application preview and cancel make no business write and keep all editable fields
+  ---
+  duration_ms: 10.915667
+  type: 'test'
+  ...
+# Subtest: dynamic suggestion cancel, append and replace preserve the intended public draft without sending
+ok 108 - dynamic suggestion cancel, append and replace preserve the intended public draft without sending
+  ---
+  duration_ms: 17.78675
+  type: 'test'
+  ...
+# Subtest: an external order update blocks old confirmation and refresh restores the draft for a fresh preview
+ok 109 - an external order update blocks old confirmation and refresh restores the draft for a fresh preview
+  ---
+  duration_ms: 10.828083
+  type: 'test'
+  ...
+# Subtest: close panel submits rendered disposition fields and callbacks atomically after validation
+ok 110 - close panel submits rendered disposition fields and callbacks atomically after validation
+  ---
+  duration_ms: 11.613625
+  type: 'test'
+  ...
+# Subtest: a concurrent customer message prevents closing an old panel without discarding its draft
+ok 111 - a concurrent customer message prevents closing an old panel without discarding its draft
+  ---
+  duration_ms: 10.353125
+  type: 'test'
+  ...
+# Subtest: A02/A03 full SOP and four aftersales steps stay visible without fabricating irrelevant progress
+ok 112 - A02/A03 full SOP and four aftersales steps stay visible without fabricating irrelevant progress
+  ---
+  duration_ms: 6.410584
+  type: 'test'
+  ...
+# Subtest: A02 an existing human support issue does not swallow a later return request or auto-send a reply
+ok 113 - A02 an existing human support issue does not swallow a later return request or auto-send a reply
+  ---
+  duration_ms: 0.502375
+  type: 'test'
+  ...
+# Subtest: A02 multiple order numbers stay unbound until a human matches each issue
+ok 114 - A02 multiple order numbers stay unbound until a human matches each issue
+  ---
+  duration_ms: 0.272708
+  type: 'test'
+  ...
+# Subtest: A04/A05 structured preview is read-only and confirmation validates owner/order/required exchange demand atomically
+ok 115 - A04/A05 structured preview is read-only and confirmation validates owner/order/required exchange demand atomically
+  ---
+  duration_ms: 1.305042
+  type: 'test'
+  ...
+# Subtest: A05 repeated structured application reuses receipt and a blank placeholder merges into original issue
+ok 116 - A05 repeated structured application reuses receipt and a blank placeholder merges into original issue
+  ---
+  duration_ms: 1.775583
+  type: 'test'
+  ...
+# Subtest: A05 committed aftersales cannot be rebound and unrelated orders create independent issues
+ok 117 - A05 committed aftersales cannot be rebound and unrelated orders create independent issues
+  ---
+  duration_ms: 0.992417
+  type: 'test'
+  ...
+# Subtest: A02 order querying records evidence without sending or completing business
+ok 118 - A02 order querying records evidence without sending or completing business
+  ---
+  duration_ms: 0.444333
+  type: 'test'
+  ...
+# Subtest: A06/A07 AI is explicit, delayed, limited to two distinct turns and never claims first human response
+ok 119 - A06/A07 AI is explicit, delayed, limited to two distinct turns and never claims first human response
+  ---
+  duration_ms: 0.834541
+  type: 'test'
+  ...
+# Subtest: A07/A08 delayed AI rejects stale authorization after reply
+ok 120 - A07/A08 delayed AI rejects stale authorization after reply
+  ---
+  duration_ms: 1.080625
+  type: 'test'
+  ...
+# Subtest: A07/A08 delayed AI rejects stale authorization after reassign
+ok 121 - A07/A08 delayed AI rejects stale authorization after reassign
+  ---
+  duration_ms: 0.907
+  type: 'test'
+  ...
+# Subtest: A07/A08 delayed AI rejects stale authorization after offline
+ok 122 - A07/A08 delayed AI rejects stale authorization after offline
+  ---
+  duration_ms: 0.685083
+  type: 'test'
+  ...
+# Subtest: A07/A08 delayed AI rejects stale authorization after new-message
+ok 123 - A07/A08 delayed AI rejects stale authorization after new-message
+  ---
+  duration_ms: 0.679792
+  type: 'test'
+  ...
+# Subtest: A07/A08 delayed AI rejects stale authorization after knowledge
+ok 124 - A07/A08 delayed AI rejects stale authorization after knowledge
+  ---
+  duration_ms: 0.550333
+  type: 'test'
+  ...
+# Subtest: A07/A08 delayed AI rejects stale authorization after order
+ok 125 - A07/A08 delayed AI rejects stale authorization after order
+  ---
+  duration_ms: 0.584875
+  type: 'test'
+  ...
+# Subtest: A07 opt-out survives attempts to grant again and source-less questions stay with humans
+ok 126 - A07 opt-out survives attempts to grant again and source-less questions stay with humans
+  ---
+  duration_ms: 0.696458
+  type: 'test'
+  ...
+# Subtest: A08 recommendations must be rechecked after message
+ok 127 - A08 recommendations must be rechecked after message
+  ---
+  duration_ms: 0.439542
+  type: 'test'
+  ...
+# Subtest: A08 recommendations must be rechecked after expired
+ok 128 - A08 recommendations must be rechecked after expired
+  ---
+  duration_ms: 0.374667
+  type: 'test'
+  ...
+# Subtest: A08 recommendations must be rechecked after disabled
+ok 129 - A08 recommendations must be rechecked after disabled
+  ---
+  duration_ms: 1.0685
+  type: 'test'
+  ...
+# Subtest: A08 recommendations must be rechecked after version
+ok 130 - A08 recommendations must be rechecked after version
+  ---
+  duration_ms: 0.660708
+  type: 'test'
+  ...
+# Subtest: A08 recommendations must be rechecked after order
+ok 131 - A08 recommendations must be rechecked after order
+  ---
+  duration_ms: 0.936875
+  type: 'test'
+  ...
+# Subtest: A08 recommendations must be rechecked after owner
+ok 132 - A08 recommendations must be rechecked after owner
+  ---
+  duration_ms: 0.757
+  type: 'test'
+  ...
+# Subtest: A09 connection is customer scoped, blocks sends and survives roundtrip without implying a closed case
+ok 133 - A09 connection is customer scoped, blocks sends and survives roundtrip without implying a closed case
+  ---
+  duration_ms: 1.12075
+  type: 'test'
+  ...
+# Subtest: A10/A11 close excludes its own control node, requires every unfinished item and creates one followup per issue atomically
+ok 134 - A10/A11 close excludes its own control node, requires every unfinished item and creates one followup per issue atomically
+  ---
+  duration_ms: 2.313166
+  type: 'test'
+  ...
+# Subtest: A10 stale close previews and unauthorized close reject without any business mutation
+ok 135 - A10 stale close previews and unauthorized close reject without any business mutation
+  ---
+  duration_ms: 1.096042
+  type: 'test'
+  ...
+# Subtest: A11 submitted aftersales cannot be discarded by NA or withdrawal
+ok 136 - A11 submitted aftersales cannot be discarded by NA or withdrawal
+  ---
+  duration_ms: 1.692834
+  type: 'test'
+  ...
+# Subtest: A12/A13 callback close is atomic, ownership inherited and cannot complete the underlying issue
+ok 137 - A12/A13 callback close is atomic, ownership inherited and cannot complete the underlying issue
+  ---
+  duration_ms: 2.94025
+  type: 'test'
+  ...
+# Subtest: A13 a colleague ticket may be referenced but its callback/due date cannot be changed
+ok 138 - A13 a colleague ticket may be referenced but its callback/due date cannot be changed
+  ---
+  duration_ms: 1.637708
+  type: 'test'
+  ...
+# Subtest: A14 reopening preserves closure snapshots and close completion is conversation scoped
+ok 139 - A14 reopening preserves closure snapshots and close completion is conversation scoped
+  ---
+  duration_ms: 0.70725
+  type: 'test'
+  ...
+# Subtest: A17 customer projection omits internal workflow, closure, callback and AI authorization details
+ok 140 - A17 customer projection omits internal workflow, closure, callback and AI authorization details
+  ---
+  duration_ms: 1.199875
+  type: 'test'
+  ...
+# Subtest: A10/A17 storage failure or a stale tab leaves close arrangements and history untouched
+ok 141 - A10/A17 storage failure or a stale tab leaves close arrangements and history untouched
+  ---
+  duration_ms: 0.693125
+  type: 'test'
+  ...
+# Subtest: A17 old optional-field-free records remain valid while malformed new fields are blocked
+ok 142 - A17 old optional-field-free records remain valid while malformed new fields are blocked
+  ---
+  duration_ms: 0.520083
+  type: 'test'
+  ...
+# Subtest: A03 bot intake and human intake share only explicit service type and quoted reason prefill
+ok 143 - A03 bot intake and human intake share only explicit service type and quoted reason prefill
+  ---
+  duration_ms: 0.338584
+  type: 'test'
+  ...
+# Subtest: exchange prefill quotes explicit replacement requests but leaves unknown or declined demands blank
+ok 144 - exchange prefill quotes explicit replacement requests but leaves unknown or declined demands blank
+  ---
+  duration_ms: 0.921208
+  type: 'test'
+  ...
+# Subtest: A02 a human-stage combined logistics and aftersales request keeps two independently actionable issues
+ok 145 - A02 a human-stage combined logistics and aftersales request keeps two independently actionable issues
+  ---
+  duration_ms: 0.182584
+  type: 'test'
+  ...
+# Subtest: A09 offline cannot create customer-visible side effects through alternative customer commands
+ok 146 - A09 offline cannot create customer-visible side effects through alternative customer commands
+  ---
+  duration_ms: 0.320833
+  type: 'test'
+  ...
+# Subtest: changing an uncommitted order invalidates old logistics evidence and keeps both source orders private
+ok 147 - changing an uncommitted order invalidates old logistics evidence and keeps both source orders private
+  ---
+  duration_ms: 0.241417
+  type: 'test'
+  ...
+# Subtest: withdrawing an unsubmitted issue retains its history without capturing the next request
+ok 148 - withdrawing an unsubmitted issue retains its history without capturing the next request
+  ---
+  duration_ms: 0.994625
+  type: 'test'
+  ...
+# Subtest: pending callback on a completed ticket can transfer without reopening business
+ok 149 - pending callback on a completed ticket can transfer without reopening business
+  ---
+  duration_ms: 1.451292
+  type: 'test'
+  ...
+# Subtest: A06 preview facts must still match at confirmation and exact successful retries remain idempotent
+ok 150 - A06 preview facts must still match at confirmation and exact successful retries remain idempotent
+  ---
+  duration_ms: 1.460417
+  type: 'test'
+  ...
+# Subtest: a repeated merged-placeholder confirmation returns the original receipt even after placeholder removal
+ok 151 - a repeated merged-placeholder confirmation returns the original receipt even after placeholder removal
+  ---
+  duration_ms: 0.57275
+  type: 'test'
+  ...
+# Subtest: an unaccepted aftersales followup stays unfinished and upgrades the original ticket after reopening and order confirmation
+ok 152 - an unaccepted aftersales followup stays unfinished and upgrades the original ticket after reopening and order confirmation
+  ---
+  duration_ms: 1.410708
+  type: 'test'
+  ...
+# Subtest: bot resumption collects a missing followup order and still offers application intake
+ok 153 - bot resumption collects a missing followup order and still offers application intake
+  ---
+  duration_ms: 0.558167
+  type: 'test'
+  ...
+# Subtest: a case with followup history cannot be silently merged into another accepted order
+ok 154 - a case with followup history cannot be silently merged into another accepted order
+  ---
+  duration_ms: 1.344209
+  type: 'test'
+  ...
+# Subtest: followup acceptance requires complete structured fields and validates marker shape without changing legacy acceptance
+ok 155 - followup acceptance requires complete structured fields and validates marker shape without changing legacy acceptance
+  ---
+  duration_ms: 0.655917
+  type: 'test'
+  ...
+# Subtest: followup upgrades respect staff ownership while a customer confirmation preserves the assigned owner and callback
+ok 156 - followup upgrades respect staff ownership while a customer confirmation preserves the assigned owner and callback
+  ---
+  duration_ms: 0.725416
+  type: 'test'
+  ...
+# Subtest: a verified suggestion reply keeps the exact citation after knowledge changes
+ok 157 - a verified suggestion reply keeps the exact citation after knowledge changes
+  ---
+  duration_ms: 0.275
+  type: 'test'
+  ...
+# Subtest: closing one issue rejects contradictory target times for its shared followup ticket atomically
+ok 158 - closing one issue rejects contradictory target times for its shared followup ticket atomically
+  ---
+  duration_ms: 1.065917
+  type: 'test'
+  ...
+# Subtest: an order reply rejects changed or unrelated facts while ordinary manual replies remain available
+ok 159 - an order reply rejects changed or unrelated facts while ordinary manual replies remain available
+  ---
+  duration_ms: 0.664291
+  type: 'test'
+  ...
+1..159
+# tests 159
+# suites 0
+# pass 159
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 195.067

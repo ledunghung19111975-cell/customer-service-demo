@@ -19,24 +19,26 @@
   function clearFlowTest(){ui.flowTest=null;$('.query-result')?.remove();}
   function fail(err){const message=err?.message||'操作没有完成，请重试';if($('#dialog').open){$('#dialog-error').textContent=message;$('#dialog-error').hidden=false;}else toast(message,true);}
   function apply(type,data,success){const value=store.dispatch(identity(),type,data);if(success)toast(success);return value;}
-  function navigate(workspace,page){ui.workspace=workspace;if(workspace==='desk')ui.deskPage=page||ui.deskPage;if(workspace==='ops')ui.opsPage=page||ui.opsPage;history.pushState(null,'','#'+workspace+(workspace==='desk'?'/'+ui.deskPage:workspace==='ops'?'/'+ui.opsPage:''));cache();}
+  function navigate(workspace,page){ui.customerMode=workspace==='mobile'?'mobile':'desktop';ui.workspace=workspace==='mobile'?'customer':workspace;if(workspace==='desk')ui.deskPage=page||ui.deskPage;if(workspace==='ops')ui.opsPage=page||ui.opsPage;history.pushState(null,'','#'+workspace+(workspace==='desk'?'/'+ui.deskPage:workspace==='ops'?'/'+ui.opsPage:''));cache();}
   function route(){
-    if(customerOnly){ui.workspace='customer';return;}
+    if(customerOnly){ui.workspace='customer';ui.customerMode='desktop';return;}
     const hash=location.hash.slice(1);if(!hash)return;
     const legacy={playground:'customer',sessions:'desk/inbox',tickets:'desk/tickets',knowledge:'ops/knowledge',workflow:'ops/flow',quality:'ops/quality',architecture:'ops/data',integrations:'ops/integrations',overview:'ops/overview',robot:'ops/flow'};
     const [workspace,page]=(legacy[hash]||hash).split('/');
+    if(workspace==='mobile'){ui.workspace='customer';ui.customerMode='mobile';return;}
+    if(workspace==='customer')ui.customerMode='desktop';
     if(['customer','desk','ops'].includes(workspace)){ui.workspace=workspace;if(workspace==='desk')ui.deskPage=['inbox','tickets'].includes(page)?page:'inbox';if(workspace==='ops')ui.opsPage=page||'overview';}
     if(ui.workspace==='ops'&&!opsMenus[ui.opsRole].some(x=>x[0]===ui.opsPage)){ui.opsPage=opsMenus[ui.opsRole][0][0];history.replaceState(null,'','#ops/'+ui.opsPage);}
   }
   function top(s){const role=ui.workspace==='desk'?`<label class="role-picker"><span>当前客服</span><select aria-label="当前客服" data-select="agent">${options(s.staff.filter(a=>a.role==='agent').map(a=>[a.id,a.name]),ui.agentId)}</select></label>`:ui.workspace==='ops'?`<label class="role-picker"><span>工作角色</span><select aria-label="工作角色" data-select="ops-role">${options([['manager','服务经理'],['operator','知识运营'],['admin','系统管理员']],ui.opsRole)}</select></label>`:`<span class="customer-identity">${icon('users',16)} 我的账户</span><a class="icon-button" href="?view=customer#customer" target="_blank" rel="noopener" title="打开独立客户页" aria-label="打开独立客户页">${icon('external',16)}</a>`;
-    return `<header class="app-top"><a class="product-brand" href="#customer"><span class="brand-logo">${icon('chat',20)}</span><span>智能客服</span></a>${customerOnly?'<div class="standalone-heading">服务中心</div>':`<nav class="workspace-tabs" aria-label="工作区">${[['customer','客户服务','chat'],['desk','客服工作台','inbox'],['ops','运营后台','chart']].map(([key,label,glyph])=>`<button type="button" data-action="workspace" data-id="${key}" class="${ui.workspace===key?'active':''}" ${ui.workspace===key?'aria-current="page"':''}>${icon(glyph)}${label}</button>`).join('')}</nav>`}<div class="top-right">${customerOnly?'<span class="customer-identity">我的账户</span>':role}</div></header>`;
+    return `<header class="app-top"><a class="product-brand" href="#customer"><span class="brand-logo">${icon('chat',20)}</span><span>智能客服</span></a>${customerOnly?'<div class="standalone-heading">服务中心</div>':`<nav class="workspace-tabs" aria-label="工作区">${[['customer','客户服务','chat'],['mobile','手机端演示','chat'],['desk','客服工作台','inbox'],['ops','运营后台','chart']].map(([key,label,glyph])=>`<button type="button" data-action="workspace" data-id="${key}" class="${(ui.workspace==='customer'&&ui.customerMode==='mobile'?'mobile':ui.workspace)===key?'active':''}" ${(ui.workspace==='customer'&&ui.customerMode==='mobile'?'mobile':ui.workspace)===key?'aria-current="page"':''}>${icon(glyph)}${label}</button>`).join('')}</nav>`}<div class="top-right">${customerOnly?'<span class="customer-identity">我的账户</span>':role}</div></header>`;
   }
   function side(s){const menu=ui.workspace==='desk'?[['inbox','会话接待','inbox'],['tickets','工单处理','ticket']]:opsMenus[ui.opsRole];const active=ui.workspace==='desk'?ui.deskPage:ui.opsPage;const actor=identity();return `<aside class="workspace-sidebar"><div class="workspace-label">${ui.workspace==='desk'?'客户支持':'运营与管理'}</div>${menu.map(([key,label,glyph])=>`<button class="side-link ${active===key?'active':''}" type="button" data-action="${ui.workspace==='desk'?'desk-page':'ops-page'}" data-id="${key}">${icon(glyph)}<span>${label}</span></button>`).join('')}<div class="sidebar-bottom"><span class="workspace-dot"></span><strong>客户服务团队</strong><small>${ui.workspace==='desk'?'服务组 · 本人任务与公共池':{manager:'团队服务与质量',operator:'知识、策略与改进',admin:'系统接入与维护'}[ui.opsRole]}</small></div></aside>`;}
   function render(){
     if(store.blocked){$('#app').innerHTML=`<main class="fatal"><h1>工作空间暂时无法读取</h1><p>${e(store.blocked)}</p><p>不会用空白数据覆盖原记录。请先导出原始保存值，再排查数据格式。</p>${b('导出原始保存值','export-broken','','primary')}</main>`;return;}
     route();syncDrafts();const s=store.state;let content='';
     const focused=document.activeElement,focusKey=focused?.dataset.focus,selection=focused?.selectionStart;
-    if(ui.workspace==='customer')content=V.customer(D.customerView(s,'C001'),ui);
+    if(ui.workspace==='customer')content=(ui.customerMode==='mobile'?V.mobile:V.customer)(D.customerView(s,'C001'),ui);
     else if(ui.workspace==='desk'){const data=D.deskView(s,identity());content=ui.deskPage==='tickets'?V.tickets(s,data.tickets,ui):V.inbox(s,data,ui,D.actor(s,identity()));}
     else {
       switch(ui.opsPage){
@@ -52,19 +54,23 @@
         case'data':content=V.data();break;
       }
     }
-    $('#app').innerHTML=top(s)+(ui.workspace==='customer'?`<main class="customer-main">${content}</main>`:`<div class="workspace-body">${side(s)}<main class="workspace-content ${ui.workspace==='desk'&&ui.deskPage==='inbox'?'inbox-page':''}">${content}</main></div>`);
+    const scrolls=[...document.querySelectorAll('.messages,.sop-workbench-scroll,.conversation-rows')].map(x=>[x.className,x.scrollTop,x.scrollHeight-x.clientHeight-x.scrollTop<40]);
+    const dialog=$('#dialog');if(dialog.parentElement!==document.body)document.body.append(dialog);
+    $('#app').innerHTML=top(s)+(ui.workspace==='customer'?`<main class="customer-main ${ui.customerMode==='mobile'?'mobile-main':''}">${content}</main>`:`<div class="workspace-body">${side(s)}<main class="workspace-content ${ui.workspace==='desk'&&ui.deskPage==='inbox'?'inbox-page':''}">${content}</main></div>`);
+    if(dialog.open&&ui.workspace==='customer'&&ui.customerMode==='mobile')$('.phone-overlay-host')?.append(dialog);
+    document.querySelectorAll('.messages,.sop-workbench-scroll,.conversation-rows').forEach(x=>{const old=scrolls.find(y=>y[0]===x.className);if(old)x.scrollTop=old[2]?x.scrollHeight:old[1];});
     if(focusKey&&!$('#dialog').open){const target=document.querySelector(`[data-focus="${CSS.escape(focusKey)}"]`);target?.focus();try{target?.setSelectionRange(selection,selection);}catch{}}
-    cache();
+    workbench.afterRender();cache();
   }
   function scrollMessages(){requestAnimationFrame(()=>document.querySelectorAll('.messages').forEach(x=>x.scrollTop=x.scrollHeight));}
-  function modal(title,body){focusBeforeDialog=document.activeElement;$('#dialog-title').textContent=title;$('#dialog-body').innerHTML=body;$('#dialog-body').querySelectorAll('form[data-form]').forEach(form=>{const draft=ui.drafts[form.dataset.form+':'+(form.dataset.id||'new')];if(draft)Object.entries(draft).forEach(([name,value])=>{const input=form.elements.namedItem(name);if(input)input.value=value;});});$('#dialog-error').hidden=true;$('#dialog-error').textContent='';if(!$('#dialog').open)$('#dialog').showModal();$('#dialog-body').querySelector('input:not([type=hidden]),textarea,select,button')?.focus();}
-  function closeModal(){if($('#dialog').open)$('#dialog').close();if(focusBeforeDialog?.isConnected)focusBeforeDialog.focus();}
+  function modal(title,body){focusBeforeDialog=document.activeElement;$('#dialog-title').textContent=title;$('#dialog-body').innerHTML=body;$('#dialog-body').querySelectorAll('form[data-form]').forEach(form=>{const draft=ui.drafts[form.dataset.form+':'+(form.dataset.id||'new')];if(draft)Object.entries(draft).forEach(([name,value])=>{const input=form.elements.namedItem(name);if(input){if(input.type==='checkbox')input.checked=Boolean(value);else input.value=value;}});});$('#dialog-error').hidden=true;$('#dialog-error').textContent='';const dialog=$('#dialog'),host=ui.workspace==='customer'&&ui.customerMode==='mobile'?$('.phone-overlay-host'):null;if(host){host.append(dialog);[...host.parentElement.children].filter(x=>x!==host).forEach(x=>x.inert=true);if(!dialog.open)dialog.show();}else{if(dialog.parentElement!==document.body)document.body.append(dialog);if(!dialog.open)dialog.showModal();}$('#dialog-body').querySelector('input:not([type=hidden]),textarea,select,button')?.focus();}
+  function closeModal(){document.querySelectorAll('.phone-screen>[inert]').forEach(x=>x.inert=false);if($('#dialog').open)$('#dialog').close();if(workbench.onClose())render();if(focusBeforeDialog?.isConnected)focusBeforeDialog.focus();}
   function customerConversation(){const list=D.customerView(store.state,'C001').conversations;let c=list.find(c=>c.id===ui.customerConversation)||list[0];if(!c){ui.customerConversation=apply('newConversation',{});c=D.get(store.state,'conversations',ui.customerConversation);}return c;}
-  function quick(body){const c=customerConversation();apply('say',{id:c.id,body});ui.customerConversation=c.id;render();scrollMessages();}
+  function quick(body){closeModal();const c=customerConversation();apply('say',{id:c.id,body});ui.customerConversation=c.id;render();scrollMessages();}
   function formDraft(key,defaults){return {...defaults,...ui.drafts[key]};}
   function ticketForUI(id){const s=store.state;if(ui.workspace==='customer'){const t=D.customerView(s,'C001').tickets.find(t=>t.id===id);if(!t)throw Error('无权查看此工单');return t;}if(ui.workspace==='desk'){const t=[...D.deskView(s,identity()).tickets,...D.deskView(s,identity()).relatedTickets].find(t=>t.id===id);if(!t)throw Error('此工单不在本人任务或公共池中');return t;}if(ui.opsRole==='manager'){const t=D.get(s,'tickets',id);if(!D.actor(s,identity()).teams.includes(t.teamId))throw Error('无权查看此工单');return t;}throw Error('当前角色无权查看工单详情');}
   function ticketDetail(id){const s=store.state,t=ticketForUI(id),customer=ui.workspace==='customer',canEdit=ui.workspace==='desk'&&t.ownerId===ui.agentId&&t.status!=='done';const c=customer?D.customerView(s,'C001').cases.find(c=>c.id===t.caseId):D.get(s,'cases',t.caseId);const draft=formDraft('ticket-update:'+id,{status:t.status,publicText:'',evidence:'',internalText:''});
-    modal('工单详情',`<div class="row between"><h2>${e(t.title)}</h2>${pill(t.status)}</div><p class="muted">${e(t.id)} · ${date(t.createdAt,true)} · ${e(t.orderId||'未关联订单')}</p><div class="result-note">${e(t.description)}</div><div class="timeline">${t.history.map(h=>`<div class="timeline-entry"><small>${date(h.at,true)} · ${e(h.actor||'客服')}</small><p>${e(h.publicText)}</p>${!customer&&h.internalText?`<div class="internal-evidence">内部备注：${e(h.internalText)}</div>`:''}${!customer&&h.evidence?`<div class="internal-evidence">核对依据：${e(h.evidence)}</div>`:''}</div>`).join('')}</div>${customer?t.status!=='done'?`<form data-form="supplement" data-id="${e(id)}">${field('补充信息','body',ui.drafts['supplement:'+id]?.body||'','textarea','required maxlength="2000"')}<button class="btn primary" type="submit">提交补充</button></form>`:`<div class="row">${c.feedback==='confirmed'?pill('客户已确认','good')+b('仍需帮助','dispute-case',c.id):`${b('确认已解决','confirm-case',c.id,'primary')}${b('仍需帮助','dispute-case',c.id)}`}</div>`:canEdit?`<form data-form="ticket-update" data-id="${e(id)}"><label class="field"><span>处理动作</span><select name="status">${options([['working','继续处理'],['waiting_customer','请客户补充'],['done','记录办理结果']],draft.status)}</select></label>${field('客户可见说明','publicText',draft.publicText,'textarea','required maxlength="2000"')}${field('核对依据（记录结果时必填，仅内部可见）','evidence',draft.evidence,'textarea','maxlength="2000"')}${field('内部协同备注','internalText',draft.internalText,'textarea','maxlength="2000"')}<p class="muted small-text">此操作记录处理结果，不会调用退款、支付或发货接口。</p><button class="btn primary" type="submit">提交处理记录</button></form>`:ui.workspace==='desk'&&!t.ownerId?b('领取工单','claim-ticket',id,'primary'):pill('只读记录')}`);
+    modal('工单详情',`<div class="row between"><h2>${e(t.title)}</h2>${pill(t.status)}</div><p class="muted">${e(t.id)} · ${date(t.createdAt,true)} · ${e(t.orderId||'未关联订单')}</p><div class="result-note">${e(t.description)}</div>${t.serviceType?`<dl><dt>申请类型</dt><dd>${t.serviceType==='exchange'?'换货':'退货'}</dd>${t.exchangeRequest?`<dt>换货要求</dt><dd>${e(t.exchangeRequest)}</dd>`:''}${t.extraNote?`<dt>补充说明</dt><dd>${e(t.extraNote)}</dd>`:''}</dl>`:''}<div class="timeline">${t.history.map(h=>`<div class="timeline-entry"><small>${date(h.at,true)} · ${e(h.actor||'客服')}</small><p>${e(h.publicText)}</p>${!customer&&h.internalText?`<div class="internal-evidence">内部备注：${e(h.internalText)}</div>`:''}${!customer&&h.evidence?`<div class="internal-evidence">核对依据：${e(h.evidence)}</div>`:''}</div>`).join('')}</div>${customer?t.status!=='done'?`<form data-form="supplement" data-id="${e(id)}">${field('补充信息','body',ui.drafts['supplement:'+id]?.body||'','textarea','required maxlength="2000"')}<button class="btn primary" type="submit">提交补充</button></form>`:`<div class="row">${c.feedback==='confirmed'?pill('客户已确认','good')+b('仍需帮助','dispute-case',c.id):`${b('确认已解决','confirm-case',c.id,'primary')}${b('仍需帮助','dispute-case',c.id)}`}</div>`:canEdit?`<form data-form="ticket-update" data-id="${e(id)}"><label class="field"><span>处理动作</span><select name="status">${options([['working','继续处理'],['waiting_customer','请客户补充'],['done','记录办理结果']],draft.status)}</select></label>${field('客户可见说明','publicText',draft.publicText,'textarea','required maxlength="2000"')}${field('核对依据（记录结果时必填，仅内部可见）','evidence',draft.evidence,'textarea','maxlength="2000"')}${field('内部协同备注','internalText',draft.internalText,'textarea','maxlength="2000"')}<p class="muted small-text">此操作记录处理结果，不会调用退款、支付或发货接口。</p><button class="btn primary" type="submit">提交处理记录</button></form>`:ui.workspace==='desk'&&!t.ownerId?b('领取工单','claim-ticket',id,'primary'):pill('只读记录')}`);
   }
   function intake(caseId,conversationId='',standalone=false){
     const s=store.state,c=caseId?D.get(s,'cases',caseId):null;
@@ -76,15 +82,16 @@
   }
   function confirmation(title,body,action,id){modal(title,`<p>${e(body)}</p><div class="form-footer">${b('取消','close-modal')}${b('确认','confirm-action',id,'primary',`data-command="${e(action)}"`)}</div>`);}
   function download(name,value){const blob=new Blob([typeof value==='string'?value:JSON.stringify(value,null,2)],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+  const workbench=window.SupportWorkbench.create({D,V,ui,store,identity,apply,modal,closeModal,render,cache,toast,intake,scrollMessages});
   const actions={
     workspace(el){closeModal();navigate(el.dataset.id);render();scrollMessages();},
     'desk-page'(el){navigate('desk',el.dataset.id);render();},
     'ops-page'(el){if(!opsMenus[ui.opsRole].some(x=>x[0]===el.dataset.id))throw Error('当前角色无权打开这个页面');navigate('ops',el.dataset.id);render();},
-    'new-conversation'(){ui.customerConversation=apply('newConversation',{},'已开始新咨询，原服务记录仍保留');render();scrollMessages();},
+    'new-conversation'(){closeModal();ui.customerConversation=apply('newConversation',{},'已开始新咨询，原服务记录仍保留');render();scrollMessages();},
     'quick-policy'(){quick('七天无理由退货有什么条件？');},
     'order-query'(el){quick('查物流 '+el.dataset.id);},
     'order-return'(el){quick('申请退货 '+el.dataset.id);},
-    'request-human'(el){const c=el.dataset.id||customerConversation().id;apply('requestHuman',{id:c},'已提交人工请求');render();scrollMessages();},
+    'request-human'(el){closeModal();const c=el.dataset.id||customerConversation().id;apply('requestHuman',{id:c},'已提交人工请求');render();scrollMessages();},
     'cancel-queue'(el){apply('cancelQueue',{id:el.dataset.id},'已取消当前排队');render();},
     'customer-history'(){const data=D.customerView(store.state,'C001');modal('历史咨询',data.conversations.map(c=>`<button type="button" class="history-row" data-action="open-history" data-id="${e(c.id)}"><strong>${e(c.messages.find(m=>m.role==='customer')?.body||'新的咨询')}</strong><small>${e(c.id)} · ${date(c.createdAt,true)}</small>${pill(c.state)}</button>`).join('')||empty('暂无历史咨询'));},
     'open-history'(el){ui.customerConversation=el.dataset.id;closeModal();render();scrollMessages();},
@@ -122,7 +129,8 @@
     'close-modal'(){closeModal();},
     'export-data'(){const data=apply('export',{});download('客服工作空间.json',data);toast('已生成工作空间导出文件');},
     'export-legacy'(){if(identity().role!=='admin')throw Error('需要系统管理员角色');const raw=localStorage.getItem('zhixu-customer-demo-v3.1');if(raw===null)throw Error('当前浏览器未读取到旧版本保存值');download('客服旧版本原始数据.json',raw);toast('已导出旧版本原始保存值，未做转换');},
-    'export-broken'(){if(store.original===null)throw Error('无法读取原始保存值，可能是浏览器禁用了存储');download('客服异常原始数据.json',store.original);}
+    'export-broken'(){if(store.original===null)throw Error('无法读取原始保存值，可能是浏览器禁用了存储');download('客服异常原始数据.json',store.original);},
+    ...workbench.actions
   };
   function assign(type,id){modal('分配负责人',`<form data-form="assign" data-id="${e(id)}" data-command="${type}"><label class="field"><span>接收客服</span><select name="ownerId">${options(store.state.staff.filter(a=>a.role==='agent').map(a=>[a.id,a.name]),'lin')}</select></label><p class="muted small-text">转派保留原受理时间和处理记录，原负责人不能继续修改任务。</p><button class="btn primary" type="submit">确认分配</button></form>`);}
   document.addEventListener('click',ev=>{const el=ev.target.closest('[data-action]');if(!el||el.disabled)return;try{const handler=actions[el.dataset.action];if(!handler)throw Error('此操作不可用');handler(el);cache();}catch(err){fail(err);}});
@@ -131,11 +139,13 @@
     if(el.dataset.search){ui.search[el.dataset.search]=el.value;render();return;}
     const form=el.closest('form[data-form]');if(!form)return;
     ui.drafts[form.dataset.form+':'+(form.dataset.id||'new')]=Object.fromEntries(new FormData(form));cache();
+    try{if(workbench.input(form,el))render();}catch(err){fail(err);}
     if(form.dataset.form==='knowledge'){document.querySelectorAll('[data-action="test-knowledge"],[data-action="publish-knowledge"]').forEach(b=>b.disabled=true);clearFlowTest();}
     if(['flow','flow-query'].includes(form.dataset.form))clearFlowTest();
     if(form.dataset.form==='flow'){document.querySelectorAll('[data-action="test-flow"],[data-action="publish-flow"],[data-form="flow-query"] [type="submit"]').forEach(b=>b.disabled=true);$('[data-flow-unsaved]').hidden=false;}
   });
   document.addEventListener('change',ev=>{const el=ev.target;try{
+    const form=el.closest('form[data-form]');if(form)ui.drafts[form.dataset.form+':'+(form.dataset.id||'new')]=Object.fromEntries(new FormData(form));workbench.change(el);
     if(el.dataset.select==='agent'){ui.agentId=el.value;closeModal();ui.deskConversation='';render();}
     if(el.dataset.select==='ops-role'){ui.opsRole=el.value;closeModal();navigate('ops',opsMenus[ui.opsRole][0][0]);render();}
     if(el.dataset.select==='ticket-filter'){ui.ticketFilter=el.value;render();}
@@ -145,6 +155,7 @@
     const form=ev.target.closest('form[data-form]');if(!form)return;ev.preventDefault();
     const f=form.dataset.form,id=form.dataset.id,data=Object.fromEntries(new FormData(form)),key=f+':'+(id||'new');
     try{
+      if(workbench.submit(form,data))return;
       if(f==='ticket-request'){
         ui.pendingTicket={...ui.pendingTicket,...data,draftKey:key};
         modal('核对服务申请',`<div class="preview-block"><h2>${e(data.title)}</h2><p>${e(data.description)}</p>${ui.pendingTicket.caseId?`<small>关联问题：${e(ui.pendingTicket.caseId)}</small>`:`<small>客户：${e(store.state.customers.find(c=>c.id===data.customerId)?.name)}</small>`}</div><p class="muted">确认后创建或继续原工单。取消不会产生受理记录，也不会执行退款。</p><form data-form="ticket-confirm" data-id="new"><div class="form-footer">${b('取消','close-modal')}<button class="btn primary" type="submit">确认提交申请</button></div></form>`);return;
@@ -169,10 +180,11 @@
       if(f!=='flow-query')delete ui.drafts[key];cache();render();if(['customer-say','reply','note'].includes(f))scrollMessages();
     }catch(err){fail(err);}
   });
-  document.addEventListener('keydown',ev=>{if((ev.ctrlKey||ev.metaKey)&&ev.key==='Enter'&&ev.target.closest('.composer')){ev.preventDefault();ev.target.closest('form').requestSubmit();}});
+  document.addEventListener('keydown',ev=>{const dialog=$('#dialog');if(dialog.open&&dialog.parentElement?.classList.contains('phone-overlay-host')){if(ev.key==='Escape'){ev.preventDefault();closeModal();return;}if(ev.key==='Tab'){const fields=[...dialog.querySelectorAll('button,input,textarea,select,a[href]')].filter(x=>!x.disabled&&x.getClientRects().length);const first=fields[0],last=fields.at(-1);if(ev.shiftKey&&document.activeElement===first){ev.preventDefault();last?.focus();}else if(!ev.shiftKey&&document.activeElement===last){ev.preventDefault();first?.focus();}}}if((ev.ctrlKey||ev.metaKey)&&ev.key==='Enter'&&ev.target.closest('.composer')){ev.preventDefault();ev.target.closest('form').requestSubmit();}});
   window.addEventListener('hashchange',()=>{closeModal();render();scrollMessages();});
   window.addEventListener('popstate',()=>{closeModal();render();});
   window.addEventListener('storage',ev=>{if(ev.key===window.SupportStore.KEY)toast('其他页面更新了工作空间。请刷新后继续，当前输入保留。',true);});
   window.addEventListener('error',ev=>{console.error(ev.error);toast('页面出现异常；未提交的操作不会被视为成功。',true);});
   render();scrollMessages();
+  function tick(){workbench.tick();setTimeout(tick,1000);}setTimeout(tick,1000);
 })();

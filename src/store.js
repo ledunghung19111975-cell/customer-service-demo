@@ -17,7 +17,7 @@
       s.conversations.every(c=>has('customers',c.customerId)&&a(c.messages)&&a(c.runs)&&a(c.ownerHistory)&&a(c.caseIds)&&c.caseIds.every(id=>has('cases',id))&&(!c.pendingCaseId||(c.caseIds.includes(c.pendingCaseId)&&s.cases.some(x=>x.id===c.pendingCaseId&&x.customerId===c.customerId&&x.conversationIds?.includes(c.id))))&&a(c.flow?.humanWords)&&['bot','queued','human','closed'].includes(c.state)&&c.messages.every(m=>typeof m.body==='string'))&&
       s.cases.every(c=>has('customers',c.customerId)&&a(c.resultHistory)&&a(c.conversationIds)&&c.conversationIds.every(id=>has('conversations',id))&&['open','waiting_customer','completed'].includes(c.status))&&
       s.tickets.every(t=>has('cases',t.caseId)&&has('customers',t.customerId)&&a(t.history)&&['new','working','waiting_customer','done'].includes(t.status))&&
-      s.gaps.every(g=>has('conversations',g.conversationId));
+      s.gaps.every(g=>has('conversations',g.conversationId))&&D.validWorkflow(s);
   }
   function open(storage,seed){
     let current, original=null, blocked='';
@@ -51,6 +51,7 @@
         if(raw!==original){throw new Error('工作空间已在其他页面更新。请刷新后重试，当前输入仍保留。');}
         const result=D.execute(current,identity,type,data);
         if(type!=='export'){
+          if(!valid(result.state))throw new Error('操作后的数据校验未通过，原始记录未改变');
           const encoded=JSON.stringify(result.state);
           storage.setItem(KEY,encoded); // A quota/permission failure leaves memory unchanged.
           current=result.state;original=encoded;

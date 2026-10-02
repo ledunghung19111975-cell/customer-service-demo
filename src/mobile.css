@@ -1,0 +1,114 @@
+.mobile-stage{--phone-height:clamp(560px,calc(100dvh - 232px),844px);display:flex;align-items:flex-start;gap:0;width:100%;min-width:0;padding:0 0 24px}
+.mobile-left{flex:none;width:min(100%,calc(var(--phone-height) * 390 / 844 + 24px));min-width:0}
+.mobile-blank{flex:1;min-width:0;align-self:stretch}
+.mobile-demo-controls{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:40px;margin-bottom:12px;color:var(--muted);font-size:11px}
+.mobile-demo-controls strong{font-weight:500;color:var(--ink)}
+.mobile-demo-controls .btn{min-height:36px;white-space:nowrap}
+.phone-frame{width:100%;padding:10px;background:#293c36;border:2px solid #52635b;border-radius:38px;box-shadow:0 12px 32px #233a3614}
+.phone-screen{position:relative;isolation:isolate;display:flex;flex-direction:column;width:100%;aspect-ratio:390/844;min-width:0;min-height:0;overflow:hidden;border-radius:26px;background:#fff}
+.phone-status-bar{flex:none;display:flex;justify-content:space-between;align-items:center;height:29px;padding:7px 20px 3px;background:#f5f8f5;font-size:10px;font-weight:600;color:#52665c}
+.phone-status-symbols{display:flex;align-items:center;gap:7px}
+.phone-signal{font-size:10px;letter-spacing:-1px}
+.phone-battery{position:relative;display:block;width:18px;height:8px;border:1px solid currentColor;border-radius:2px}
+.phone-battery:before{content:'';position:absolute;inset:1px;background:currentColor;border-radius:1px}
+.phone-battery:after{content:'';position:absolute;right:-3px;top:2px;width:2px;height:3px;border-radius:0 1px 1px 0;background:currentColor}
+.phone-header{flex:none;position:relative;display:flex;align-items:center;gap:10px;min-height:70px;padding:12px 15px;border-bottom:1px solid var(--line);background:#f5f8f5;z-index:3}
+.phone-avatar{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:12px;background:#dfebe3;color:var(--brand)}
+.phone-heading{min-width:0}
+.phone-heading h1{margin:0;font-size:16px;line-height:1.5;font-weight:650}
+.phone-heading p{display:flex;align-items:center;gap:5px;margin:2px 0 0;font-size:10px;color:var(--muted)}
+.phone-status-dot{height:5px;width:5px;border-radius:50%;background:#578b6c}
+.phone-status-dot.offline{background:#ab8064}
+.phone-menu{margin:0 0 0 auto;padding:0;border:0;position:relative}
+.phone-menu summary{display:grid;place-items:center;list-style:none;width:44px;height:44px;cursor:pointer;font-size:14px;letter-spacing:2px;border-radius:8px}
+.phone-menu summary::-webkit-details-marker{display:none}
+.phone-menu summary:hover,.phone-menu summary:focus-visible{background:#e7eee7}
+.phone-menu-content{position:absolute;right:0;top:47px;display:grid;min-width:132px;padding:6px;border:1px solid var(--line);border-radius:10px;background:#fff;box-shadow:0 8px 24px #233a3620}
+.phone-menu-content .btn{min-height:44px;justify-content:flex-start;padding:10px 12px;font-size:13px}
+.phone-connection-notice{flex:none;background:#fff7e8;padding:8px 12px;color:#8c6d3a;font-size:11px;line-height:1.5}
+.phone-messages{flex:1 1 0;min-height:96px;padding:18px 13px 8px;background:#fbfcfb;overflow-y:auto;overflow-x:hidden;scroll-padding-block:16px}
+.phone-messages .message{max-width:94%;margin-bottom:18px}
+.phone-messages .incoming{margin-left:auto}
+.phone-messages .outgoing{margin-right:auto}
+.phone-messages .bubble{font-size:13px;line-height:1.8;padding:10px 12px}
+.phone-messages .message-meta{gap:7px;flex-wrap:wrap;font-size:10px}
+.phone-messages .message-meta time{font-size:9px}
+.phone-messages .system-message{font-size:10px;line-height:1.7;padding:0 4px;margin-bottom:15px}
+.phone-messages .citation{max-width:100%;min-height:36px;text-align:left;white-space:normal;line-height:1.5}
+.phone-messages .message>.btn{min-height:40px}
+.message-meta .ai-assist-label{display:inline-flex;align-items:center;padding:1px 5px;border:1px solid #cdded3;border-radius:4px;color:#5d7a6a;font-size:9px;line-height:1.5;white-space:nowrap}
+.phone-feedback{padding:11px 12px;margin-bottom:15px}
+.phone-feedback strong{font-size:12px;line-height:1.6}
+.phone-feedback .btn{min-height:40px;font-size:12px}
+.phone-chat-progress{margin:0 0 14px}
+.phone-chat-progress h2{margin:0 0 7px;font-size:11px;font-weight:500;color:var(--muted)}
+.phone-services{flex:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;padding:6px 6px 2px;background:#fff;border-top:1px solid var(--line)}
+.phone-services .btn{display:flex;flex-direction:column;gap:4px;padding:6px 1px;min-height:52px;font-size:10px;line-height:1.4;border-radius:7px}
+.phone-services .btn svg{flex:none}
+.phone-services .btn span{white-space:nowrap}
+.phone-composer{flex:none;margin:0;padding:4px 12px 8px;border-top:0;min-width:0}
+.phone-composer textarea{padding:8px 10px;min-height:62px;max-height:108px;font-size:14px;line-height:1.5;border:1px solid #e4ebe5;border-radius:9px;background:#f8faf8;resize:none}
+.phone-composer textarea:focus-visible{outline:2px solid #a7c9b8;outline-offset:-2px}
+.phone-compose-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:6px}
+.phone-compose-actions>span{font-size:9px;color:var(--muted);line-height:1.5;min-width:0}
+.phone-compose-actions .btn{flex:none;min-height:40px;font-size:12px;padding:8px 13px}
+.phone-start{flex:none;padding:10px 14px;text-align:center}
+.phone-start .btn{width:100%;min-height:44px}
+.phone-queue-footer{flex:none;padding:0 8px;text-align:center}
+.phone-queue-footer .btn{min-height:36px;font-size:10px}
+.phone-home-indicator{flex:none;width:31%;height:4px;margin:6px auto 9px;border-radius:6px;background:#2f4038}
+.phone-screen .empty{padding:28px 12px}
+.phone-screen .empty h3{font-size:14px}
+.phone-screen .empty p{font-size:12px;line-height:1.7}
+.phone-order-list,.phone-progress-list{min-width:0}
+.phone-order-card{padding:14px 0;border-bottom:1px solid var(--line)}
+.phone-order-card:first-child{padding-top:0}
+.phone-order-card:last-of-type{border-bottom:0}
+.phone-order-summary{display:flex;align-items:flex-start;gap:11px}
+.phone-order-summary>div{min-width:0;flex:1}
+.phone-product-symbol{flex:none;display:grid;place-items:center;width:38px;height:43px;border-radius:8px;background:#f0f3eb;color:#93a182;font-size:23px}
+.phone-order-summary h3{margin:0 0 5px!important;font-size:13px!important;line-height:1.65}
+.phone-order-summary small{display:block;font-size:10px;color:var(--muted);overflow-wrap:anywhere;margin-bottom:8px}
+.phone-order-summary .row{gap:8px;flex-wrap:wrap}
+.phone-price{font-size:12px;font-weight:600}
+.phone-order-actions{display:flex;gap:9px;margin-top:14px}
+.phone-order-actions .btn{flex:1;min-height:44px;font-size:12px;padding:8px}
+.phone-progress-card{display:block;width:100%;border:1px solid var(--line);border-radius:9px;background:#fff;text-align:left;padding:12px;margin:0 0 10px;color:var(--ink)}
+.phone-progress-card:hover{border-color:#bdd1c3;background:#f8fbf8}
+.phone-progress-card .row{gap:8px;align-items:flex-start}
+.phone-progress-card strong{font-size:12px;line-height:1.6;font-weight:550;min-width:0}
+.phone-progress-card svg{flex:none;margin-top:2px}
+.phone-progress-card small{display:block;margin:5px 0 8px;font-size:9px;color:var(--muted);overflow-wrap:anywhere}
+.phone-local-notice{color:var(--muted);font-size:11px;line-height:1.7;margin:12px 0 0!important}
+.phone-overlay-host{position:absolute;inset:0;z-index:10;overflow:hidden;pointer-events:none;border-radius:inherit}
+.phone-overlay-host:has(dialog[open]){pointer-events:auto;background:#21392d40}
+.phone-overlay-host dialog[open]{position:absolute;inset:auto 0 0;display:flex;flex-direction:column;margin:0;width:100%;max-width:100%;max-height:93%;min-height:0;padding:0;border:0;border-radius:18px 18px 0 0;box-shadow:0 -10px 35px #233a3624;overflow:hidden;pointer-events:auto}
+.phone-overlay-host dialog[open]:has(form){height:100%;max-height:100%;border-radius:0}
+.phone-overlay-host .dialog-head{position:relative;flex:none;padding:13px 14px;gap:10px;min-height:62px}
+.phone-overlay-host .dialog-head h2{font-size:15px;line-height:1.5}
+.phone-overlay-host .dialog-head button{min-width:44px;min-height:44px;color:var(--muted)}
+.phone-overlay-host #dialog-body{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:17px 14px 22px;scrollbar-width:thin}
+.phone-overlay-host #dialog-body p{font-size:12px;line-height:1.8}
+.phone-overlay-host #dialog-body h2{font-size:16px;line-height:1.6}
+.phone-overlay-host #dialog-error{flex:none;margin:10px 14px 0;padding:10px 11px;font-size:11px;max-height:110px;overflow-y:auto}
+.phone-overlay-host .field{margin-bottom:16px;gap:7px}
+.phone-overlay-host .field>span{font-size:12px}
+.phone-overlay-host .field input,.phone-overlay-host .field textarea,.phone-overlay-host .field select{min-height:44px;max-width:100%;font-size:14px}
+.phone-overlay-host .field textarea{min-height:108px}
+.phone-overlay-host .form-grid{grid-template-columns:1fr}
+.phone-overlay-host .form-footer{gap:9px;margin-top:18px}
+.phone-overlay-host .form-footer .btn{flex:1;min-height:44px;font-size:12px}
+.phone-overlay-host .history-row{padding:12px;gap:8px}
+.phone-overlay-host .history-row strong{font-size:12px;line-height:1.7}
+.phone-overlay-host .history-row small{font-size:9px}
+.phone-overlay-host .timeline-entry p{overflow-wrap:anywhere}
+.phone-screen button:focus-visible,.phone-screen summary:focus-visible{outline:2px solid #68a083;outline-offset:2px}
+.phone-screen button:disabled{cursor:not-allowed;opacity:.48}
+@media(max-width:600px){
+  .mobile-stage{padding-bottom:12px}
+  .mobile-left{width:min(100%,414px)}
+  .mobile-demo-controls{font-size:11px}
+  .phone-frame{padding:7px;border-radius:31px}
+  .phone-screen{border-radius:22px}
+  .phone-overlay-host .field input,.phone-overlay-host .field textarea,.phone-overlay-host .field select,.phone-composer textarea{font-size:16px}
+}

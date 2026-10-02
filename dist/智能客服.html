@@ -15,10 +15,280 @@
 .internal-evidence{padding:10px 12px;background:#fff8e5;border:1px solid #eee2ba;border-radius:6px;font-size:11px;color:#917c48;margin:8px 0;line-height:1.7}
 
 </style>
+  <style>
+/* Conversation, messages and SOP keep separate scroll positions. */
+.workspace-body:has(.workbench-viewport) > .workspace-sidebar { width: 160px; }
+.workspace-content.inbox-page { padding: 22px 20px 0; }
+.inbox-page .page-heading { margin-bottom: 16px; }
+.workbench-viewport { width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+.inbox-shell.workbench-shell {
+  display: grid;
+  grid-template-columns: 220px minmax(320px, 1fr) 380px;
+  min-width: 920px;
+  height: calc(100dvh - 175px);
+  min-height: 520px;
+  border: 1px solid var(--line);
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  overflow: hidden;
+}
+.workbench-shell > .conversation-list { display: flex; flex-direction: column; min-height: 0; height: auto; max-height: none; overflow: hidden; border-right: 1px solid var(--line); }
+.workbench-shell .list-tools { padding: 14px 12px; flex-shrink: 0; }
+.workbench-shell .list-caption { flex-shrink: 0; }
+.workbench-shell .conversation-rows { min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.workbench-shell .conversation-row { padding: 15px 11px; }
+.workbench-shell > .agent-conversation { height: auto; min-height: 0; border-top: 0; }
+.workbench-shell .conversation-header { padding: 16px; flex-shrink: 0; flex-wrap: wrap; gap: 8px; }
+.workbench-shell .conversation-header h2 { font-size: 15px; }
+.workbench-shell .conversation-header small { font-size: 10px; }
+.workbench-shell .messages { min-height: 100px; padding: 18px; }
+.workbench-shell .composer { padding: 12px 16px; flex-shrink: 0; }
+.workbench-shell .composer textarea { min-height: 66px; max-height: 140px; resize: vertical; }
+.workbench-shell .composer .row.between { gap: 8px; }
+.workbench-shell .composer .small-text { font-size: 10px; }
+.workbench-shell .read-only-bar { flex-shrink: 0; }
+.connection-banner { display: flex; gap: 9px; align-items: flex-start; flex-shrink: 0; padding: 12px 16px; background: #f8f5e9; border-bottom: 1px solid #eee4c9; color: #897347; }
+.connection-banner.offline { background: #fcf0e7; color: #966448; }
+.connection-banner svg { flex-shrink: 0; margin-top: 2px; }
+.connection-banner strong, .connection-banner small { display: block; font-size: 11px; line-height: 1.6; }
+.connection-banner small { font-size: 10px; margin-top: 2px; }
+.ai-assist-control { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-shrink: 0; padding: 10px 16px; border-top: 1px solid var(--line); background: #f5f8f4; }
+.ai-assist-control strong { display: block; font-size: 11px; font-weight: 500; }
+.ai-assist-control small { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; line-height: 1.5; }
+.ai-assist-control .btn { flex-shrink: 0; }
+.ai-enabled { background: #e6f0e8; color: #35715a; }
+.sop-workbench { display: flex; flex-direction: column; min-height: 0; min-width: 0; border-left: 1px solid var(--line); background: #fbfcfa; overflow: hidden; }
+.sop-workbench-header { padding: 17px 16px 13px; background: #fff; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+.sop-workbench-header h2 { font-size: 15px; margin: 0; }
+.sop-workbench-header > .row + .row { margin-top: 10px; }
+.sop-pending { color: #6c806d; font-size: 10px; }
+.sop-case-tabs { display: flex; gap: 7px; overflow-x: auto; margin: 12px 0 9px; padding-bottom: 3px; scrollbar-width: thin; }
+.sop-case-tab { min-width: 180px; max-width: 295px; text-align: left; flex: 0 0 auto; border: 1px solid var(--line); border-radius: 7px; background: #fff; padding: 9px 10px; color: #5b6c61; }
+.sop-case-tab.active { background: #edf4ed; border-color: #83a38b; }
+.sop-case-tab > span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.sop-case-tab small { display: block; margin-top: 4px; color: #819184; font-size: 9px; }
+.sop-order-ref { display: block; font-size: 10px; color: #7b8a7e; overflow-wrap: anywhere; }
+.sop-workbench-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; padding: 14px 12px 24px; }
+.sop-nodes, .sop-substeps { list-style: none; padding: 0; margin: 0; }
+.sop-node { border: 1px solid #e3e9df; border-radius: 8px; background: #fff; margin-bottom: 9px; overflow: hidden; }
+.sop-node.status-todo, .sop-node.status-doing { border-color: #9bb59f; }
+.sop-node.status-waiting { border-color: #d8c690; }
+.sop-node.status-error { border-color: #d9a991; }
+.sop-node.expanded { box-shadow: 0 2px 8px #344c3510; }
+.sop-node-toggle { display: flex; width: 100%; align-items: center; gap: 8px; background: none; border: 0; padding: 11px 10px 6px; text-align: left; color: #405c4c; }
+.sop-node-toggle:disabled { opacity: 1; cursor: default; }
+.sop-node-toggle:focus-visible, .sop-case-tab:focus-visible { outline: 2px solid #50816b; outline-offset: -2px; }
+.sop-number { display: grid; place-items: center; width: 21px; height: 21px; flex-shrink: 0; border-radius: 50%; background: #f0f4ed; color: #849680; font-size: 10px; }
+.status-todo > .sop-node-toggle .sop-number, .status-doing > .sop-node-toggle .sop-number, .status-done > .sop-node-toggle .sop-number { background: #e3eee3; color: #487957; }
+.sop-node-title { font-size: 12px; font-weight: 500; flex: 1; }
+.sop-chevron { color: #899989; font-size: 16px; width: 12px; text-align: center; }
+.sop-status { display: inline-block; flex-shrink: 0; font-size: 9px; padding: 2px 5px; border-radius: 4px; background: #f1f3ef; color: #879482; line-height: 1.6; }
+.sop-status.status-todo, .sop-status.status-doing { color: #426f51; background: #edf4e8; }
+.sop-status.status-done { color: #317152; background: #e6f2e9; }
+.sop-status.status-waiting { color: #997627; background: #fbf1d9; }
+.sop-status.status-error { color: #a16243; background: #fcece2; }
+.sop-node-reason { color: #86917e; line-height: 1.65; font-size: 10px; margin: 0; padding: 0 13px 10px 39px; overflow-wrap: anywhere; }
+.sop-followup { display: flex; align-items: center; gap: 6px; font-size: 10px; padding: 0 13px 9px 39px; color: #7c896f; }
+.sop-followup .btn.text { padding: 0; font-size: 10px; }
+.sop-substeps { padding: 0 13px 10px 39px; }
+.sop-substeps li { display: flex; gap: 7px; align-items: center; justify-content: space-between; font-size: 10px; color: #7b8b75; line-height: 1.6; padding: 5px 0; border-top: 1px dashed #edf0e9; }
+.sop-substeps li::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: #b6c4ac; flex-shrink: 0; }
+.sop-substeps li > span:first-child { flex: 1; }
+.sop-node-detail { border-top: 1px solid #e9eee3; padding: 13px; font-size: 11px; color: #60765f; line-height: 1.75; }
+.sop-node-detail > p { margin: 0 0 10px; }
+.sop-facts { margin: 0 0 12px; }
+.sop-facts dt { color: #899783; font-size: 10px; margin-top: 10px; }
+.sop-facts dt:first-child { margin-top: 0; }
+.sop-facts dd { margin: 3px 0 0; font-size: 11px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.sop-hint { display: block; color: #899581; font-size: 10px; line-height: 1.75; margin: 8px 0; overflow-wrap: anywhere; }
+.sop-form { display: grid; gap: 10px; margin-top: 14px; }
+.sop-form label { display: grid; gap: 5px; font-size: 10px; color: #71836b; }
+.sop-form input, .sop-form select { width: 100%; min-width: 0; border: 1px solid #dfe6d8; border-radius: 6px; padding: 8px; background: #fff; font: inherit; font-size: 11px; color: #587255; }
+.sop-form .btn { justify-self: start; }
+.sop-form .sop-hint { margin: 0; }
+.sop-order-card { padding: 11px; border: 1px solid #e3e9de; border-radius: 7px; background: #f8faf5; }
+.sop-order-card strong, .sop-order-card > small { display: block; font-size: 11px; }
+.sop-order-card > small { font-size: 9px; margin-top: 3px; color: #8a967e; }
+.sop-order-card .row { margin-top: 10px; gap: 7px; font-size: 10px; }
+.sop-order-card p { font-size: 10px; margin: 10px 0 0; }
+.sop-actions, .sop-corrections { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+.sop-actions .btn, .sop-node-detail > .btn { font-size: 10px; }
+.sop-corrections { border-top: 1px dashed #e1e8d9; padding-top: 9px; margin-top: 14px; }
+.sop-corrections .btn { font-size: 10px; padding: 3px 0; margin-right: 8px; }
+.sop-record { padding: 10px; border: 1px solid #e3e9de; border-radius: 7px; }
+.sop-record p { margin: 6px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.sop-record small { display: block; color: #87947e; font-size: 9px; }
+.sop-record .internal-evidence { margin-bottom: 0; }
+.sop-feedback { margin: 10px 0; flex-wrap: wrap; }
+.sop-suggestion { margin: 15px 0; padding: 13px; background: #f2f6ed; border: 1px solid #dfe8d5; border-radius: 9px; font-size: 11px; }
+.sop-suggestion h3 { display: flex; align-items: center; gap: 7px; font-size: 12px; margin: 0; color: #577348; }
+.sop-suggestion > small { display: block; color: #819276; margin: 9px 0; font-size: 10px; }
+.suggestion-body { line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; color: #5b7154; }
+.suggestion-source { border-top: 1px solid #dde6d4; padding-top: 10px; margin-top: 10px; }
+.suggestion-source strong { font-size: 10px; font-weight: 500; }
+.suggestion-source small { display: block; font-size: 9px; color: #91a081; margin-top: 4px; }
+.sop-customer-profile { padding: 5px 3px; }
+.sop-customer-profile h3 { font-size: 11px; color: #7c8d73; margin: 0 0 12px; }
+.sop-customer-profile strong { font-size: 11px; }
+.sop-customer-profile small { display: block; color: #87987f; font-size: 10px; margin-top: 3px; }
+.sop-customer-profile p { color: #8b9984; font-size: 10px; }
+.sop-empty { align-items: center; justify-content: center; }
+.callback-ticket-table { min-width: 960px; }
+.callback-ticket-table th, .callback-ticket-table td { padding-left: 13px; padding-right: 13px; }
+.callback-ticket-table th:first-child { width: 24%; }
+.callback-ticket-table th:last-child { width: 140px; }
+.callback-cell { min-width: 155px; font-size: 11px; }
+.callback-cell small { margin-top: 5px; }
+.timezone { display: block; color: #96a18c; font-size: 9px; line-height: 1.6; }
+.ticket-row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.ticket-row-actions .btn { font-size: 10px; }
+@media (max-width: 1280px) {
+  .workspace-body:has(.workbench-viewport) > .workspace-sidebar { width: 148px; }
+  .inbox-shell.workbench-shell { grid-template-columns: 210px minmax(320px, 1fr) 370px; min-width: 900px; }
+  .workspace-content.inbox-page { padding-left: 14px; padding-right: 14px; }
+}
+@media (max-width: 700px) {
+  .workspace-content.inbox-page { min-width: 0; padding: 20px 12px 0; }
+  .inbox-shell.workbench-shell { height: calc(100dvh - 235px); min-height: 520px; }
+  .workbench-shell .conversation-list { border-right: 1px solid var(--line); }
+  .workbench-shell .conversation-row .avatar { width: 30px; height: 30px; font-size: 10px; }
+  .workbench-shell .conversation-header { min-height: 72px; }
+}
+
+</style>
+  <style>
+.mobile-stage{--phone-height:clamp(560px,calc(100dvh - 232px),844px);display:flex;align-items:flex-start;gap:0;width:100%;min-width:0;padding:0 0 24px}
+.mobile-left{flex:none;width:min(100%,calc(var(--phone-height) * 390 / 844 + 24px));min-width:0}
+.mobile-blank{flex:1;min-width:0;align-self:stretch}
+.mobile-demo-controls{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:40px;margin-bottom:12px;color:var(--muted);font-size:11px}
+.mobile-demo-controls strong{font-weight:500;color:var(--ink)}
+.mobile-demo-controls .btn{min-height:36px;white-space:nowrap}
+.phone-frame{width:100%;padding:10px;background:#293c36;border:2px solid #52635b;border-radius:38px;box-shadow:0 12px 32px #233a3614}
+.phone-screen{position:relative;isolation:isolate;display:flex;flex-direction:column;width:100%;aspect-ratio:390/844;min-width:0;min-height:0;overflow:hidden;border-radius:26px;background:#fff}
+.phone-status-bar{flex:none;display:flex;justify-content:space-between;align-items:center;height:29px;padding:7px 20px 3px;background:#f5f8f5;font-size:10px;font-weight:600;color:#52665c}
+.phone-status-symbols{display:flex;align-items:center;gap:7px}
+.phone-signal{font-size:10px;letter-spacing:-1px}
+.phone-battery{position:relative;display:block;width:18px;height:8px;border:1px solid currentColor;border-radius:2px}
+.phone-battery:before{content:'';position:absolute;inset:1px;background:currentColor;border-radius:1px}
+.phone-battery:after{content:'';position:absolute;right:-3px;top:2px;width:2px;height:3px;border-radius:0 1px 1px 0;background:currentColor}
+.phone-header{flex:none;position:relative;display:flex;align-items:center;gap:10px;min-height:70px;padding:12px 15px;border-bottom:1px solid var(--line);background:#f5f8f5;z-index:3}
+.phone-avatar{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:12px;background:#dfebe3;color:var(--brand)}
+.phone-heading{min-width:0}
+.phone-heading h1{margin:0;font-size:16px;line-height:1.5;font-weight:650}
+.phone-heading p{display:flex;align-items:center;gap:5px;margin:2px 0 0;font-size:10px;color:var(--muted)}
+.phone-status-dot{height:5px;width:5px;border-radius:50%;background:#578b6c}
+.phone-status-dot.offline{background:#ab8064}
+.phone-menu{margin:0 0 0 auto;padding:0;border:0;position:relative}
+.phone-menu summary{display:grid;place-items:center;list-style:none;width:44px;height:44px;cursor:pointer;font-size:14px;letter-spacing:2px;border-radius:8px}
+.phone-menu summary::-webkit-details-marker{display:none}
+.phone-menu summary:hover,.phone-menu summary:focus-visible{background:#e7eee7}
+.phone-menu-content{position:absolute;right:0;top:47px;display:grid;min-width:132px;padding:6px;border:1px solid var(--line);border-radius:10px;background:#fff;box-shadow:0 8px 24px #233a3620}
+.phone-menu-content .btn{min-height:44px;justify-content:flex-start;padding:10px 12px;font-size:13px}
+.phone-connection-notice{flex:none;background:#fff7e8;padding:8px 12px;color:#8c6d3a;font-size:11px;line-height:1.5}
+.phone-messages{flex:1 1 0;min-height:96px;padding:18px 13px 8px;background:#fbfcfb;overflow-y:auto;overflow-x:hidden;scroll-padding-block:16px}
+.phone-messages .message{max-width:94%;margin-bottom:18px}
+.phone-messages .incoming{margin-left:auto}
+.phone-messages .outgoing{margin-right:auto}
+.phone-messages .bubble{font-size:13px;line-height:1.8;padding:10px 12px}
+.phone-messages .message-meta{gap:7px;flex-wrap:wrap;font-size:10px}
+.phone-messages .message-meta time{font-size:9px}
+.phone-messages .system-message{font-size:10px;line-height:1.7;padding:0 4px;margin-bottom:15px}
+.phone-messages .citation{max-width:100%;min-height:36px;text-align:left;white-space:normal;line-height:1.5}
+.phone-messages .message>.btn{min-height:40px}
+.message-meta .ai-assist-label{display:inline-flex;align-items:center;padding:1px 5px;border:1px solid #cdded3;border-radius:4px;color:#5d7a6a;font-size:9px;line-height:1.5;white-space:nowrap}
+.phone-feedback{padding:11px 12px;margin-bottom:15px}
+.phone-feedback strong{font-size:12px;line-height:1.6}
+.phone-feedback .btn{min-height:40px;font-size:12px}
+.phone-chat-progress{margin:0 0 14px}
+.phone-chat-progress h2{margin:0 0 7px;font-size:11px;font-weight:500;color:var(--muted)}
+.phone-services{flex:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;padding:6px 6px 2px;background:#fff;border-top:1px solid var(--line)}
+.phone-services .btn{display:flex;flex-direction:column;gap:4px;padding:6px 1px;min-height:52px;font-size:10px;line-height:1.4;border-radius:7px}
+.phone-services .btn svg{flex:none}
+.phone-services .btn span{white-space:nowrap}
+.phone-composer{flex:none;margin:0;padding:4px 12px 8px;border-top:0;min-width:0}
+.phone-composer textarea{padding:8px 10px;min-height:62px;max-height:108px;font-size:14px;line-height:1.5;border:1px solid #e4ebe5;border-radius:9px;background:#f8faf8;resize:none}
+.phone-composer textarea:focus-visible{outline:2px solid #a7c9b8;outline-offset:-2px}
+.phone-compose-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:6px}
+.phone-compose-actions>span{font-size:9px;color:var(--muted);line-height:1.5;min-width:0}
+.phone-compose-actions .btn{flex:none;min-height:40px;font-size:12px;padding:8px 13px}
+.phone-start{flex:none;padding:10px 14px;text-align:center}
+.phone-start .btn{width:100%;min-height:44px}
+.phone-queue-footer{flex:none;padding:0 8px;text-align:center}
+.phone-queue-footer .btn{min-height:36px;font-size:10px}
+.phone-home-indicator{flex:none;width:31%;height:4px;margin:6px auto 9px;border-radius:6px;background:#2f4038}
+.phone-screen .empty{padding:28px 12px}
+.phone-screen .empty h3{font-size:14px}
+.phone-screen .empty p{font-size:12px;line-height:1.7}
+.phone-order-list,.phone-progress-list{min-width:0}
+.phone-order-card{padding:14px 0;border-bottom:1px solid var(--line)}
+.phone-order-card:first-child{padding-top:0}
+.phone-order-card:last-of-type{border-bottom:0}
+.phone-order-summary{display:flex;align-items:flex-start;gap:11px}
+.phone-order-summary>div{min-width:0;flex:1}
+.phone-product-symbol{flex:none;display:grid;place-items:center;width:38px;height:43px;border-radius:8px;background:#f0f3eb;color:#93a182;font-size:23px}
+.phone-order-summary h3{margin:0 0 5px!important;font-size:13px!important;line-height:1.65}
+.phone-order-summary small{display:block;font-size:10px;color:var(--muted);overflow-wrap:anywhere;margin-bottom:8px}
+.phone-order-summary .row{gap:8px;flex-wrap:wrap}
+.phone-price{font-size:12px;font-weight:600}
+.phone-order-actions{display:flex;gap:9px;margin-top:14px}
+.phone-order-actions .btn{flex:1;min-height:44px;font-size:12px;padding:8px}
+.phone-progress-card{display:block;width:100%;border:1px solid var(--line);border-radius:9px;background:#fff;text-align:left;padding:12px;margin:0 0 10px;color:var(--ink)}
+.phone-progress-card:hover{border-color:#bdd1c3;background:#f8fbf8}
+.phone-progress-card .row{gap:8px;align-items:flex-start}
+.phone-progress-card strong{font-size:12px;line-height:1.6;font-weight:550;min-width:0}
+.phone-progress-card svg{flex:none;margin-top:2px}
+.phone-progress-card small{display:block;margin:5px 0 8px;font-size:9px;color:var(--muted);overflow-wrap:anywhere}
+.phone-local-notice{color:var(--muted);font-size:11px;line-height:1.7;margin:12px 0 0!important}
+.phone-overlay-host{position:absolute;inset:0;z-index:10;overflow:hidden;pointer-events:none;border-radius:inherit}
+.phone-overlay-host:has(dialog[open]){pointer-events:auto;background:#21392d40}
+.phone-overlay-host dialog[open]{position:absolute;inset:auto 0 0;display:flex;flex-direction:column;margin:0;width:100%;max-width:100%;max-height:93%;min-height:0;padding:0;border:0;border-radius:18px 18px 0 0;box-shadow:0 -10px 35px #233a3624;overflow:hidden;pointer-events:auto}
+.phone-overlay-host dialog[open]:has(form){height:100%;max-height:100%;border-radius:0}
+.phone-overlay-host .dialog-head{position:relative;flex:none;padding:13px 14px;gap:10px;min-height:62px}
+.phone-overlay-host .dialog-head h2{font-size:15px;line-height:1.5}
+.phone-overlay-host .dialog-head button{min-width:44px;min-height:44px;color:var(--muted)}
+.phone-overlay-host #dialog-body{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:17px 14px 22px;scrollbar-width:thin}
+.phone-overlay-host #dialog-body p{font-size:12px;line-height:1.8}
+.phone-overlay-host #dialog-body h2{font-size:16px;line-height:1.6}
+.phone-overlay-host #dialog-error{flex:none;margin:10px 14px 0;padding:10px 11px;font-size:11px;max-height:110px;overflow-y:auto}
+.phone-overlay-host .field{margin-bottom:16px;gap:7px}
+.phone-overlay-host .field>span{font-size:12px}
+.phone-overlay-host .field input,.phone-overlay-host .field textarea,.phone-overlay-host .field select{min-height:44px;max-width:100%;font-size:14px}
+.phone-overlay-host .field textarea{min-height:108px}
+.phone-overlay-host .form-grid{grid-template-columns:1fr}
+.phone-overlay-host .form-footer{gap:9px;margin-top:18px}
+.phone-overlay-host .form-footer .btn{flex:1;min-height:44px;font-size:12px}
+.phone-overlay-host .history-row{padding:12px;gap:8px}
+.phone-overlay-host .history-row strong{font-size:12px;line-height:1.7}
+.phone-overlay-host .history-row small{font-size:9px}
+.phone-overlay-host .timeline-entry p{overflow-wrap:anywhere}
+.phone-screen button:focus-visible,.phone-screen summary:focus-visible{outline:2px solid #68a083;outline-offset:2px}
+.phone-screen button:disabled{cursor:not-allowed;opacity:.48}
+@media(max-width:600px){
+  .mobile-stage{padding-bottom:12px}
+  .mobile-left{width:min(100%,414px)}
+  .mobile-demo-controls{font-size:11px}
+  .phone-frame{padding:7px;border-radius:31px}
+  .phone-screen{border-radius:22px}
+  .phone-overlay-host .field input,.phone-overlay-host .field textarea,.phone-overlay-host .field select,.phone-composer textarea{font-size:16px}
+}
+
+</style>
+  <style>
+.close-item{border:1px solid var(--border,#dce4df);border-radius:10px;margin:14px 0;padding:16px;min-width:0}
+.close-item legend{padding:0 6px;font-weight:600;font-size:13px}
+.close-item p{overflow-wrap:anywhere}.close-item .row input{width:auto}
+.order-facts,.readonly-context{background:#f3f6f3;border:1px solid #e0e8e1;padding:12px 14px;border-radius:8px;margin:12px 0;font-size:13px;line-height:1.7;overflow-wrap:anywhere}
+.order-facts p{margin:4px 0}.order-facts small{color:#687b70}
+.phone-overlay-host .order-facts,.phone-overlay-host .readonly-context{font-size:12px}
+.phone-overlay-host .form-footer{flex-wrap:wrap}.phone-overlay-host .close-item{padding:10px}
+@media(max-width:760px){.app-top{padding-inline:12px;gap:10px}.workspace-tabs{overflow-x:auto;min-width:0}.workspace-tabs button{padding-inline:12px;white-space:nowrap}.app-top .top-right{display:none}.app-top .product-brand>span:last-child{display:none}}
+.field:has([required])>span:after{content:" *";color:var(--danger)}
+
+</style>
 </head>
 <body>
   <div id="app"><div class="loading">正在加载…</div></div>
-  <dialog id="dialog" aria-labelledby="dialog-title"><div class="dialog-head"><h2 id="dialog-title"></h2><button type="button" class="icon-button" data-action="close-modal" aria-label="关闭弹窗">×</button></div><div id="dialog-error" class="form-error" role="alert" hidden></div><div id="dialog-body"></div></dialog>
+  <dialog id="dialog" aria-labelledby="dialog-title"><div class="dialog-head"><h2 id="dialog-title"></h2><button type="button" class="icon-button" data-action="close-modal" aria-label="关闭弹窗">×</button></div><div id="dialog-error" class="form-error dialog-error" role="alert" hidden></div><div id="dialog-body" class="dialog-body"></div></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <noscript>请启用 JavaScript 后使用客户服务工作空间。</noscript>
 <script>
@@ -134,8 +404,8 @@
   const normalize = s => String(s || '').toLowerCase().replace(/[\s，,。.!！?？]/g, '');
   const split = s => [...new Set(String(s).split(/[,，\n]/).map(x => x.trim()).filter(Boolean))];
   const roles = {
-    customer: ['newConversation', 'say', 'requestHuman', 'cancelQueue', 'feedback', 'createTicket', 'supplement', 'closeConversation'],
-    agent: ['claimConversation', 'reply', 'note', 'completeCase', 'closeConversation', 'createTicket', 'claimTicket', 'updateTicket', 'flag', 'presence'],
+    customer: ['newConversation', 'say', 'requestHuman', 'cancelQueue', 'feedback', 'createTicket', 'supplement', 'closeConversation', 'customerConnection'],
+    agent: ['claimConversation', 'reply', 'note', 'completeCase', 'closeConversation', 'createTicket', 'claimTicket', 'updateTicket', 'flag', 'presence', 'confirmIntent', 'bindOrder', 'queryOrder', 'markSop', 'setAiAssist', 'aiContinue', 'saveCallback', 'callbackResult', 'closeWithSummary'],
     manager: ['assignTicket', 'assignConversation', 'reviewGap', 'acceptGap', 'serviceSettings'],
     operator: ['saveKnowledge', 'testKnowledge', 'publishKnowledge', 'disableKnowledge', 'saveFlow', 'testFlow', 'publishFlow', 'linkGap'],
     admin: ['export']
@@ -150,6 +420,9 @@
   function agentOwns(a, r) { assert(a.role === 'agent' && r.ownerId === a.id && within(a, r), '请先领取本人有权处理的任务'); }
   function managing(a, r) { assert(a.role === 'manager' && within(a, r), '不在授权管理范围内'); }
   const activeTicket = (s, c) => s.tickets.find(t => t.caseId === c.id && t.status !== 'done');
+  // Missing markers retain legacy intake semantics.
+  const acceptedTicket = (s, c) => s.tickets.find(t => t.caseId === c.id && t.followupOnly !== true);
+  const otherAftersalesTicket = (s, c) => c.orderId && s.tickets.find(t => t.caseId !== c.id && t.customerId === c.customerId && t.orderId === c.orderId && t.status !== 'done' && get(s, 'cases', t.caseId).kind === 'aftersales');
   const activeArticles = (s, now) => s.knowledge.filter(k => k.live && !k.disabled && Date.parse(k.live.effectiveAt) <= now && (!k.live.expiresAt || now < Date.parse(k.live.expiresAt)));
   function retrieve(s, query, now = Date.now()) {
     const q = normalize(query);
@@ -202,7 +475,7 @@
     return c;
   }
   function makeCase(s, conv, kind, title, orderId, now) {
-    let c = kind === 'aftersales' && orderId ? s.cases.find(x => x.customerId === conv.customerId && x.kind === kind && x.orderId === orderId && (x.status !== 'completed' || x.feedback === 'pending')) : null;
+    let c = kind === 'aftersales' && orderId ? s.cases.find(x => x.customerId === conv.customerId && x.kind === kind && x.orderId === orderId && !x.workflow?.withdrawn && (x.status !== 'completed' || x.feedback === 'pending')) : null;
     if (!c) {
       c = {id: uid(s, 'SC'), customerId: conv.customerId, conversationIds: [], kind, title, orderId: orderId || '', status: 'open', feedback: 'none', result: null, resultHistory: [], createdAt: now, completedAt: null, humanTouched: false};
       s.cases.unshift(c);
@@ -212,6 +485,7 @@
     return c;
   }
   function handoff(s, conv, reason, now) {
+    pauseAi(conv,'已转交人工核实',now);
     if (conv.state !== 'human' && conv.state !== 'queued') { conv.state = 'queued'; conv.ownerId = ''; conv.waitingSince = now; conv.firstHumanAt = null; }
     conv.handoffReason = reason;
     conv.caseIds.map(id => get(s, 'cases', id)).filter(c => c.status !== 'completed').forEach(c => c.humanTouched = true);
@@ -229,9 +503,15 @@
   }
   function aftersalesCase(s, conv, pending, orderId, now) {
     if (pending?.kind !== 'aftersales') return makeCase(s, conv, 'aftersales', '售后申请', orderId, now);
-    assert(!pending.result && !s.tickets.some(t => t.caseId === pending.id), '已有办理记录，请继续原问题');
-    const existing = orderId && s.cases.find(c => c.id !== pending.id && c.customerId === conv.customerId && c.kind === 'aftersales' && c.orderId === orderId && (c.status !== 'completed' || c.feedback === 'pending'));
-    if (!existing) { pending.orderId = orderId; return pending; }
+    assert(!pending.result && !acceptedTicket(s, pending), '已有办理记录，请继续原问题');
+    const existing = orderId && s.cases.find(c => c.id !== pending.id && c.customerId === conv.customerId && c.kind === 'aftersales' && c.orderId === orderId && !c.workflow?.withdrawn && (c.status !== 'completed' || c.feedback === 'pending'));
+    const followups = s.tickets.filter(t => t.caseId === pending.id);
+    if (!existing) {
+      if (pending.orderId !== orderId && pending.workflow) delete pending.workflow.logistics;
+      pending.orderId = orderId; followups.forEach(t => t.orderId = orderId); return pending;
+    }
+    const original = activeTicket(s, existing) || s.tickets.find(t => t.caseId === existing.id);
+    assert(!followups.length, `当前问题已有跟进工单 ${followups[0]?.id}，不能合并或丢弃历史。请从${original ? '工单列表' : '问题记录'}继续原记录 ${original?.id || existing.id}`);
     // Collapse only the unfinished order-collection placeholder, retaining all conversation links.
     for (const conversation of s.conversations) {
       if (!conversation.caseIds.includes(pending.id)) continue;
@@ -249,7 +529,7 @@
     if (plan.onlyId && pending && pending.kind === 'aftersales') {
       const c = aftersalesCase(s, conv, pending, plan.id, now); conv.pendingCaseId = '';
       const valid = s.orders.some(o => o.id === plan.id && o.customerId === conv.customerId);
-      const existing = valid && s.tickets.find(t => t.caseId === c.id);
+      const existing = valid && acceptedTicket(s, c);
       const body = existing ? `此问题已受理，工单 ${existing.id}。请继续原记录，无需重复提交。` : valid ? '订单已核对。请填写售后原因，核对后再提交申请。' : '暂时无法核对此订单，请检查订单号或联系人工客服。';
       message(s, conv, 'bot', body, now, {caseId: c.id, intake: valid && !existing, ...(existing ? {ticketId: existing.id} : {})});
       if (!valid) handoff(s, conv, '订单归属未通过核对', now);
@@ -275,8 +555,9 @@
         else { message(s, conv, 'bot', r.kind === 'orderDenied' ? '暂时无法核对此订单。请确认订单号及购买账户；我不会展示其他账户的订单信息。' : '订单查询暂时不可用，没有取得最新状态。我会将已有信息交给人工核实。', now, {caseId: c.id}); handoff(s, conv, r.kind === 'orderDenied' ? '订单归属未通过核对' : '订单查询失败', now); }
       } else if (r.kind === 'intake') {
         const c = aftersalesCase(s, conv, pending, r.orderId, now);
+        recordIntake(conv,c,query,now);
         if (r.orderId) conv.pendingCaseId = '';
-        const existing = s.tickets.find(t => t.caseId === c.id);
+        const existing = acceptedTicket(s, c);
         if (existing) message(s, conv, 'bot', `此问题已受理，工单 ${existing.id}。可以继续在原记录查看进度或补充信息，无需重复提交。`, now, {caseId: c.id, ticketId: existing.id});
         else if (!r.orderId) { conv.pendingCaseId = c.id; message(s, conv, 'bot', '请提供要申请售后的订单号。确认订单后，请您补充原因并核对申请。', now, {caseId: c.id}); }
         else if (!s.orders.some(o => o.id === r.orderId && o.customerId === conv.customerId)) { message(s, conv, 'bot', '暂时无法核对此订单，请检查订单号或联系人工客服。', now); handoff(s, conv, '售后订单需要人工核实', now); }
@@ -329,26 +610,272 @@
     if (articleId) rows.push({name: '待发布知识生效区间', query: articleId, actual: activeArticles(s, now).some(k => k.id === articleId) ? '可用' : '尚未生效或已过期', pass: activeArticles(s, now).some(k => k.id === articleId)});
     return {at: now, fingerprint: fingerprint(s), rows, passed: rows.every(r => r.pass)};
   }
+  const SOP = [['intent','确认诉求'],['order','核对订单'],['logistics','查询物流'],['aftersales','退换货办理'],['information','补充资料'],['result','记录处理结果'],['callback','回访安排'],['close','结束沟通']];
+  const wf = c => c.workflow ||= {overrides: {}};
+  const latestCustomer = c => [...c.messages].reverse().find(m => m.role === 'customer');
+  const currentOrder = (s, c) => s.orders.find(o => o.id === c?.orderId && o.customerId === c?.customerId);
+  const customerConnection = (s, id) => get(s, 'customers', id).connection || 'online';
+  function pauseAi(conv, reason, now) { if (conv.aiAssist?.enabled) { conv.aiAssist.enabled = false; conv.aiAssist.history.push({at: now, action: 'paused', reason}); } }
+  function scopedCase(s, a, conversationId, caseId) {
+    const conv = get(s, 'conversations', conversationId), c = get(s, 'cases', caseId);
+    agentOwns(a, conv); assert(conv.state === 'human' && conv.caseIds.includes(c.id) && c.customerId === conv.customerId, '问题不属于当前接待');
+    return {conv, c};
+  }
+  function bindCaseOrder(s, conv, c, orderId, now) {
+    const id = text(orderId, '订单号', 80).toUpperCase();
+    assert(s.orders.some(o => o.id === id && o.customerId === c.customerId), '订单归属尚未核对');
+    if (c.orderId !== id) { assert(!c.result && !acceptedTicket(s, c), '已有办理记录，不能更换订单'); if (c.workflow) delete c.workflow.logistics; }
+    if (c.kind === 'aftersales' && c.orderId !== id) c = aftersalesCase(s, conv, c, id, now);
+    else c.orderId = id;
+    s.tickets.filter(t => t.caseId === c.id && t.followupOnly === true).forEach(t => t.orderId = id);
+    wf(c).orderCheckedAt = now;
+    if (conv.pendingCaseId === c.id) conv.pendingCaseId = '';
+    return c;
+  }
+  function recordIntake(conv,c,body,now) {
+    const f=wf(c); f.prefill ||= {serviceType:'',description:'',exchangeRequest:'',extraNote:''};
+    if (/换货/.test(body)) f.prefill.serviceType='exchange'; else if (/退货|退款/.test(body)) f.prefill.serviceType='return';
+    const demand=body.split(/[，,。；;\n]/).map(clause=>{
+      const match=clause.match(/(?:更换为|换成|换为)\s*(.+)/);
+      return match && !/(不要|不用|不想|不需要|暂不|不能|别)/.test(clause.slice(0,match.index)) ? match[1].trim().slice(0,200) : '';
+    }).find(Boolean);
+    f.prefill.exchangeRequest=f.prefill.serviceType==='exchange' ? demand || '' : '';
+    f.prefill.description=body;
+    f.intentEvidence={messageId:latestCustomer(conv)?.id || '',text:body,at:now};
+  }
+  function recognise(s, conv, body, now) {
+    const p = intentions(body, conv.flow), ids = [...new Set((body.match(/\bSO[A-Z0-9]+\b/gi) || []).map(x => x.toUpperCase()))];
+    const open = conv.caseIds.map(id => get(s, 'cases', id)).filter(c => c.status !== 'completed' && !c.workflow?.withdrawn);
+    let c;
+    if (ids.length <= 1 && !p.human && (p.intake || (p.onlyId && conv.pendingCaseId && get(s, 'cases', conv.pendingCaseId).kind === 'aftersales'))) {
+      const pending = open.find(x => x.kind === 'aftersales' && !x.orderId && !x.result && !acceptedTicket(s, x));
+      c = pending ? aftersalesCase(s, conv, pending, p.id, now) : makeCase(s, conv, 'aftersales', '售后申请', p.id, now);
+      if (!p.onlyId) recordIntake(conv,c,body,now);
+      if (p.lookup) {
+        const lookup=open.find(x=>x.kind==='order' && x.orderId===p.id) || makeCase(s,conv,'order','查询订单与物流',p.id,now);
+        lookup.humanTouched=true; wf(lookup).intentEvidence={messageId:latestCustomer(conv).id,text:body,at:now};
+      }
+      if (!c.orderId) conv.pendingCaseId = c.id;
+    } else if (ids.length <= 1 && !p.human && (p.lookup || p.onlyId)) {
+      c = open.find(x => x.kind === 'order' && (!x.orderId || x.orderId === p.id)) || makeCase(s, conv, 'order', '查询订单与物流', p.id, now);
+      if (p.id && !c.result && !acceptedTicket(s, c)) { c.orderId = p.id; s.tickets.filter(t => t.caseId === c.id && t.followupOnly === true).forEach(t => t.orderId = p.id); }
+      if (!p.id) conv.pendingCaseId = c.id;
+    } else if (!open.length || ids.length > 1) c = makeCase(s, conv, 'support', body, '', now);
+    else c = open.find(x => x.kind === 'support') || open.at(-1);
+    c.humanTouched = true;
+    conv.messages.at(-1).caseId = c.id;
+    if (/(停止|不要|不用|别).{0,8}(AI|ai|机器人|自动回复)/.test(body)) { conv.aiOptOut = true; pauseAi(conv, '客户要求停止 AI 协助', now); }
+  }
+  function suggestion(s, conversationId, caseId, now = Date.now()) {
+    const conv = get(s, 'conversations', conversationId), c = caseId ? get(s, 'cases', caseId) : conv.caseIds.length ? get(s, 'cases', conv.caseIds.at(-1)) : null;
+    assert(!c || conv.caseIds.includes(c.id), '问题不属于当前会话');
+    const m = latestCustomer(conv), query = m?.body || '', k = query ? retrieve(s, query, now) : null;
+    const token = JSON.stringify({conv: conv.id, owner: conv.ownerId, state: conv.state, message: m || null, case: c ? {id: c.id, kind: c.kind, orderId: c.orderId, status: c.status} : null, order: currentOrder(s, c) || null, referencedOrders: s.orders.filter(o=>o.customerId===conv.customerId && query.toUpperCase().includes(o.id)), knowledge: k, connection: customerConnection(s, conv.customerId)});
+    if (!k || k.conflict) return {token, messageId: m?.id || '', query, body: '', status: k?.conflict ? 'conflict' : 'none', reason: k?.conflict ? '知识来源冲突，需要人工核实' : '尚无有效知识依据，请人工核实'};
+    return {token, messageId: m.id, query, body: k.answer, status: 'ready', knowledge: {id: k.id, title: k.title, version: k.version, source: k.source, answer: k.answer}};
+  }
+  function sopView(s, conversationId, caseId, now = Date.now()) {
+    const conv = get(s, 'conversations', conversationId), c = caseId ? get(s, 'cases', caseId) : conv.caseIds.length ? get(s, 'cases', conv.caseIds.at(-1)) : null;
+    assert(!c || conv.caseIds.includes(c.id), '问题不属于当前会话');
+    const f = c?.workflow || {}, order = currentOrder(s, c), t = c && (activeTicket(s, c) || s.tickets.find(x => x.caseId === c.id));
+    const accepted = c && acceptedTicket(s, c);
+    const bound = Boolean(order), isOrder = c?.kind === 'order', sale = c?.kind === 'aftersales', done = c?.status === 'completed';
+    const states = !c ? {} : {intent: c.kind === 'support' && !f.intentConfirmedAt ? 'todo' : 'done', order: isOrder || sale ? (bound ? 'done' : 'todo') : 'idle', logistics: isOrder ? (f.logistics || c.result?.evidence?.kind === 'local-order' ? 'done' : 'todo') : 'idle', aftersales: sale ? (accepted ? 'done' : bound ? 'doing' : 'todo') : 'idle', information: t?.status === 'waiting_customer' ? 'waiting' : sale && !accepted ? 'todo' : 'idle', result: done ? 'done' : t ? (t.status==='waiting_customer'?'waiting':'doing') : 'todo', callback: t?.callback ? 'done' : 'idle'};
+    const nodes = SOP.map(([key, title]) => {
+      const override = f.overrides?.[key];
+      let status = key === 'close' ? (conv.state === 'closed' ? 'done' : customerConnection(s, conv.customerId) === 'online' ? 'idle' : 'todo') : (states[key] || 'idle');
+      let reason = status === 'idle' ? '当前诉求未触发此节点' : status === 'done' ? '已有可核对记录' : '需要继续处理';
+      if (key !== 'close' && f.withdrawn) { status = 'na'; reason = f.withdrawn.reason; }
+      else if (override && key !== 'close' && status !== 'done') { status = override.status; reason = override.reason; }
+      if (key === 'order' && (isOrder || sale) && !bound) reason = c.orderId ? '订单归属尚未核对，请选择本人订单' : '等待客户提供订单';
+      if (key==='intent' && f.intentEvidence) reason=`客户原话：${f.intentEvidence.text}`;
+      const n = {key, title, status, reason, ...(t ? {ticketId: t.id} : {})};
+      if (key === 'aftersales') n.steps = [{title:'确认类型与原因',status:sale?(accepted?'done':f.prefill?.serviceType?'doing':'todo'):'idle'},{title:'核对规则及缺失信息',status:sale?(accepted?'done':'todo'):'idle'},{title:'核对申请',status:sale?(accepted?'done':'todo'):'idle'},{title:'登记受理',status:sale?(accepted?'done':'todo'):'idle'}];
+      return n;
+    });
+    const p = f.prefill || {};
+    return {caseId:c?.id || '',caseTitle:c?.title || '尚无待处理问题',orderId:c?.orderId || '',nodes,prefill:{serviceType:accepted?.serviceType || p.serviceType || '',description:accepted?.description || p.description || '',exchangeRequest:accepted?.exchangeRequest || p.exchangeRequest || '',extraNote:accepted?.extraNote || p.extraNote || ''},suggestion:suggestion(s,conversationId,c?.id,now)};
+  }
+  function closePreview(s, conversationId, now = Date.now()) {
+    const conv = get(s, 'conversations', conversationId), cases = conv.caseIds.map(id => get(s, 'cases', id)), tickets = s.tickets.filter(t => conv.caseIds.includes(t.caseId));
+    const items = cases.flatMap(c => sopView(s, conv.id, c.id, now).nodes.filter(n => n.key !== 'close' && !['idle','done','na'].includes(n.status)).map(n => {
+      const t = tickets.find(t => t.id === n.ticketId);
+      return {caseId:c.id,caseTitle:c.title,nodeKey:n.key,title:n.title,status:n.status,reason:n.reason,...(t?{ticketId:t.id,ownerId:t.ownerId,dueAt:t.dueAt}:{})};
+    }));
+    return {token:JSON.stringify({id:conv.id,state:conv.state,ownerId:conv.ownerId,messages:conv.messages,cases,tickets,connection:get(s,'customers',conv.customerId).connectionChangedAt || 0}),summary:cases.map(c=>`${c.title}：${c.status==='completed'?'已形成结果':'待继续跟进'}`).join('；').slice(0,1000),items,history:copy(conv.closures || [])};
+  }
+  function aiPending(s, conversationId, now = Date.now()) {
+    const conv = get(s, 'conversations', conversationId), grant = conv.aiAssist, m = latestCustomer(conv);
+    if (!grant?.enabled || grant.remaining < 1 || conv.state !== 'human' || !conv.ownerId || grant.ownerId !== conv.ownerId || conv.aiOptOut || customerConnection(s,conv.customerId) !== 'online' || !m || grant.respondedMessageIds.includes(m.id)) return null;
+    const index = conv.messages.findIndex(x=>x.id===m.id);
+    if (conv.messages.slice(index+1).some(x=>x.role==='agent' && x.visibility==='public')) return null;
+    const c = m.caseId && conv.caseIds.includes(m.caseId) ? get(s,'cases',m.caseId) : conv.caseIds.length ? get(s,'cases',conv.caseIds.at(-1)) : null;
+    if (c?.status==='completed' || c?.workflow?.withdrawn) return null;
+    const sg = suggestion(s,conv.id,c?.id,now), p = intentions(m.body,conv.flow);
+    if (p.human || new Set((m.body.match(/\bSO[A-Z0-9]+\b/gi)||[]).map(x=>x.toUpperCase())).size>1 || sg.status==='conflict') return null;
+    let body = sg.status==='ready' ? sg.body : '', citation = sg.knowledge;
+    if (p.lookup || p.onlyId) {
+      const order = s.orders.find(o=>o.id===(p.id || c?.orderId) && o.customerId===conv.customerId);
+      body = order ? `${order.product}：${order.status}。${order.delivery}` : !p.id && !c?.orderId ? '请提供订单号，我会继续核对订单信息。' : ''; citation = null;
+    } else if (p.intake || c?.kind==='aftersales') { body = currentOrder(s,c) ? '请补充退换货原因及具体要求，客服核对申请后会继续受理。' : '请提供本人订单号，以便核对售后申请。'; citation = null; }
+    if (!body) return null;
+    return {id:conv.id,ownerId:conv.ownerId,messageId:m.id,token:JSON.stringify({suggestion:sg.token,generation:grant.generation,remaining:grant.remaining,connectionAt:get(s,'customers',conv.customerId).connectionChangedAt || 0,body}),dueAt:Math.max(m.at,grant.grantedAt)+30000,remaining:grant.remaining,body,...(citation?{citation}:{})};
+  }
+  function saveCallback(s, a, ticketId, data, now) {
+    const t = get(s,'tickets',ticketId); agentOwns(a,t);
+    const at = Number(data.at); assert(Number.isFinite(at) && at>now,'回访时间须晚于当前时间');
+    const purpose = text(data.purpose,'回访目的',1000), note = String(data.note || '').trim(); assert(note.length<=1000,'回访备注不能超过 1000 字');
+    const history = t.callback ? [...t.callback.history,{at:now,action:'rescheduled',previous:copy({...t.callback,history:undefined}),actorId:a.id}] : [];
+    t.callback = {purpose,at,note,status:'pending',history}; return t;
+  }
+  function followupTicket(s,a,c,now,dueAt) {
+    let t = activeTicket(s,c);
+    if (t) { agentOwns(a,t); return t; }
+    const duplicate = c.kind === 'aftersales' && otherAftersalesTicket(s, c);
+    assert(!duplicate, `同一订单已有办理中的售后，请从工单列表继续原工单 ${duplicate?.id}`);
+    t = {id:uid(s,'TK'),customerId:c.customerId,teamId:'service',caseId:c.id,title:`跟进：${c.title}`.slice(0,100),description:'按会话关闭记录继续跟进未完成事项。',orderId:c.orderId,status:'working',priority:'normal',ownerId:a.id,createdAt:now,dueAt,followupOnly:true,requestKey:'',requestFingerprint:'',history:[{at:now,publicText:'已安排客服继续跟进。',actor:a.name}]};
+    s.tickets.unshift(t); c.humanTouched=true; return t;
+  }
+  function intakeToken(s,caseId,orderId,conversationId) {
+    const c=get(s,'cases',caseId), conv=conversationId?get(s,'conversations',conversationId):c.conversationIds.map(id=>get(s,'conversations',id)).find(v=>v.customerId===c.customerId);
+    assert(conv && conv.caseIds.includes(c.id) && conv.customerId===c.customerId,'问题不属于当前会话');
+    const order=s.orders.find(o=>o.id===String(orderId || c.orderId).toUpperCase() && o.customerId===c.customerId);
+    assert(order,'订单归属尚未核对');
+    return JSON.stringify({caseId:c.id,customerId:c.customerId,kind:c.kind,orderId:c.orderId,status:c.status,result:c.result,order,policy:retrieve(s,'退货规则'),conversationId:conv.id,ownerId:conv.ownerId,state:conv.state,message:latestCustomer(conv) || null,tickets:s.tickets.filter(t=>t.caseId===c.id || (t.customerId===c.customerId && t.orderId===order.id)).map(t=>({id:t.id,caseId:t.caseId,status:t.status,ownerId:t.ownerId,followupOnly:t.followupOnly===true}))});
+  }
+  function intakeFingerprint(data,title,description) {
+    return JSON.stringify({caseId:data.caseId,conversationId:data.conversationId || '',orderId:String(data.orderId || '').toUpperCase(),title,description,serviceType:data.serviceType,exchangeRequest:String(data.exchangeRequest || '').trim(),extraNote:String(data.extraNote || '').trim()});
+  }
+  function receipt(t,a,data,fp,now) {
+    if (data.structured && data.requestKey) { t.intakeReceipts ||= []; t.intakeReceipts.push({requestKey:data.requestKey,fingerprint:fp,actorId:a.id,at:now}); }
+  }
+  function validWorkflow(s) {
+    const obj=x=>x && typeof x==='object' && !Array.isArray(x), str=x=>typeof x==='string', time=x=>Number.isFinite(x), arr=Array.isArray;
+    const hasAgent=id=>s.staff.some(a=>a.id===id && a.role==='agent');
+    const callback=x=>obj(x) && str(x.purpose) && x.purpose.length>0 && x.purpose.length<=1000 && time(x.at) && str(x.note) && x.note.length<=1000 && ['pending','contacted','cancelled'].includes(x.status) && arr(x.history) && x.history.every(h=>obj(h) && time(h.at) && hasAgent(h.actorId));
+    return s.customers.every(c=>(c.connection===undefined || ['online','interrupted','offline'].includes(c.connection)) && (c.connectionChangedAt===undefined || time(c.connectionChangedAt))) &&
+      s.cases.every(c=>c.workflow===undefined || (obj(c.workflow) && (c.workflow.withdrawn===undefined || (obj(c.workflow.withdrawn) && time(c.workflow.withdrawn.at) && str(c.workflow.withdrawn.reason) && hasAgent(c.workflow.withdrawn.actorId))) && (c.workflow.intentEvidence===undefined || (obj(c.workflow.intentEvidence) && str(c.workflow.intentEvidence.messageId) && str(c.workflow.intentEvidence.text) && time(c.workflow.intentEvidence.at))) && (c.workflow.intentConfirmedAt===undefined || time(c.workflow.intentConfirmedAt)) && (c.workflow.orderCheckedAt===undefined || time(c.workflow.orderCheckedAt)) && (c.workflow.logistics===undefined || (obj(c.workflow.logistics) && time(c.workflow.logistics.at) && hasAgent(c.workflow.logistics.actorId) && c.workflow.logistics.order?.id===c.orderId && c.workflow.logistics.order?.customerId===c.customerId)) && (c.workflow.prefill===undefined || (obj(c.workflow.prefill) && ['', 'return','exchange'].includes(c.workflow.prefill.serviceType) && ['description','exchangeRequest','extraNote'].every(k=>str(c.workflow.prefill[k])))) && (c.workflow.overrides===undefined || (obj(c.workflow.overrides) && Object.entries(c.workflow.overrides).every(([k,v])=>SOP.some(([key])=>key===k && k!=='close') && obj(v) && ['na','waiting','todo'].includes(v.status) && str(v.reason) && v.reason.length>0 && time(v.at) && hasAgent(v.actorId)))))) &&
+      s.tickets.every(t=>(t.followupOnly===undefined || typeof t.followupOnly==='boolean') && (t.followupOnly!==true || (t.serviceType===undefined && t.intakeReceipts===undefined)) && (t.intakeReceipts===undefined || (arr(t.intakeReceipts) && new Set(t.intakeReceipts.map(r=>r?.requestKey)).size===t.intakeReceipts.length && t.intakeReceipts.every(r=>obj(r) && str(r.requestKey) && r.requestKey.length>0 && str(r.fingerprint) && time(r.at) && (r.actorId===t.customerId || hasAgent(r.actorId))))) && (t.serviceType===undefined || (['return','exchange'].includes(t.serviceType) && str(t.exchangeRequest) && str(t.extraNote) && t.exchangeRequest.length<=200 && t.extraNote.length<=1000 && (t.serviceType!=='exchange' || t.exchangeRequest.length>0) && s.cases.some(c=>c.id===t.caseId && c.kind==='aftersales' && c.customerId===t.customerId && c.orderId===t.orderId))) && (t.callback===undefined || (callback(t.callback) && s.staff.some(a=>a.id===t.ownerId && a.role==='agent' && a.teams.includes(t.teamId))))) &&
+      s.conversations.every(c=>(c.aiOptOut===undefined || typeof c.aiOptOut==='boolean') && (c.aiAssist===undefined || (obj(c.aiAssist) && typeof c.aiAssist.enabled==='boolean' && hasAgent(c.aiAssist.ownerId) && time(c.aiAssist.grantedAt) && Number.isInteger(c.aiAssist.generation) && c.aiAssist.generation>0 && Number.isInteger(c.aiAssist.remaining) && c.aiAssist.remaining>=0 && c.aiAssist.remaining<=2 && arr(c.aiAssist.respondedMessageIds) && c.aiAssist.respondedMessageIds.every(id=>c.messages.some(m=>m.id===id && m.role==='customer')) && arr(c.aiAssist.history) && c.aiAssist.history.every(h=>obj(h) && time(h.at) && str(h.action)) && (!c.aiAssist.enabled || (c.state==='human' && c.ownerId===c.aiAssist.ownerId && !c.aiOptOut && customerConnection(s,c.customerId)==='online')))) && (c.closures===undefined || (arr(c.closures) && new Set(c.closures.map(x=>x.id)).size===c.closures.length && c.closures.every(x=>obj(x) && str(x.id) && time(x.at) && hasAgent(x.actorId) && str(x.reason) && str(x.summary) && x.summary.length<=1000 && str(x.requestKey) && str(x.requestFingerprint) && arr(x.items) && arr(x.sop) && arr(x.callbacks) && x.items.every(i=>obj(i) && str(i.caseId) && SOP.some(([key])=>key===i.nodeKey && key!=='close') && ['existing','new','callback','na','withdrawn'].includes(i.action) && str(i.reason))))));
+  }
   function execute(state, identity, type, data = {}, now = Date.now()) {
     const s = copy(state), a = actor(s, identity);
     assert(roles[a.role]?.includes(type), '当前角色无权执行此操作');
+    if (a.role==='customer' && type!=='customerConnection') assert(customerConnection(s,a.id)==='online','当前连接不可用，请恢复在线后操作');
     let value;
     switch (type) {
+      case 'confirmIntent': {
+        const {conv,c} = scopedCase(s,a,data.conversationId,data.caseId);
+        assert(['knowledge','order','aftersales','support'].includes(data.kind),'诉求类型无效');
+        assert(c.kind===data.kind || (!c.result && !acceptedTicket(s,c)),'已有办理记录，不能更换诉求类型');
+        c.kind=data.kind; if (data.title) c.title=text(data.title,'诉求说明',200); wf(c).intentConfirmedAt=now; pauseAi(conv,'诉求核对已更新',now); value=c.id; break;
+      }
+      case 'bindOrder': {
+        const {conv,c} = scopedCase(s,a,data.conversationId,data.caseId); assert(['order','aftersales'].includes(c.kind),'此诉求不需要绑定订单');
+        value=bindCaseOrder(s,conv,c,data.orderId,now).id; pauseAi(conv,'订单核对已更新',now); break;
+      }
+      case 'queryOrder': {
+        const {c} = scopedCase(s,a,data.conversationId,data.caseId), order=currentOrder(s,c); assert(order,'请先核对本人订单');
+        wf(c).logistics={at:now,order:copy(order),actorId:a.id}; value={body:`${order.product}：${order.status}。${order.delivery}`,order:copy(order)}; break;
+      }
+      case 'markSop': {
+        const {c} = scopedCase(s,a,data.conversationId,data.caseId);
+        assert(SOP.some(([key])=>key===data.nodeKey) && data.nodeKey!=='close','节点无效');
+        assert(['na','waiting','todo'].includes(data.status),'节点状态无效');
+        const node=sopView(s,data.conversationId,c.id,now).nodes.find(n=>n.key===data.nodeKey);
+        assert(node.status!=='done','已有完成依据，不能覆盖节点状态');
+        assert(!(c.kind==='aftersales' && acceptedTicket(s,c) && data.status==='na'),'已受理售后须继续原工单');
+        wf(c).overrides ||= {}; wf(c).overrides[data.nodeKey]={status:data.status,reason:text(data.reason,'节点说明',500),at:now,actorId:a.id}; break;
+      }
+      case 'setAiAssist': {
+        const conv=get(s,'conversations',data.id); agentOwns(a,conv); assert(conv.state==='human','请先接管会话'); assert(typeof data.enabled==='boolean','授权状态无效');
+        if (!data.enabled) { pauseAi(conv,'客服暂停 AI 协助',now); break; }
+        assert(!conv.aiOptOut,'客户已要求停止 AI 协助'); assert(customerConnection(s,conv.customerId)==='online','客户当前不在线');
+        if (conv.aiAssist?.enabled) break;
+        const prior=conv.aiAssist;
+        conv.aiAssist={enabled:true,ownerId:a.id,grantedAt:now,generation:(prior?.generation || 0)+1,remaining:2,respondedMessageIds:prior?.respondedMessageIds || [],history:[...(prior?.history || []),{at:now,action:'authorized',actorId:a.id}]}; break;
+      }
+      case 'aiContinue': {
+        const conv=get(s,'conversations',data.id); agentOwns(a,conv); const p=aiPending(s,conv.id,now);
+        assert(p && p.messageId===data.messageId && p.token===data.token && now>=p.dueAt,'AI 协助已失效或尚未到发送时间');
+        message(s,conv,'bot',p.body,now,{aiAssist:true,...(p.citation?{citation:copy(p.citation)}:{})});
+        conv.aiAssist.remaining--; conv.aiAssist.respondedMessageIds.push(p.messageId);
+        conv.aiAssist.history.push({at:now,action:'sent',authorizedBy:conv.aiAssist.ownerId,messageId:p.messageId,source:p.citation?copy(p.citation):'本人订单事实或信息收集'});
+        if (!conv.aiAssist.remaining) pauseAi(conv,'本次授权次数已用完',now); value=conv.messages.at(-1).id; break;
+      }
+      case 'customerConnection': {
+        assert(['online','interrupted','offline'].includes(data.status),'连接状态无效'); const customer=get(s,'customers',a.id);
+        customer.connection=data.status; customer.connectionChangedAt=now;
+        if (data.status!=='online') s.conversations.filter(c=>c.customerId===a.id).forEach(c=>pauseAi(c,'客户连接已中断',now)); break;
+      }
+      case 'saveCallback': { value=saveCallback(s,a,data.ticketId,data,now).id; break; }
+      case 'callbackResult': {
+        const t=get(s,'tickets',data.ticketId); agentOwns(a,t); assert(t.callback?.status==='pending','当前没有待处理回访');
+        assert(['contacted','unreachable','cancelled'].includes(data.result),'回访结果无效'); const summary=text(data.summary,'回访结果说明',1000);
+        if (data.result==='unreachable') { assert(Number.isFinite(Number(data.nextAt)) && Number(data.nextAt)>now,'未联系到客户时须设置下次回访时间'); t.callback.at=Number(data.nextAt); }
+        else t.callback.status=data.result;
+        t.callback.history.push({at:now,result:data.result,summary,nextAt:data.result==='unreachable'?Number(data.nextAt):null,actorId:a.id}); break;
+      }
+      case 'closeWithSummary': {
+        const conv=get(s,'conversations',data.id), requestKey=text(data.requestKey,'提交标识',200), requestFingerprint=JSON.stringify(data);
+        const previous=conv.closures?.find(x=>x.requestKey===requestKey);
+        if (previous) { assert(previous.actorId===a.id && previous.requestFingerprint===requestFingerprint,'关闭标识已用于其他内容'); value=previous.id; break; }
+        agentOwns(a,conv); assert(conv.state==='human','请先接管会话');
+        const preview=closePreview(s,conv.id,now); assert(data.token===preview.token,'会话或跟进安排已变化，请重新核对关闭记录');
+        const reason=text(data.reason,'关闭原因',500), summary=text(data.summary,'会话总结',1000);
+        assert(Array.isArray(data.items) && data.items.length===preview.items.length,'请逐项安排未完成事项');
+        assert(Array.isArray(data.callbacks || []),'回访安排格式无效');
+        const callbacks=data.callbacks || [], keys=new Set(), arrangements=new Map(), targetTimes=new Map(), disposition=[];
+        assert(new Set(callbacks.map(x=>x.caseId)).size===callbacks.length,'每个问题只能安排一条回访');
+        for (const item of data.items) {
+          const key=`${item.caseId}:${item.nodeKey}`, original=preview.items.find(x=>x.caseId===item.caseId && x.nodeKey===item.nodeKey);
+          assert(original && !keys.has(key),'未完成事项重复或已变化'); keys.add(key);
+          assert(['existing','new','callback','na','withdrawn'].includes(item.action),'遗留事项安排无效');
+          const why=text(item.reason,'跟进安排说明',500), c=get(s,'cases',item.caseId); let t;
+          if (['na','withdrawn'].includes(item.action)) {
+            assert(!(c.kind==='aftersales' && acceptedTicket(s,c)),'已受理售后不能通过关闭取消');
+            assert(!s.tickets.some(t=>t.caseId===c.id && t.status!=='done'),'已有办理任务，请保留跟进安排');
+            wf(c).overrides ||= {}; wf(c).overrides[item.nodeKey]={status:'na',reason:why,at:now,actorId:a.id};
+          } else {
+            const dueAt=Number(item.dueAt || (item.ticketId && get(s,'tickets',item.ticketId).dueAt) || now+s.settings.ticketHours*3600000);
+            assert(Number.isFinite(dueAt) && dueAt>now,'跟进目标时间须晚于当前时间');
+            if (item.action==='existing') {
+              t=get(s,'tickets',item.ticketId); assert(t.caseId===c.id && t.customerId===conv.customerId && t.status!=='done' && t.ownerId && within(a,t),'请关联同一问题且已分配负责人的办理中工单');
+              if (dueAt!==t.dueAt) { agentOwns(a,t); t.dueAt=dueAt; }
+            } else {
+              if (item.action==='callback') assert(callbacks.some(x=>x.caseId===c.id),'请填写对应问题的回访计划');
+              t=arrangements.get(c.id) || followupTicket(s,a,c,now,dueAt); agentOwns(a,t); t.dueAt=dueAt;
+            }
+            assert(!targetTimes.has(t.id) || targetTimes.get(t.id)===t.dueAt,'同一工单的跟进目标时间必须一致');
+            targetTimes.set(t.id,t.dueAt); arrangements.set(c.id,t);
+          }
+          disposition.push({...copy(original),action:item.action,reason:why,...(t?{ticketId:t.id,ownerId:t.ownerId,dueAt:t.dueAt}:{})});
+        }
+        for (const caseId of conv.caseIds) {
+          const caseItems=disposition.filter(x=>x.caseId===caseId);
+          if (caseItems.length && caseItems.every(x=>['na','withdrawn'].includes(x.action))) wf(get(s,'cases',caseId)).withdrawn={at:now,actorId:a.id,reason:caseItems.map(x=>x.reason).join('；').slice(0,1000)};
+        }
+        for (const plan of callbacks) {
+          assert(conv.caseIds.includes(plan.caseId),'回访问题不属于当前会话'); const c=get(s,'cases',plan.caseId);
+          let t=arrangements.get(c.id) || activeTicket(s,c) || s.tickets.find(t=>t.caseId===c.id);
+          if (!t) t=followupTicket(s,a,c,now,Number(plan.at));
+          saveCallback(s,a,t.id,plan,now); arrangements.set(c.id,t);
+        }
+        const snapshot={id:uid(s,'CL'),at:now,actorId:a.id,reason,summary,items:disposition,connection:customerConnection(s,conv.customerId),sop:conv.caseIds.map(id=>copy(sopView(s,conv.id,id,now).nodes).map(node=>node.key==='close'?{...node,status:'done',reason:'本次沟通已结束'}:node)),callbacks:[...arrangements.values()].filter(t=>t.callback).map(t=>({ticketId:t.id,ownerId:t.ownerId,...copy(t.callback)})),requestKey,requestFingerprint};
+        conv.closures ||= []; conv.closures.push(snapshot); pauseAi(conv,'会话已结束',now); conv.state='closed'; conv.ownerId='';
+        message(s,conv,'system','本次沟通已结束，已记录后续跟进安排。未完成的办理记录会继续保留。',now); value=snapshot.id; break;
+      }
       case 'newConversation': {
         const c = makeConversation(s, a.id, now);
         if (data.caseId) { const issue = get(s, 'cases', data.caseId); owns(a, issue); c.caseIds.push(issue.id); issue.conversationIds.push(c.id); if (issue.status !== 'completed' || s.tickets.some(t => t.caseId === issue.id)) handoff(s, c, '继续跟进已有问题', now); }
         value = c.id; break;
       }
       case 'say': {
-        const c = get(s, 'conversations', data.id); owns(a, c); const body = text(data.body, '问题');
+        const c = get(s, 'conversations', data.id); owns(a, c); assert(customerConnection(s,a.id)==='online','当前连接不可用，请恢复在线后发送'); const body = text(data.body, '问题');
         if (c.state === 'closed') { c.state = c.ownerHistory.length || c.caseIds.some(id => activeTicket(s, get(s, 'cases', id))) ? 'queued' : 'bot'; if (c.state === 'queued') {c.waitingSince = now; c.firstHumanAt = null;} }
         message(s, c, 'customer', body, now);
         if (c.state === 'bot') run(s, c, body, now);
-        else if (!c.caseIds.some(id => get(s, 'cases', id).status !== 'completed')) {
-          const issue = makeCase(s, c, 'support', body, '', now);
-          issue.humanTouched = true;
-          c.messages.at(-1).caseId = issue.id;
-        }
+        else recognise(s, c, body, now);
         value = c.id; break;
       }
       case 'requestHuman': {
@@ -367,7 +894,15 @@
       }
       case 'reply': case 'note': {
         const c = get(s, 'conversations', data.id); agentOwns(a, c); assert(c.state === 'human', '会话不在人工接待状态');
-        message(s, c, 'agent', text(data.body, type === 'note' ? '内部备注' : '回复'), now, {author: a.name, visibility: type === 'note' ? 'internal' : 'public'});
+        let citation, orderId;
+        if (type === 'reply' && data.suggestionToken) { const sg = suggestion(s,c.id,data.suggestionCaseId,now); assert(sg.status==='ready' && sg.token===data.suggestionToken,'推荐依据已变化，请重新核对后发送'); citation=copy(sg.knowledge); }
+        if (type === 'reply' && (data.orderCaseId !== undefined || data.orderSnapshot !== undefined)) {
+          const issue=get(s,'cases',data.orderCaseId), order=currentOrder(s,issue);
+          assert(c.caseIds.includes(issue.id) && issue.customerId===c.customerId && order,'订单不属于当前接待问题');
+          assert(JSON.stringify(order)===JSON.stringify(data.orderSnapshot),'订单事实已变化，请重新查询并核对后发送'); orderId=order.id;
+        }
+        pauseAi(c,'人工已接手回复',now);
+        message(s, c, 'agent', text(data.body, type === 'note' ? '内部备注' : '回复'), now, {author: a.name, visibility: type === 'note' ? 'internal' : 'public', ...(citation?{citation}:{}), ...(orderId?{orderId}:{})});
         if (type === 'reply') c.firstHumanAt ||= now; break;
       }
       case 'completeCase': {
@@ -378,13 +913,14 @@
         const conclusion = text(data.conclusion, '处理结论'), evidence = text(data.evidence, '核对依据');
         complete(s, c, conclusion, {kind: 'agent-record', text: evidence, actor: a.name}, a.id, now); c.humanTouched = true;
         for (const id of c.conversationIds) { const v = get(s, 'conversations', id); if (v.pendingCaseId === c.id) v.pendingCaseId = ''; }
+        pauseAi(conv,'人工已记录处理结果',now);
         message(s, conv, 'agent', conclusion, now, {author: a.name, caseId: c.id}); conv.firstHumanAt ||= now; break;
       }
       case 'closeConversation': {
         const c = get(s, 'conversations', data.id);
         if (a.role === 'customer') owns(a, c);
         else { agentOwns(a, c); assert(c.state === 'human', '请先接管会话'); assert(c.caseIds.every(id => get(s, 'cases', id).status === 'completed' || activeTicket(s, get(s, 'cases', id))), '仍有未完成且无人跟进的问题，请记录结论或建立工单'); }
-        assert(c.state !== 'closed', '会话已经结束'); c.state = 'closed'; c.ownerId = '';
+        assert(c.state !== 'closed', '会话已经结束'); pauseAi(c,'会话已结束',now); c.state = 'closed'; c.ownerId = '';
         message(s, c, 'system', '本次沟通已结束。未完成的办理记录会继续保留，您可以在这里继续咨询。', now); break;
       }
       case 'feedback': {
@@ -404,19 +940,51 @@
       case 'createTicket': {
         const title = text(data.title, '工单标题', 100), description = text(data.description, '问题描述');
         assert(data.confirmed === true, '请核对申请后再确认受理');
+        const inputFingerprint=data.structured?intakeFingerprint(data,title,description):'';
+        const priorReceipt=data.structured && data.requestKey && s.tickets.find(t=>t.intakeReceipts?.some(r=>r.requestKey===data.requestKey));
+        if (priorReceipt) {
+          const r=priorReceipt.intakeReceipts.find(r=>r.requestKey===data.requestKey);
+          assert(r.fingerprint===inputFingerprint && r.actorId===a.id,'提交标识被用于不同内容，请重新核对');
+          if (a.role==='customer') owns(a,priorReceipt); else { const conv=get(s,'conversations',data.conversationId); agentOwns(a,conv); assert(conv.state==='human' && conv.caseIds.includes(priorReceipt.caseId),'无法从这段会话受理此问题'); }
+          value={id:priorReceipt.id,created:false}; break;
+        }
         let c = data.caseId && get(s, 'cases', data.caseId);
-        if (a.role === 'customer') { assert(c, '请选择要办理的问题'); owns(a, c); assert(c.kind === 'aftersales', '该问题请由客服协助受理'); assert(s.orders.some(o => o.id === c.orderId && o.customerId === a.id), '订单归属尚未核对'); }
+        if (a.role === 'customer') { assert(c, '请选择要办理的问题'); owns(a, c); assert(c.kind === 'aftersales', '该问题请由客服协助受理'); if (!data.structured) assert(s.orders.some(o => o.id === c.orderId && o.customerId === a.id), '订单归属尚未核对'); }
         else if (c) { const conv = get(s, 'conversations', data.conversationId); agentOwns(a, conv); assert(conv.state === 'human' && conv.caseIds.includes(c.id), '无法从这段会话受理此问题'); }
         else { get(s, 'customers', data.customerId); c = {id: uid(s, 'SC'), customerId: data.customerId, conversationIds: [], kind: 'support', title, orderId: '', status: 'open', feedback: 'none', result: null, resultHistory: [], createdAt: now, completedAt: null, humanTouched: true}; s.cases.unshift(c); }
+        let structured = null;
+        if (data.structured === true) {
+          assert(c.kind==='aftersales','结构化售后仅适用于退换货诉求');
+          if (data.previewToken!==undefined) assert(data.previewToken===intakeToken(s,c.id,data.orderId || c.orderId,data.conversationId),'订单或接待信息已变化，请返回修改并重新核对申请');
+          assert(['return','exchange'].includes(data.serviceType),'请选择退货或换货');
+          const exchangeRequest=data.serviceType==='exchange'?text(data.exchangeRequest,'换货要求',200):String(data.exchangeRequest || '').trim(), extraNote=String(data.extraNote || '').trim();
+          assert(exchangeRequest.length<=200 && extraNote.length<=1000,'换货要求或补充备注过长');
+          let conv=data.conversationId?get(s,'conversations',data.conversationId):c.conversationIds.map(id=>get(s,'conversations',id)).find(v=>v.customerId===c.customerId);
+          assert(conv && conv.customerId===c.customerId && conv.caseIds.includes(c.id),'问题不属于当前会话');
+          c=bindCaseOrder(s,conv,c,data.orderId || c.orderId,now);
+          structured={serviceType:data.serviceType,exchangeRequest,extraNote};
+        }
         assert(c.status !== 'completed', '问题已完成；需要继续处理时请先反馈未解决');
         for (const id of c.conversationIds) { const v = get(s, 'conversations', id); if (v.pendingCaseId === c.id) v.pendingCaseId = ''; }
-        const fp = JSON.stringify({caseId: c.id, title, description});
+        const fp = JSON.stringify({caseId: c.id, title, description,...(structured || {})});
         const byKey = data.requestKey && s.tickets.find(t => t.requestKey === data.requestKey);
         if (byKey) { assert(byKey.requestFingerprint === fp, '提交标识被用于不同内容，请重新核对'); value = {id: byKey.id, created: false}; break; }
         const existing = activeTicket(s, c);
-        if (existing) { value = {id: existing.id, created: false}; break; }
-        assert(c.kind !== 'aftersales' || !s.tickets.some(t => t.customerId === c.customerId && t.orderId === c.orderId && t.status !== 'done' && get(s, 'cases', t.caseId).kind === 'aftersales'), '同一订单已有办理中的售后，请继续原工单');
+        if (existing?.followupOnly === true && c.kind === 'aftersales') {
+          assert(structured, '请核对完整退换货申请后再确认受理');
+          if (a.role === 'agent') agentOwns(a, existing);
+          const duplicate=otherAftersalesTicket(s,c); assert(!duplicate, `同一订单已有办理中的售后，请从工单列表继续原工单 ${duplicate?.id}`);
+          Object.assign(existing, {title,description,orderId:c.orderId,...structured,followupOnly:false,requestKey:data.requestKey || '',requestFingerprint:fp});
+          receipt(existing,a,data,inputFingerprint,now); existing.history.push({at:now,publicText:'退换货申请已核对受理，继续在本工单跟进。',actor:a.name});
+          c.humanTouched=true;
+          for (const id of c.conversationIds) message(s,get(s,'conversations',id),'system',`已核对受理工单 ${existing.id}：${title}。后续继续在原记录办理。`,now,{ticketId:existing.id});
+          value={id:existing.id,created:false,upgraded:true}; break;
+        }
+        if (existing) { receipt(existing,a,data,inputFingerprint,now); value = {id: existing.id, created: false}; break; }
+        const duplicate=c.kind === 'aftersales' && otherAftersalesTicket(s,c);
+        assert(!duplicate, `同一订单已有办理中的售后，请从工单列表继续原工单 ${duplicate?.id}`);
         const t = {id: uid(s, 'TK'), customerId: c.customerId, teamId: 'service', caseId: c.id, title, description, orderId: c.orderId, status: 'new', priority: 'normal', ownerId: '', createdAt: now, dueAt: now + s.settings.ticketHours * 3600000, requestKey: data.requestKey || '', requestFingerprint: fp, history: [{at: now, publicText: '申请已受理，等待客服核实。', actor: a.name}]};
+        if (structured) { Object.assign(t,structured); receipt(t,a,data,inputFingerprint,now); }
         s.tickets.unshift(t); c.humanTouched = true; c.status = 'open';
         for (const id of c.conversationIds) message(s, get(s, 'conversations', id), 'system', `已受理工单 ${t.id}：${title}。请在“服务进度”查看后续处理。`, now, {ticketId: t.id});
         value = {id: t.id, created: true}; break;
@@ -443,8 +1011,8 @@
       case 'assignTicket': case 'assignConversation': {
         const r = get(s, type === 'assignTicket' ? 'tickets' : 'conversations', data.id); managing(a, r);
         const next = get(s, 'staff', data.ownerId); assert(next.role === 'agent' && within(next, r), '请选择该服务组的客服');
-        if (type === 'assignTicket') { assert(r.status !== 'done', '已完成工单不再转派'); r.ownerId = next.id; if (r.status === 'new') r.status = 'working'; r.history.push({at: now, publicText: '已安排客服继续处理。', actor: a.name, internalText: `转派给${next.name}`}); }
-        else { assert(['queued', 'human'].includes(r.state), '仅能分配待接待或接待中的会话'); assert(next.available && s.conversations.filter(v => v.state === 'human' && v.ownerId === next.id && v.id !== r.id).length < s.settings.capacity, '目标客服不可接待或已满载'); r.ownerId = next.id; r.state = 'human'; if (!r.ownerHistory.includes(next.id)) r.ownerHistory.push(next.id); message(s, r, 'system', `${next.name}将继续为您服务，已有信息会保留。`, now); } break;
+        if (type === 'assignTicket') { assert(r.status !== 'done' || r.callback?.status === 'pending', '已完成且无待回访的工单不再转派'); r.ownerId = next.id; if (r.status === 'new') r.status = 'working'; r.history.push({at: now, publicText: '已安排客服继续处理。', actor: a.name, internalText: `转派给${next.name}`}); }
+        else { assert(['queued', 'human'].includes(r.state), '仅能分配待接待或接待中的会话'); assert(next.available && s.conversations.filter(v => v.state === 'human' && v.ownerId === next.id && v.id !== r.id).length < s.settings.capacity, '目标客服不可接待或已满载'); pauseAi(r,'会话已转派',now); r.ownerId = next.id; r.state = 'human'; if (!r.ownerHistory.includes(next.id)) r.ownerHistory.push(next.id); message(s, r, 'system', `${next.name}将继续为您服务，已有信息会保留。`, now); } break;
       }
       case 'presence': get(s, 'staff', a.id).available = Boolean(data.available); break;
       case 'serviceSettings': {
@@ -496,10 +1064,11 @@
     get(s, 'customers', customerId);
     return {
       customer: copy(get(s, 'customers', customerId)),
+      connection: customerConnection(s, customerId),
       orders: copy(s.orders.filter(o => o.customerId === customerId)),
-      conversations: s.conversations.filter(c => c.customerId === customerId).map(c => ({id: c.id, customerId: c.customerId, state: c.state, caseIds: [...c.caseIds], createdAt: c.createdAt, updatedAt: c.updatedAt, messages: copy(c.messages.filter(m => m.visibility === 'public'))})),
+      conversations: s.conversations.filter(c => c.customerId === customerId).map(c => ({id: c.id, customerId: c.customerId, state: c.state, caseIds: [...c.caseIds], createdAt: c.createdAt, updatedAt: c.updatedAt, messages: c.messages.filter(m => m.visibility === 'public').map(m => Object.fromEntries(Object.entries(copy(m)).filter(([key]) => ['id','role','body','at','visibility','author','caseId','ticketId','orderId','intake','citation','aiAssist'].includes(key))))})),
       cases: s.cases.filter(c => c.customerId === customerId).map(c => ({id: c.id, kind: c.kind, title: c.title, orderId: c.orderId, status: c.status, feedback: c.feedback, conversationIds: [...c.conversationIds], createdAt: c.createdAt, result: c.result ? {publicText: c.result.publicText, at: c.result.at} : null})),
-      tickets: s.tickets.filter(t => t.customerId === customerId).map(t => ({id: t.id, caseId: t.caseId, title: t.title, description: t.description, orderId: t.orderId, status: t.status, createdAt: t.createdAt, history: t.history.map(h => ({at: h.at, publicText: h.publicText, actor: h.actor}))}))
+      tickets: s.tickets.filter(t => t.customerId === customerId).map(t => ({id: t.id, caseId: t.caseId, title: t.title, description: t.description, serviceType:t.serviceType || '',exchangeRequest:t.exchangeRequest || '',extraNote:t.extraNote || '',orderId: t.orderId, status: t.status, createdAt: t.createdAt, history: t.history.map(h => ({at: h.at, publicText: h.publicText, actor: h.actor}))}))
     };
   }
   function deskView(s, identity) {
@@ -515,7 +1084,7 @@
     const confirmed = completed.filter(c => c.feedback === 'confirmed');
     return {conversations: s.conversations.length, cases: s.cases.length, completed: completed.length, confirmed: confirmed.length, botConfirmed: confirmed.filter(c => !c.humanTouched).length, waiting: s.conversations.filter(c => c.state === 'queued').length, activeTickets: s.tickets.filter(t => t.status !== 'done').length, overdue: s.tickets.filter(t => t.status !== 'done' && t.dueAt < now).length, gaps: s.gaps.filter(g => !['closed', 'dismissed'].includes(g.status)).length};
   }
-  const api = {copy, get, split, roles, actor, retrieve, intentions, classify, execute, customerView, deskView, metrics, regression, fingerprint, activeArticles};
+  const api = {copy, get, split, roles, actor, retrieve, intentions, classify, execute, customerView, deskView, metrics, regression, fingerprint, activeArticles, sopView, suggestion, closePreview, aiPending, customerConnection, validWorkflow, intakeToken};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.SupportDomain = api;
 })(typeof window !== 'undefined' ? window : globalThis);
 
@@ -593,7 +1162,7 @@
       s.conversations.every(c=>has('customers',c.customerId)&&a(c.messages)&&a(c.runs)&&a(c.ownerHistory)&&a(c.caseIds)&&c.caseIds.every(id=>has('cases',id))&&(!c.pendingCaseId||(c.caseIds.includes(c.pendingCaseId)&&s.cases.some(x=>x.id===c.pendingCaseId&&x.customerId===c.customerId&&x.conversationIds?.includes(c.id))))&&a(c.flow?.humanWords)&&['bot','queued','human','closed'].includes(c.state)&&c.messages.every(m=>typeof m.body==='string'))&&
       s.cases.every(c=>has('customers',c.customerId)&&a(c.resultHistory)&&a(c.conversationIds)&&c.conversationIds.every(id=>has('conversations',id))&&['open','waiting_customer','completed'].includes(c.status))&&
       s.tickets.every(t=>has('cases',t.caseId)&&has('customers',t.customerId)&&a(t.history)&&['new','working','waiting_customer','done'].includes(t.status))&&
-      s.gaps.every(g=>has('conversations',g.conversationId));
+      s.gaps.every(g=>has('conversations',g.conversationId))&&D.validWorkflow(s);
   }
   function open(storage,seed){
     let current, original=null, blocked='';
@@ -627,6 +1196,7 @@
         if(raw!==original){throw new Error('工作空间已在其他页面更新。请刷新后重试，当前输入仍保留。');}
         const result=D.execute(current,identity,type,data);
         if(type!=='export'){
+          if(!valid(result.state))throw new Error('操作后的数据校验未通过，原始记录未改变');
           const encoded=JSON.stringify(result.state);
           storage.setItem(KEY,encoded); // A quota/permission failure leaves memory unchanged.
           current=result.state;original=encoded;
@@ -654,11 +1224,11 @@
   const heading=(title,sub,actions='')=>`<div class="page-heading"><div><div class="eyebrow">工作空间</div><h1>${e(title)}</h1><p>${e(sub)}</p></div><div class="row">${actions}</div></div>`;
   const options=(arr,selected)=>arr.map(([id,label])=>`<option value="${e(id)}" ${id===selected?'selected':''}>${e(label)}</option>`).join('');
   const search=(name,value,placeholder)=>`<label class="search">${icon('search')}<input data-search="${name}" data-focus="search-${name}" value="${e(value||'')}" placeholder="${e(placeholder)}" aria-label="${e(placeholder)}"></label>`;
-  function messages(conv,customer=false){return conv.messages.map(m=>{
+  function messages(conv,customer=false,{offline=false}={}){return conv.messages.map(m=>{
     if(customer&&m.visibility!=='public')return '';
     if(m.role==='system')return `<div class="system-message">${e(m.body)}</div>`;
     const isCustomer=m.role==='customer';
-    return `<article class="message ${isCustomer?'incoming':'outgoing'} ${m.visibility==='internal'?'internal':''}"><div class="message-meta">${e(isCustomer?'客户':m.author||(m.role==='agent'?'人工客服':'智能客服'))}${m.visibility==='internal'?' · 仅内部可见':''}<time>${date(m.at)}</time></div><div class="bubble">${e(m.body).replace(/\n/g,'<br>')}</div>${m.citation?`<button type="button" class="citation" data-action="citation" data-id="${e(m.id)}">${icon('book',13)} ${e(m.citation.title)} · v${m.citation.version}</button>`:''}${customer&&m.intake?b('填写售后申请','intake',m.caseId,'small'):''}</article>`;
+    return `<article class="message ${isCustomer?'incoming':'outgoing'} ${m.visibility==='internal'?'internal':''}"><div class="message-meta">${e(isCustomer?'客户':m.author||(m.role==='agent'?'人工客服':'智能客服'))}${m.role==='bot'&&m.aiAssist?'<span class="ai-assist-label">AI 协助</span>':''}${m.visibility==='internal'?' · 仅内部可见':''}<time>${date(m.at)}</time></div><div class="bubble">${e(m.body).replace(/\n/g,'<br>')}</div>${m.citation?`<button type="button" class="citation" data-action="citation" data-id="${e(m.id)}">${icon('book',13)} ${e(m.citation.title)} · v${m.citation.version}</button>`:''}${customer&&m.intake?b('填写售后申请','intake',m.caseId,'small',offline?'disabled':''):''}</article>`;
     }).join('');}
   function testReport(report){return report?`<div class="test-report"><div class="row between"><strong>回归结果</strong>${pill(report.passed?'全部通过':'存在失败',report.passed?'good':'warn')}</div><p class="muted small-text">${date(report.at,true)} · 校验路由和知识命中，不代表语义质量评分</p>${report.rows.map(r=>`<div class="test-row"><span class="${r.pass?'success-text':'danger-text'}">${r.pass?'✓':'×'}</span><div><strong>${e(r.name)}</strong><small>${e(r.query)} → ${e(r.actual)}</small></div></div>`).join('')}</div>`:empty('还没有测试结果','保存草稿后运行回归，全部通过才能发布。');}
   root.SupportViews={e,icon,b,pill,date,empty,field,heading,options,search,messages,testReport,labels};
@@ -669,31 +1239,220 @@
 (function(root){
   'use strict';const V=root.SupportViews,{e,icon,b,pill,date,empty,messages}=V;
   V.customer=function(data,ui){
+    const offline=data.connection&&data.connection!=='online';
     const conv=data.conversations.find(c=>c.id===ui.customerConversation)||data.conversations[0];
     const service=data.cases.filter(c=>c.kind==='aftersales'||c.feedback==='disputed');
-    return `<div class="customer-layout"><aside class="customer-home"><div class="store-brand"><span class="brand-mark">${icon('chat',18)}</span><div><strong>服务中心</strong><small>订单查询 · 售后服务</small></div></div><div class="welcome"><h1>有什么可以帮您？</h1><p>请描述问题，或选择下方服务。</p></div><div class="customer-shortcuts">${b(`${icon('book')}<span>服务规则</span>${icon('arrow')}`,'quick-policy','','shortcut')}${b(`${icon('users')}<span>联系人工</span>${icon('arrow')}`,'request-human',conv?.id||'','shortcut')}</div><div class="section-title"><h2>我的订单</h2><span>${data.orders.length} 笔</span></div>${data.orders.map(o=>`<div class="order-card"><div class="product-symbol">${e(o.symbol)}</div><div><strong>${e(o.product)}</strong><small>${e(o.id)}</small><div class="row">${pill(o.status)}<span class="price">¥${o.price.toFixed(2)}</span></div></div><div class="order-actions">${b('查物流','order-query',o.id,'text')}${b('申请售后','order-return',o.id,'text')}</div></div>`).join('')}<div class="section-title"><h2>服务进度</h2><span>${service.length} 项</span></div>${data.tickets.map(t=>`<button class="progress-card" type="button" data-action="ticket-detail" data-id="${e(t.id)}"><div class="row between"><strong>${e(t.title)}</strong>${icon('arrow',15)}</div><small>${e(t.id)} · ${date(t.createdAt,true)}</small>${pill(t.status,t.status==='waiting_customer'?'warn':'')}</button>`).join('')||'<p class="muted">暂无售后记录。</p>'}</aside><section class="messenger"><header class="messenger-head"><div class="assistant-avatar">${icon('bolt',22)}</div><div><strong>${conv?.state==='human'?'人工客服':'在线客服'}</strong><small><span class="status-dot"></span>${conv?e(V.labels[conv.state]):'在线咨询'}</small></div><div class="row push-right">${b('历史咨询','customer-history','','text')}${b(`${icon('plus')} 新咨询`,'new-conversation','','small')}</div></header>${conv?`<div class="messages customer-messages" id="customer-messages">${messages(conv,true)}${data.cases.filter(c=>conv.caseIds.includes(c.id)&&c.status==='completed').map(c=>`<div class="feedback-card"><strong>${e(c.kind==='knowledge'?'这个问题解决了吗？':'这个问题解决了吗？')}</strong>${c.feedback==='confirmed'?pill('已确认解决','good')+b('仍需帮助','dispute-case',c.id,'small text'):`<div class="row">${b('已解决','confirm-case',c.id,'small')}${b('仍需帮助','dispute-case',c.id,'small text')}</div>`}</div>`).join('')}</div><form class="composer customer-composer" data-form="customer-say" data-id="${e(conv.id)}"><label class="sr-only" for="customer-input">请输入问题</label><textarea id="customer-input" data-focus="customer-input" name="body" rows="2" maxlength="2000" required placeholder="请输入问题，或提供订单号…">${e(ui.drafts['customer-say:'+conv.id]?.body||'')}</textarea><div class="row between"><span class="muted small-text">${conv.state==='queued'?'已在排队，补充信息会一并交给客服。':conv.state==='closed'?'继续发送即可重新联系，原记录会保留。':'请勿发送密码或验证码。'}</span><button class="btn primary" type="submit">发送 ${icon('send',15)}</button></div></form>${conv.state==='queued'?`<div class="queue-footer">${b('取消排队，继续咨询','cancel-queue',conv.id,'text')}</div>`:''}`:empty('暂无咨询记录','点击“新咨询”开始联系。')}</section></div>`;
+    return `<div class="customer-layout"><aside class="customer-home"><div class="store-brand"><span class="brand-mark">${icon('chat',18)}</span><div><strong>服务中心</strong><small>订单查询 · 售后服务</small></div></div><div class="welcome"><h1>有什么可以帮您？</h1><p>请描述问题，或选择下方服务。</p></div><div class="customer-shortcuts">${b(`${icon('book')}<span>服务规则</span>${icon('arrow')}`,'quick-policy','','shortcut')}${b(`${icon('users')}<span>联系人工</span>${icon('arrow')}`,'request-human',conv?.id||'','shortcut')}</div><div class="section-title"><h2>我的订单</h2><span>${data.orders.length} 笔</span></div>${data.orders.map(o=>`<div class="order-card"><div class="product-symbol">${e(o.symbol)}</div><div><strong>${e(o.product)}</strong><small>${e(o.id)}</small><div class="row">${pill(o.status)}<span class="price">¥${o.price.toFixed(2)}</span></div></div><div class="order-actions">${b('查物流','order-query',o.id,'text')}${b('申请售后','order-return',o.id,'text')}</div></div>`).join('')}<div class="section-title"><h2>服务进度</h2><span>${service.length} 项</span></div>${data.tickets.map(t=>`<button class="progress-card" type="button" data-action="ticket-detail" data-id="${e(t.id)}"><div class="row between"><strong>${e(t.title)}</strong>${icon('arrow',15)}</div><small>${e(t.id)} · ${date(t.createdAt,true)}</small>${pill(t.status,t.status==='waiting_customer'?'warn':'')}</button>`).join('')||'<p class="muted">暂无售后记录。</p>'}</aside><section class="messenger"><header class="messenger-head"><div class="assistant-avatar">${icon('bolt',22)}</div><div><strong>${conv?.state==='human'?'人工客服':'在线客服'}</strong><small><span class="status-dot"></span>${conv?e(V.labels[conv.state]):'在线咨询'}</small></div><div class="row push-right">${b('历史咨询','customer-history','','text')}${b(`${icon('plus')} 新咨询`,'new-conversation','','small')}</div></header>${conv?`<div class="messages customer-messages" id="customer-messages">${messages(conv,true)}${data.cases.filter(c=>conv.caseIds.includes(c.id)&&c.status==='completed').map(c=>`<div class="feedback-card"><strong>${e(c.kind==='knowledge'?'这个问题解决了吗？':'这个问题解决了吗？')}</strong>${c.feedback==='confirmed'?pill('已确认解决','good')+b('仍需帮助','dispute-case',c.id,'small text'):`<div class="row">${b('已解决','confirm-case',c.id,'small')}${b('仍需帮助','dispute-case',c.id,'small text')}</div>`}</div>`).join('')}</div><form class="composer customer-composer" data-form="customer-say" data-id="${e(conv.id)}"><label class="sr-only" for="customer-input">请输入问题</label><textarea id="customer-input" data-focus="customer-input" name="body" rows="2" maxlength="2000" required placeholder="请输入问题，或提供订单号…">${e(ui.drafts['customer-say:'+conv.id]?.body||'')}</textarea><div class="row between"><span class="muted small-text">${offline?'连接已断开，输入内容已保留，请到手机端演示恢复在线。':conv.state==='queued'?'已在排队，补充信息会一并交给客服。':conv.state==='closed'?'继续发送即可重新联系，原记录会保留。':'请勿发送密码或验证码。'}</span><button class="btn primary" type="submit" ${offline?'disabled':''}>发送 ${icon('send',15)}</button></div></form>${conv.state==='queued'?`<div class="queue-footer">${b('取消排队，继续咨询','cancel-queue',conv.id,'text')}</div>`:''}`:empty('暂无咨询记录','点击“新咨询”开始联系。')}</section></div>`;
   };
 })(window);
 
 </script>
 <script>
 (function(root){
-  'use strict';const V=root.SupportViews,{e,icon,b,pill,date,empty,heading,search,messages}=V;
-  function due(conv,s){if(conv.firstHumanAt||!conv.waitingSince||!['queued','human'].includes(conv.state))return '';const left=Math.ceil((conv.waitingSince+s.settings.responseMinutes*60000-Date.now())/60000);return `<span class="sla ${left<0?'late':''}">${icon('clock',12)}${left<0?'首响已超 '+Math.abs(left)+' 分钟':'首响剩余 '+left+' 分钟'}</span>`;}
-  V.inbox=function(s,data,ui,actor){
-    const all=data.conversations, group=ui.deskFilter||'queue', query=(ui.search.inbox||'').toLowerCase();
-    const names={queue:'待接待',mine:'我接待中',history:'我的历史'};
-    const filtered=all.filter(c=>group==='queue'?c.state==='queued':group==='mine'?c.state==='human'&&c.ownerId===actor.id:c.state==='closed').filter(c=>(c.id+' '+(data.customers.find(x=>x.id===c.customerId)?.name||'')+' '+c.messages.map(m=>m.body).join(' ')).toLowerCase().includes(query));
-    const selected=filtered.find(c=>c.id===ui.deskConversation)||filtered[0];
-    ui.visibleConversation=selected?.id||'';
-    const customer=selected&&data.customers.find(c=>c.id===selected.customerId);
-    const owned=selected?.state==='human'&&selected.ownerId===actor.id;
-    const cases=selected?data.cases.filter(c=>selected.caseIds.includes(c.id)):[];
-    const latest=selected&&[...selected.messages].reverse().find(m=>m.role==='customer');
-    const knowledge=latest&&root.SupportDomain.retrieve(s,latest.body);
-    return `${heading('会话接待','接待客户咨询、查看上下文并跟进处理。',`<span class="muted">${actor.available?'接待中':'暂离'}</span>${b(actor.available?'设为暂离':'恢复接待','presence',actor.id,'small')}`)}<div class="inbox-shell"><aside class="conversation-list"><div class="list-tools"><div class="segmented">${Object.entries(names).map(([key,label])=>`<button type="button" class="${key===group?'active':''}" data-action="inbox-filter" data-id="${key}">${label}</button>`).join('')}</div>${search('inbox',query,'搜索客户或对话内容')}</div><div class="list-caption">${e(names[group])}<span>${filtered.length}</span></div>${filtered.map(c=>{const person=data.customers.find(x=>x.id===c.customerId);const last=[...c.messages].reverse().find(m=>m.role==='customer');return `<button type="button" class="conversation-row ${c.id===selected?.id?'selected':''}" data-action="select-conversation" data-id="${e(c.id)}"><div class="row"><span class="avatar">${e(person?.name.slice(-2))}</span><strong>${e(person?.name)}</strong><time>${date(c.updatedAt)}</time></div><p>${e(last?.body||'尚未提问')}</p><div class="row between">${pill(c.state,c.state==='queued'?'warn':'')}${due(c,s)}</div></button>`;}).join('')||empty(query?'没有匹配的会话':'当前没有会话',query?'换一个关键词试试。':'客户发起人工请求后，会出现在待接待队列。')}</aside><section class="agent-conversation">${selected?`<header class="conversation-header"><div><h2>${e(customer.name)}</h2><small>${e(selected.id)} · Web 在线咨询</small></div><div class="row">${selected.state==='queued'?b('接管会话','claim-conversation',selected.id,'primary'):owned?b('结束沟通','close-conversation',selected.id,'small'):pill('只读记录')}</div></header><div class="messages" id="agent-messages">${selected.handoffReason?`<div class="handoff-banner">${icon('bolt')}<div><strong>转人工原因</strong><p>${e(selected.handoffReason)}</p></div></div>`:''}${messages(selected)}</div>${owned?`<form class="composer ${ui.composeMode==='note'?'note-composer':''}" data-form="${ui.composeMode==='note'?'note':'reply'}" data-id="${e(selected.id)}"><div class="compose-tabs"><button type="button" data-action="compose-mode" data-id="reply" class="${ui.composeMode!=='note'?'active':''}">公开回复</button><button type="button" data-action="compose-mode" data-id="note" class="${ui.composeMode==='note'?'active':''}">内部备注</button></div><label class="sr-only" for="agent-input">${ui.composeMode==='note'?'内部备注':'回复客户'}</label><textarea id="agent-input" data-focus="agent-input" name="body" rows="3" maxlength="2000" required placeholder="${ui.composeMode==='note'?'仅同事可见，不会发送给客户':'输入要发送给客户的内容…'}">${e(ui.drafts[(ui.composeMode==='note'?'note':'reply')+':'+selected.id]?.body||'')}</textarea><div class="row between"><span class="muted small-text">${ui.composeMode==='note'?'内部备注与公开回复分别保存草稿。':'发送回复不会自动完成客户问题。'}</span><button type="submit" class="btn primary">${ui.composeMode==='note'?'保存备注':'发送回复'} ${icon('send',14)}</button></div></form>`:`<div class="read-only-bar">${selected.state==='queued'?'接管后即可回复，智能客服已暂停自动回复。':'这段沟通已结束，历史记录只读保留。'}</div>`}`:empty('选择一段会话','选择会话后查看消息和处理信息。')}</section><aside class="customer-context">${selected?`<div class="context-section"><div class="row"><span class="avatar large">${e(customer.name.slice(-2))}</span><div><strong>${e(customer.name)}</strong><small>${e(customer.level)}</small></div></div><p class="muted small-text">${e(customer.email)}</p></div><div class="context-section"><h3>${icon('bolt',16)} 交接摘要</h3><dl><dt>最初问题</dt><dd>${e(selected.messages.find(m=>m.role==='customer')?.body||'尚未提问')}</dd><dt>最近补充</dt><dd>${e(latest?.body||'无')}</dd><dt>已执行步骤</dt><dd>${e(selected.runs.at(-1)?.steps.map(x=>({answer:'检索知识并答复',order:'核对订单',intake:'采集售后申请',gap:'未命中知识',handoff:'转人工',askOrder:'等待订单号',orderDenied:'订单核对未通过'}[x]||x)).join(' → ')||'暂无自动处理记录')}</dd></dl><small class="muted">依据实际消息与执行记录整理</small></div><div class="context-section"><h3>${icon('ticket',16)} 当前客户问题</h3>${cases.map(c=>{const t=[...data.tickets,...data.relatedTickets].find(t=>t.caseId===c.id);return `<div class="case-card"><strong>${e(c.title)}</strong><div class="row">${pill(c.status,c.status==='completed'?'good':'')}${c.feedback==='confirmed'?pill('客户已确认','good'):''}</div>${t?b(`${e(t.id)} · 查看工单`,'ticket-detail',t.id,'text'):owned&&c.status!=='completed'?`<div class="row">${b('记录结果','complete-case',c.id,'small',`data-conversation="${e(selected.id)}"`)}${b('建工单','staff-intake',c.id,'small',`data-conversation="${e(selected.id)}"`)}</div>`:''}</div>`;}).join('')||'<p class="muted">尚无待处理问题。</p>'}</div><div class="context-section"><h3>${icon('book',16)} 答复依据</h3>${knowledge&&!knowledge.conflict?`<strong>${e(knowledge.title)}</strong><p class="small-text">${e(knowledge.answer)}</p><small class="muted">${e(knowledge.source)} · v${knowledge.version}</small>${owned?b('插入公开回复草稿','insert-suggestion',knowledge.id,'small'):''}`:'<p class="muted small-text">当前没有可靠的知识建议。请核实后回复，不直接补写结论。</p>'}${owned?b('标记服务问题','flag',selected.id,'text'):''}</div><div class="context-section"><h3>相关订单</h3>${data.orders.filter(o=>o.customerId===customer.id).map(o=>`<div class="compact-order"><strong>${e(o.product)}</strong><small>${e(o.id)}</small>${pill(o.status)}</div>`).join('')||'<p class="muted">暂无关联订单。</p>'}</div>`:empty('客户上下文','选择会话后显示。')}</aside></div>`;
+  'use strict';
+  const V=root.SupportViews,{e,icon,b,pill,date,empty,messages}=V;
+  const connection=data=>['interrupted','offline'].includes(data.connection)?data.connection:'online';
+  const isOffline=data=>connection(data)!=='online';
+  const disabled=data=>isOffline(data)?'disabled':'';
+  function current(data,ui){
+    return data.conversations.find(c=>c.id===ui.customerConversation)||data.conversations[0];
+  }
+  function feedback(data,conv,offline){
+    return data.cases.filter(c=>conv.caseIds.includes(c.id)&&c.status==='completed').map(c=>
+      `<section class="feedback-card phone-feedback"><strong>这个问题解决了吗？</strong><div class="row">${c.feedback==='confirmed'?pill('已确认解决','good'):b('已解决','confirm-case',c.id,'small',offline?'disabled':'')}${b('仍需帮助','dispute-case',c.id,'small text',offline?'disabled':'')}</div></section>`
+    ).join('');
+  }
+  function progressCard(ticket){
+    return `<button type="button" class="phone-progress-card" data-action="ticket-detail" data-id="${e(ticket.id)}"><div class="row between"><strong>${e(ticket.title)}</strong>${icon('arrow',16)}</div><small>${e(ticket.id)} · ${date(ticket.createdAt,true)}</small>${pill(ticket.status,ticket.status==='waiting_customer'?'warn':ticket.status==='done'?'good':'')}</button>`;
+  }
+  V.mobileOrders=function(data){
+    return `<div class="phone-order-list">${data.orders.map(order=>`<article class="phone-order-card"><div class="phone-order-summary"><span class="phone-product-symbol" aria-hidden="true">${e(order.symbol||'▧')}</span><div><h3>${e(order.product)}</h3><small>${e(order.id)}</small><div class="row">${pill(order.status)}<span class="phone-price">¥${e(order.price.toFixed(2))}</span></div></div></div><div class="phone-order-actions">${b('查物流','order-query',order.id,'',disabled(data))}${b('申请退换货','order-return',order.id,'primary',disabled(data))}</div></article>`).join('')||empty('暂无订单','当前账户没有可查看的订单。')}${isOffline(data)?'<p class="phone-local-notice">连接已断开，恢复后可查询或提交申请。</p>':''}</div>`;
   };
-  V.tickets=function(s,rows,ui,manager=false){const filter=ui.ticketFilter||'all',q=(ui.search.tickets||'').toLowerCase();const list=rows.filter(t=>filter==='all'||filter==='pool'&&!t.ownerId||t.status===filter).filter(t=>(t.id+' '+t.title+' '+t.description).toLowerCase().includes(q));return `${heading(manager?'团队协同':'工单处理',manager?'查看团队待办、分配任务并跟进处理进度。':'查看和处理工单，跟进客户补充与办理结果。',manager?'':b(`${icon('plus')} 新建工单`,'standalone-ticket','','primary'))}<div class="panel"><div class="table-toolbar">${search('tickets',q,'搜索工单编号或问题')}<select aria-label="工单状态" data-select="ticket-filter">${V.options([['all','全部状态'],['pool','待领取'],['working','处理中'],['waiting_customer','待客户补充'],['done','结果已记录']],filter)}</select></div>${list.length?`<div class="table-scroll"><table><thead><tr><th>工单 / 客户问题</th><th>状态</th><th>负责人</th><th>受理时间</th><th>处理目标</th><th></th></tr></thead><tbody>${list.map(t=>`<tr><td><button type="button" class="table-title" data-action="ticket-detail" data-id="${e(t.id)}">${e(t.title)}</button><small>${e(t.id)} · ${e(s.customers.find(c=>c.id===t.customerId)?.name||'未关联')}</small></td><td>${pill(t.status,t.status==='waiting_customer'?'warn':t.status==='done'?'good':'')}</td><td>${e(s.staff.find(a=>a.id===t.ownerId)?.name||'待领取')}</td><td>${date(t.createdAt,true)}</td><td>${t.status==='done'?'—':`<span class="${t.dueAt<Date.now()?'danger-text':''}">${date(t.dueAt,true)}${t.dueAt<Date.now()?' · 已超时':''}</span>`}</td><td>${manager&&t.status!=='done'?b('转派','assign-ticket',t.id,'small'):!t.ownerId?b('领取','claim-ticket',t.id,'small'):b('处理','ticket-detail',t.id,'small')}</td></tr>`).join('')}</tbody></table></div>`:empty(q?'没有匹配的工单':'当前没有工单',q?'请调整搜索词或筛选条件。':'需要继续办理的问题受理后会出现在这里。')}</div>`;};
+  V.mobileProgress=function(data){
+    return `<div class="phone-progress-list">${data.tickets.map(progressCard).join('')||empty('暂无办理记录','申请受理后，可在这里查看处理进度。')}${isOffline(data)?'<p class="phone-local-notice">当前可查看已保存的进度，恢复连接后再提交补充。</p>':''}</div>`;
+  };
+  V.mobile=function(data,ui){
+    const conv=current(data,ui),status=connection(data),offline=isOffline(data);
+    const statusText=status==='offline'?'已离线':status==='interrupted'?'连接中断待确认':'在线';
+    const conversationStatus=offline?'连接已断开':conv?V.labels[conv.state]:'在线咨询';
+    const draft=conv?ui.drafts?.['customer-say:'+conv.id]?.body||'':'';
+    const assigned=conv&&['queued','human'].includes(conv.state);
+    const related=conv?data.tickets.filter(t=>conv.caseIds.includes(t.caseId)):[];
+    return `<section class="mobile-stage" aria-label="手机端演示"><div class="mobile-left"><div class="mobile-demo-controls"><span>演示状态：<strong>${e(statusText)}</strong></span>${b(offline?'恢复在线':'模拟离线','connection-toggle',offline?'online':'offline','small')}</div><div class="phone-frame"><div class="phone-screen"><div class="phone-status-bar" aria-hidden="true"><span>服务中心</span><span class="phone-status-symbols"><span class="phone-signal">▂▄▆</span><span class="phone-battery"></span></span></div><header class="phone-header"><span class="phone-avatar">${icon('chat',20)}</span><div class="phone-heading"><h1>在线客服</h1><p><span class="phone-status-dot ${offline?'offline':''}"></span>${e(conversationStatus)}</p></div><details class="phone-menu"><summary aria-label="更多咨询操作">•••</summary><div class="phone-menu-content">${b('历史咨询','customer-history','','text')}${b('新咨询','new-conversation','','text',offline?'disabled':'')}</div></details></header>${offline?'<div class="phone-connection-notice" role="status">连接已断开，输入内容已保留。</div>':''}<div class="messages customer-messages phone-messages" id="customer-messages" role="log" aria-label="咨询消息" aria-live="polite">${conv?messages(conv,true,{offline})+feedback(data,conv,offline)+(related.length?`<section class="phone-chat-progress"><h2>相关服务进度</h2>${related.map(progressCard).join('')}</section>`:''):empty('开始在线咨询','可以选择下方服务，或新建一段咨询。')}</div><nav class="phone-services" aria-label="常用服务">${b(`${icon('book',17)}<span>服务规则</span>`,'quick-policy','','text',offline?'disabled':'')}${b(`${icon('inbox',17)}<span>我的订单</span>`,'mobile-orders','','text')}${b(`${icon('ticket',17)}<span>服务进度</span>`,'mobile-progress','','text')}${b(`${icon('users',17)}<span>${conv?.state==='queued'?'人工排队中':conv?.state==='human'?'人工已接待':'联系人工'}</span>`,'request-human',conv?.id||'','text',offline||assigned?'disabled':'')}</nav>${conv?`<form class="composer phone-composer" data-form="customer-say" data-id="${e(conv.id)}" data-offline="${offline}"><label class="sr-only" for="customer-input">请输入问题</label><textarea id="customer-input" data-focus="customer-input" name="body" rows="2" maxlength="2000" required placeholder="请输入问题，或提供订单号…" aria-describedby="phone-send-hint">${e(draft)}</textarea><div class="phone-compose-actions"><span id="phone-send-hint">${offline?'恢复在线后可发送':conv.state==='queued'?'补充信息会一并交给客服':conv.state==='closed'?'继续发送可重新联系':'请勿发送密码或验证码'}</span><button class="btn primary" type="submit" ${offline?'disabled':''}>发送 ${icon('send',15)}</button></div></form>`:`<div class="phone-start">${b('新咨询','new-conversation','','primary',offline?'disabled':'')}</div>`}${conv?.state==='queued'?`<div class="phone-queue-footer">${b('取消排队，继续咨询','cancel-queue',conv.id,'text',offline?'disabled':'')}</div>`:''}<div class="phone-home-indicator" aria-hidden="true"></div><div class="phone-overlay-host"></div></div></div></div><div class="mobile-blank" aria-hidden="true"></div></section>`;
+  };
+})(window);
+
+</script>
+<script>
+(function (root) {
+  'use strict';
+  const V = root.SupportViews;
+  const {e, icon, b, pill, date, empty, heading, search} = V;
+  const NODE_TITLES = [
+    ['intent', '确认诉求'], ['order', '核对订单'], ['logistics', '查询物流'],
+    ['aftersales', '退换货办理'], ['information', '补充资料'],
+    ['result', '记录处理结果'], ['callback', '回访安排'], ['close', '结束沟通']
+  ];
+  const STEP_TITLES = ['确认类型与原因', '核对规则及缺失信息', '核对申请', '登记受理'];
+  const STATUS_LABELS = {idle: '未触发', todo: '待处理', doing: '处理中', waiting: '待客户补充', done: '已完成', na: '不适用', error: '异常'};
+  const RUN_LABELS = {answer: '检索知识并答复', order: '核对订单', intake: '采集售后申请', gap: '未命中知识', handoff: '转人工', askOrder: '等待订单号', orderDenied: '订单核对未通过'};
+  const CALLBACK_LABELS = {pending: '待回访', contacted: '已联系', cancelled: '已取消'};
+
+  function due(conv, s) {
+    if (conv.firstHumanAt || !conv.waitingSince || !['queued', 'human'].includes(conv.state)) return '';
+    const left = Math.ceil((conv.waitingSince + s.settings.responseMinutes * 60000 - Date.now()) / 60000);
+    return `<span class="sla ${left < 0 ? 'late' : ''}">${icon('clock', 12)}${left < 0 ? '首响已超 ' + Math.abs(left) + ' 分钟' : '首响剩余 ' + left + ' 分钟'}</span>`;
+  }
+
+  function beijingDate(at) {
+    if (!at) return '—';
+    const formatted = new Intl.DateTimeFormat('zh-CN', {timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'}).format(new Date(at));
+    return `${e(formatted)} <span class="timezone">UTC+08:00</span>`;
+  }
+
+  function nodeStatus(status) {
+    return `<span class="sop-status status-${e(status)}">${e(STATUS_LABELS[status] || STATUS_LABELS.idle)}</span>`;
+  }
+
+  function connection(s, conv) {
+    return root.SupportDomain.customerConnection(s, conv.customerId);
+  }
+
+  function connectionLabel(status) {
+    return {online: '客户在线', interrupted: '连接中断待确认', offline: '客户已离线'}[status] || '客户在线';
+  }
+
+  function caseAttributes(conv, item) {
+    return `data-conversation="${e(conv.id)}" data-case="${e(item.id)}"`;
+  }
+
+  function orderCard(order) {
+    if (!order) return '<p class="sop-hint">尚未确认关联订单。请先核对客户本人订单。</p>';
+    return `<div class="sop-order-card"><strong>${e(order.product)}</strong><small>${e(order.id)}</small><div class="row between">${pill(order.status)}<span>订单金额 ¥${e(order.price)}</span></div><p>${e(order.delivery || '暂无物流信息')}</p><small class="muted">来自订单记录；订单金额不代表可退金额。</small></div>`;
+  }
+
+  function callbackCard(ticket, editable) {
+    const callback = ticket?.callback;
+    if (!ticket) return '<p class="sop-hint">需要回访时，先关联有负责人的跟进工单。结束沟通时也可一并安排。</p>';
+    const detail = callback ? `<div class="sop-record"><div class="row between"><strong>${e(CALLBACK_LABELS[callback.status] || '回访记录')}</strong>${callback.status === 'pending' && callback.at <= Date.now() ? pill('已到期', 'warn') : ''}</div><p>${e(callback.purpose)}</p><p class="callback-time">${beijingDate(callback.at)}</p><small>站内联系 · 负责人继承工单</small>${callback.note ? `<p class="muted">内部备注：${e(callback.note)}</p>` : ''}</div>` : '<p class="sop-hint">当前工单未安排回访。</p>';
+    return `${detail}<div class="sop-actions">${b('查看工单 ' + e(ticket.id), 'ticket-detail', ticket.id, 'small')}${editable ? b(callback?.status === 'pending' ? '调整回访' : '安排回访', 'callback-plan', ticket.id, 'small') : ''}${editable && callback?.status === 'pending' ? b('登记回访结果', 'callback-result', ticket.id, 'small') : ''}</div>`;
+  }
+
+  function intentDetail(conv, item, ui, owned) {
+    const draft = ui.drafts?.['sop-intent:' + item.id] || {};
+    const first = conv.messages.find(message => message.role === 'customer');
+    const latest = [...conv.messages].reverse().find(message => message.role === 'customer');
+    const steps = conv.runs?.at(-1)?.steps.map(key => RUN_LABELS[key] || key).join(' → ');
+    return `<dl class="sop-facts"><dt>最初问题</dt><dd>${e(first?.body || '尚未提问')}</dd><dt>最近补充</dt><dd>${e(latest?.body || '无')}</dd><dt>交接摘要</dt><dd>${e(conv.handoffReason || '暂无转人工原因')}</dd><dt>已执行步骤</dt><dd>${e(steps || '暂无自动处理记录')}</dd></dl><small class="sop-hint">依据实际消息与执行记录整理，请结合当前问题核对。</small>${owned ? `<form class="sop-form" data-form="sop-intent" data-id="${e(item.id)}" ${caseAttributes(conv, item)}><label>诉求类型<select name="kind">${V.options([['knowledge', '规则与知识咨询'], ['order', '订单与物流'], ['aftersales', '退换货申请'], ['support', '其他服务问题']], draft.kind ?? item.kind)}</select></label><label>当前问题<input name="title" maxlength="200" required value="${e(draft.title ?? item.title)}"></label><button type="submit" class="btn small primary">确认诉求</button></form>` : `<p class="sop-hint">当前问题：${e(item.title)}</p>`}`;
+  }
+
+  function nodeDetail(s, conv, item, node, sop, ui, owned, ticket) {
+    const attrs = caseAttributes(conv, item);
+    const order = s.orders.find(order => order.id === sop.orderId && order.customerId === conv.customerId);
+    const editableTicket = owned && ticket?.ownerId === ui.agentId;
+    if (node.key === 'intent') return intentDetail(conv, item, ui, owned);
+    if (node.key === 'order') {
+      const draft = ui.drafts?.['sop-order:' + item.id] || {};
+      const orders = s.orders.filter(order => order.customerId === conv.customerId);
+      return `${orderCard(order)}${owned && (!ticket || ticket.followupOnly) && item.status !== 'completed' ? `<form class="sop-form" data-form="sop-order" data-id="${e(item.id)}" ${attrs}><label>客户本人订单<select name="orderId" required>${V.options([['', '选择并核对订单'], ...orders.map(order => [order.id, `${order.id} · ${order.product}`])], draft.orderId ?? sop.orderId ?? '')}</select></label><button type="submit" class="btn small primary">确认关联订单</button><small class="sop-hint">更换订单后，相关核验需重新确认。</small></form>` : `<p class="sop-hint">${ticket&&!ticket.followupOnly ? '申请已登记，沿用原工单关联订单。' : '当前订单信息只读。'}</p>`}`;
+    }
+    if (node.key === 'logistics') return `${orderCard(order)}<p class="sop-hint">${e(node.reason)}</p>${owned && order ? b('核对并查询物流', 'sop-query-order', item.id, 'small primary', attrs)+(item.workflow?.logistics?`<p class="sop-hint">查询时间：${beijingDate(item.workflow.logistics.at)}</p>`+b('将查询结果插入回复','sop-insert-order',item.id,'small',attrs):'') : '<p class="sop-hint">确认订单并接管会话后可查询。</p>'}`;
+    if (node.key === 'aftersales') {
+      const prefill = sop.prefill || {};
+      const service = {return: '退货退款', exchange: '换货'}[prefill.serviceType] || '待确认';
+      return `${orderCard(order)}<dl class="sop-facts"><dt>服务类型 · 待核对提取</dt><dd>${e(service)}</dd><dt>申请原因 · 来自客户原话</dt><dd>${e(prefill.description || '尚未提供，需补充确认')}</dd><dt>换货诉求 · 待核对提取</dt><dd>${e(prefill.exchangeRequest || '尚未提供')}</dd>${prefill.extraNote ? `<dt>补充说明</dt><dd>${e(prefill.extraNote)}</dd>` : ''}</dl><p class="sop-hint">核对规则与必要信息后，预填内容会带入申请。登记申请后仍需核实处理。</p>${ticket&&!ticket.followupOnly ? `<div class="sop-actions">${b('继续原工单 ' + e(ticket.id), 'ticket-detail', ticket.id, 'small')}${pill(ticket.status, ticket.status === 'done' ? 'good' : '')}</div>` : owned && item.status !== 'completed' ? b('核对退换货申请', 'sop-intake', item.id, 'small primary', attrs) : ''}`;
+    }
+    if (node.key === 'information') return `<p>${e(node.reason || '当前未发现需要补充的资料。')}</p><p class="sop-hint">结合客户原话与申请字段确认缺失内容；发送追问不会自动完成资料核对。</p>${ticket ? b('查看工单与客户补充', 'ticket-detail', ticket.id, 'small') : ''}`;
+    if (node.key === 'result') {
+      const result = item.result;
+      const evidence = result?.evidence;
+      return `${result ? `<div class="sop-record"><strong>客户可见结果</strong><p>${e(result.publicText)}</p><small>${date(result.at, true)}</small>${evidence?.text ? `<div class="internal-evidence"><strong>内部核对依据</strong><p>${e(evidence.text)}</p></div>` : ''}</div>` : '<p class="sop-hint">尚未记录办理结果。普通回复和 AI 续答不会自动办结问题。</p>'}<div class="row sop-feedback">${pill(item.status, item.status === 'completed' ? 'good' : '')}${item.feedback === 'confirmed' ? pill('客户已确认', 'good') : item.feedback === 'pending' ? pill('待客户确认', 'warn') : ''}</div>${ticket ? b('在原工单记录结果', 'ticket-detail', ticket.id, 'small') : owned && item.status !== 'completed' ? `<div class="sop-actions">${b('记录结果', 'complete-case', item.id, 'small primary', attrs)}${b('建跟进工单', 'staff-intake', item.id, 'small', attrs)}</div>` : ''}`;
+    }
+    if (node.key === 'callback') return callbackCard(ticket, editableTicket);
+    if (node.key === 'close') return `<p>${e(conv.state === 'closed' ? '本次沟通已结束，办理进度和关闭快照保留。' : '核对接待小结，为已触发的未完成事项安排后续负责人和目标时间。')}</p><div class="sop-actions">${owned ? b('整理小结并结束', 'close-conversation', conv.id, 'small primary') : ''}${b('查看关闭记录', 'close-history', conv.id, 'small')}</div>`;
+    return '';
+  }
+
+  function suggestionCard(conv, item, sop, ui, owned) {
+    const suggestion = sop.suggestion;
+    const dismissed = suggestion?.token && ui.dismissedSuggestionTokens?.[conv.id + ':' + item.id] === suggestion.token;
+    const attrs = caseAttributes(conv, item);
+    const ready = suggestion?.status === 'ready' && !dismissed;
+    const knowledge = suggestion?.knowledge;
+    return `<section class="sop-suggestion"><div class="row between"><h3>${icon('book', 15)} 动态建议</h3>${pill(dismissed ? '暂不采用' : ready ? '请核对后使用' : suggestion?.status === 'conflict' ? '依据冲突' : '暂无可靠建议', ready ? '' : 'warn')}</div><small>针对：${e(item.title)}</small>${ready ? `<p class="suggestion-body">${e(suggestion.body)}</p>${knowledge ? `<div class="suggestion-source"><strong>${e(knowledge.title)} · v${e(knowledge.version)}</strong><small>${e(knowledge.source)}</small></div>` : ''}<p class="sop-hint">仅适用于当前问题和已核对订单；办理资格与金额仍需核实。</p><div class="sop-actions">${owned ? b('插入公开回复', 'dynamic-suggestion', item.id, 'small primary', attrs) : ''}${b('查看依据', 'suggestion-source', item.id, 'small', attrs)}${owned ? b('暂不采用', 'dismiss-suggestion', item.id, 'text', attrs) : ''}</div>` : `<p class="sop-hint">${e(dismissed ? '本条建议已暂不采用，后续新消息会重新核对依据。' : suggestion?.reason || '请先核实具体诉求和相关订单信息，再回复客户。')}</p>${!dismissed && suggestion?.status === 'none' ? '<div class="result-note"><strong>可先追问</strong><p>请您补充遇到的具体情况、发生时间，以及相关订单号；如有报错，可提供不含敏感信息的截图。</p><small>收集资料后继续核实，不据此承诺办理结果。</small></div>' : ''}`}${owned ? b('标记服务问题', 'flag', conv.id, 'text') : ''}</section>`;
+  }
+
+  V.sopBoard = function (s, conv, ui, owned) {
+    const cases = s.cases.filter(item => conv.caseIds.includes(item.id) && item.customerId === conv.customerId);
+    const item = cases.find(item => item.id === ui.sopCaseByConversation?.[conv.id]) || cases.find(item => item.status !== 'completed') || cases[0];
+    const sop = item ? root.SupportDomain.sopView(s, conv.id, item.id) : {nodes: [], orderId: ''};
+    const nodes = NODE_TITLES.map(([key, title]) => sop.nodes.find(node => node.key === key) || {key, title, status: key === 'close' && conv.state === 'closed' ? 'done' : 'idle', reason: item ? '当前未触发' : '尚未建立客户问题'});
+    const pending = nodes.filter(node => ['todo', 'doing', 'waiting', 'error'].includes(node.status)).length;
+    const hasOpen = item && Object.prototype.hasOwnProperty.call(ui.sopNodeByCase || {}, item.id);
+    const openKey = hasOpen ? ui.sopNodeByCase[item.id] : nodes.find(node => ['todo', 'doing', 'waiting', 'error'].includes(node.status))?.key || 'intent';
+    const ticket = item && s.tickets.find(ticket => ticket.caseId === item.id && ticket.customerId === conv.customerId);
+    const customer = s.customers.find(customer => customer.id === conv.customerId);
+    const mode = conv.state === 'human' ? '人工接待' : conv.state === 'queued' ? '等待人工' : conv.state === 'closed' ? '已结束 · 只读' : '自动接待';
+    return `<aside class="sop-workbench" aria-label="SOP 看板"><header class="sop-workbench-header"><div class="row between"><h2>SOP 看板</h2><span class="sop-pending">${pending} 个待处理</span></div><div class="row">${pill(mode)}${pill(connectionLabel(connection(s, conv)), connection(s, conv) === 'online' ? 'good' : 'warn')}</div><div class="sop-case-tabs" aria-label="切换客户问题">${cases.map(current => `<button type="button" data-action="select-sop-case" data-id="${e(current.id)}" data-conversation="${e(conv.id)}" class="sop-case-tab ${current.id === item?.id ? 'active' : ''}" aria-pressed="${current.id === item?.id}"><span>${e(current.title)}</span><small>${e(current.id)} · ${current.status === 'completed' ? '结果已记录' : '待跟进'}</small></button>`).join('') || '<p class="sop-hint">客户提出问题后，在这里跟进对应流程。</p>'}</div><small class="sop-order-ref">关联订单：${e(sop.orderId || '尚未确认')}</small></header><div class="sop-workbench-scroll" data-scroll="sop"><ol class="sop-nodes">${nodes.map((node, index) => {
+      const expanded = !!item && openKey === node.key;
+      const followup = node.ticketId && s.tickets.find(ticket => ticket.id === node.ticketId && ticket.customerId === conv.customerId && ticket.caseId === item?.id);
+      const steps = node.key === 'aftersales' ? STEP_TITLES.map((title, index) => node.steps?.[index] || {title, status: 'idle'}) : [];
+      const canCorrect = owned && item && !['intent', 'result', 'close'].includes(node.key) && ['todo', 'doing', 'waiting', 'error'].includes(node.status);
+      return `<li class="sop-node node-${e(node.key)} status-${e(node.status)} ${expanded ? 'expanded' : ''}" data-sop-node="${e(node.key)}"><button type="button" class="sop-node-toggle" data-action="toggle-sop-node" data-id="${e(node.key)}" data-case="${e(item?.id || '')}" aria-expanded="${expanded}" aria-controls="sop-detail-${e(conv.id)}-${e(node.key)}" ${item ? '' : 'disabled'}><span class="sop-number">${index + 1}</span><span class="sop-node-title">${e(node.title)}</span>${nodeStatus(node.status)}<span class="sop-chevron" aria-hidden="true">${expanded ? '−' : '+'}</span></button><p class="sop-node-reason">${e(node.reason || '当前未触发')}</p>${followup ? `<div class="sop-followup">已安排跟进 ${b(e(followup.id), 'ticket-detail', followup.id, 'text')}</div>` : ''}${steps.length ? `<ol class="sop-substeps">${steps.map(step => `<li><span>${e(step.title)}</span>${nodeStatus(step.status)}</li>`).join('')}</ol>` : ''}${expanded ? `<div class="sop-node-detail" id="sop-detail-${e(conv.id)}-${e(node.key)}">${nodeDetail(s, conv, item, node, sop, ui, owned, ticket)}${canCorrect ? `<div class="sop-corrections">${node.status !== 'waiting' ? b('等待客户补充', 'sop-wait', node.key, 'text', caseAttributes(conv, item)) : ''}${b('标记不适用', 'sop-na', node.key, 'text', caseAttributes(conv, item))}</div>` : ''}</div>` : ''}</li>`;
+    }).join('')}</ol>${item ? suggestionCard(conv, item, sop, ui, owned) : ''}<section class="sop-customer-profile"><h3>客户资料</h3><div class="row"><span class="avatar">${e(customer?.name.slice(-2))}</span><div><strong>${e(customer?.name)}</strong><small>${e(customer?.level)} · ${e(customer?.id)}</small></div></div><p>${e(customer?.email)}</p><div class="sop-actions">${b('查看关闭记录', 'close-history', conv.id, 'small')}</div></section></div></aside>`;
+  };
+
+  function aiControl(s, conv, owned) {
+    if (!owned) return '';
+    const pending = root.SupportDomain.aiPending(s, conv.id);
+    const enabled = !!conv.aiAssist?.enabled;
+    const status = connection(s, conv);
+    const detail = status !== 'online' ? '客户连接未恢复，AI 续答已暂停。' : enabled ? pending ? `等待 30 秒后可续答 · 剩余 ${pending.remaining} 轮` : `等待新的客户消息 · 剩余 ${conv.aiAssist.remaining} 轮` : '人工接待 · 输入或发送后暂停 AI 续答';
+    return `<div class="ai-assist-control"><div><strong>${enabled ? '忙时 AI 续答已开启' : '忙时 AI 续答'}</strong><small>${e(detail)}</small></div><button type="button" class="btn small ${enabled ? 'ai-enabled' : ''}" data-action="ai-toggle" data-id="${e(conv.id)}" aria-pressed="${enabled}" ${!enabled && status !== 'online' ? 'disabled' : ''}>${enabled ? '暂停续答' : '开启续答'}</button></div>`;
+  }
+
+  function composer(s, conv, ui) {
+    const note = ui.composeMode === 'note';
+    const form = note ? 'note' : 'reply';
+    return `<form class="composer ${note ? 'note-composer' : ''}" data-form="${form}" data-id="${e(conv.id)}"><div class="compose-tabs"><button type="button" data-action="compose-mode" data-id="reply" class="${note ? '' : 'active'}">公开回复</button><button type="button" data-action="compose-mode" data-id="note" class="${note ? 'active' : ''}">内部备注</button></div><label class="sr-only" for="agent-input">${note ? '内部备注' : '回复客户'}</label><textarea id="agent-input" data-focus="agent-input" name="body" rows="3" maxlength="2000" required placeholder="${note ? '仅同事可见，不会发送给客户' : '输入要发送给客户的内容…'}">${e(ui.drafts?.[form + ':' + conv.id]?.body || '')}</textarea><div class="row between"><span class="muted small-text">${note ? '内部备注与公开回复分别保存草稿。' : '发送回复不会自动完成客户问题。'}</span><button type="submit" class="btn primary">${note ? '保存备注' : '发送回复'} ${icon('send', 14)}</button></div></form>${aiControl(s, conv, true)}`;
+  }
+
+  V.inbox = function (s, data, ui, actor) {
+    const group = ui.deskFilter || 'queue';
+    const query = (ui.search.inbox || '').toLowerCase();
+    const names = {queue: '待接待', mine: '我接待中', history: '我的历史'};
+    const filtered = data.conversations.filter(conv => group === 'queue' ? conv.state === 'queued' : group === 'mine' ? conv.state === 'human' && conv.ownerId === actor.id : conv.state === 'closed').filter(conv => (conv.id + ' ' + (data.customers.find(customer => customer.id === conv.customerId)?.name || '') + ' ' + conv.messages.map(message => message.body).join(' ')).toLowerCase().includes(query));
+    const selected = filtered.find(conv => conv.id === ui.deskConversation) || filtered[0];
+    ui.visibleConversation = selected?.id || '';
+    const customer = selected && data.customers.find(customer => customer.id === selected.customerId);
+    const owned = selected?.state === 'human' && selected.ownerId === actor.id;
+    const status = selected && connection(s, selected);
+    const list = filtered.map(conv => {
+      const person = data.customers.find(customer => customer.id === conv.customerId);
+      const latest = [...conv.messages].reverse().find(message => message.role === 'customer');
+      return `<button type="button" class="conversation-row ${conv.id === selected?.id ? 'selected' : ''}" data-action="select-conversation" data-id="${e(conv.id)}"><div class="row"><span class="avatar">${e(person?.name.slice(-2))}</span><strong>${e(person?.name)}</strong><time>${date(conv.updatedAt)}</time></div><p>${e(latest?.body || '尚未提问')}</p><div class="row between">${pill(conv.state, conv.state === 'queued' ? 'warn' : '')}${due(conv, s)}</div></button>`;
+    }).join('');
+    const offline = selected && selected.state !== 'closed' && status !== 'online' ? `<div class="connection-banner ${status === 'offline' ? 'offline' : ''}" role="status">${icon('clock', 15)}<div><strong>${status === 'offline' ? '客户已离线，请整理本次沟通' : '客户连接中断，在线状态待确认'}</strong><small>${status === 'offline' ? 'AI 续答已暂停。未完成事项安排妥当后，再保存记录并关闭。' : '暂不自动续答；连接恢复前保留当前办理进度。'}</small></div></div>` : '';
+    return `${heading('会话接待', '接待客户咨询、查看上下文并跟进处理。', `<span class="muted">${actor.available ? '接待中' : '暂离'}</span>${b(actor.available ? '设为暂离' : '恢复接待', 'presence', actor.id, 'small')}`)}<div class="workbench-viewport"><div class="inbox-shell workbench-shell"><aside class="conversation-list"><div class="list-tools"><div class="segmented">${Object.entries(names).map(([key, label]) => `<button type="button" class="${key === group ? 'active' : ''}" data-action="inbox-filter" data-id="${key}">${label}</button>`).join('')}</div>${search('inbox', query, '搜索客户或对话内容')}</div><div class="list-caption">${e(names[group])}<span>${filtered.length}</span></div><div class="conversation-rows" data-scroll="conversations">${list || empty(query ? '没有匹配的会话' : '当前没有会话', query ? '换一个关键词试试。' : '客户发起人工请求后，会出现在待接待队列。')}</div></aside><section class="agent-conversation">${selected ? `<header class="conversation-header"><div><h2>${e(customer?.name)}</h2><small>${e(selected.id)} · ${e(connectionLabel(status))}</small></div><div class="row">${selected.state === 'queued' ? b('接管会话', 'claim-conversation', selected.id, 'primary') : owned ? b('结束沟通', 'close-conversation', selected.id, 'small') : pill('只读记录')}</div></header>${offline}<div class="messages" id="agent-messages">${selected.handoffReason ? `<div class="handoff-banner">${icon('bolt')}<div><strong>转人工原因</strong><p>${e(selected.handoffReason)}</p></div></div>` : ''}${V.messages(selected)}</div>${owned ? composer(s, selected, ui) : `<div class="read-only-bar">${selected.state === 'queued' ? '接管后即可回复，人工接待请求持续保留。' : '这段沟通已结束，历史记录只读保留。'}</div>`}` : empty('选择一段会话', '选择会话后查看消息和处理信息。')}</section>${selected ? V.sopBoard(s, selected, ui, owned) : `<aside class="sop-workbench sop-empty">${empty('SOP 看板', '选择会话后查看完整流程与客户资料。')}</aside>`}</div></div>`;
+  };
+
+  V.tickets = function (s, rows, ui, manager = false) {
+    const filter = ui.ticketFilter || 'all';
+    const query = (ui.search.tickets || '').toLowerCase();
+    const now = Date.now();
+    const list = rows.filter(ticket => {
+      if (filter === 'callback_pending') return ticket.callback?.status === 'pending';
+      if (filter === 'callback_due') return ticket.callback?.status === 'pending' && ticket.callback.at <= now;
+      return filter === 'all' || filter === 'pool' && !ticket.ownerId || ticket.status === filter;
+    }).filter(ticket => (ticket.id + ' ' + ticket.title + ' ' + ticket.description).toLowerCase().includes(query));
+    return `${heading(manager ? '团队协同' : '工单处理', manager ? '查看团队待办、分配任务并跟进处理进度。' : '查看和处理工单，跟进客户补充、办理结果与回访。', manager ? '' : b(`${icon('plus')} 新建工单`, 'standalone-ticket', '', 'primary'))}<div class="panel"><div class="table-toolbar">${search('tickets', query, '搜索工单编号或问题')}<select aria-label="工单状态" data-select="ticket-filter">${V.options([['all', '全部状态'], ['pool', '待领取'], ['working', '处理中'], ['waiting_customer', '待客户补充'], ['done', '结果已记录'], ['callback_pending', '待回访'], ['callback_due', '已到期回访']], filter)}</select></div>${list.length ? `<div class="table-scroll"><table class="callback-ticket-table"><thead><tr><th>工单 / 客户问题</th><th>状态</th><th>负责人</th><th>受理时间</th><th>处理目标</th><th>回访时间</th><th>操作</th></tr></thead><tbody>${list.map(ticket => {
+      const callback = ticket.callback;
+      const editable = !manager && ticket.ownerId === ui.agentId;
+      const overdue = callback?.status === 'pending' && callback.at <= now;
+      const action = manager && (ticket.status !== 'done' || callback?.status === 'pending') ? b('转派', 'assign-ticket', ticket.id, 'small') : !manager && !ticket.ownerId ? b('领取', 'claim-ticket', ticket.id, 'small') : b('查看处理', 'ticket-detail', ticket.id, 'small');
+      return `<tr><td><button type="button" class="table-title" data-action="ticket-detail" data-id="${e(ticket.id)}">${e(ticket.title)}</button><small>${e(ticket.id)} · ${e(s.customers.find(customer => customer.id === ticket.customerId)?.name || '未关联')}</small></td><td>${pill(ticket.status, ticket.status === 'waiting_customer' ? 'warn' : ticket.status === 'done' ? 'good' : '')}</td><td>${e(s.staff.find(actor => actor.id === ticket.ownerId)?.name || '待领取')}</td><td>${date(ticket.createdAt, true)}</td><td>${ticket.status === 'done' ? '—' : `<span class="${ticket.dueAt < now ? 'danger-text' : ''}">${date(ticket.dueAt, true)}${ticket.dueAt < now ? ' · 已超时' : ''}</span>`}</td><td class="callback-cell">${callback ? `<span class="${overdue ? 'danger-text' : ''}">${beijingDate(callback.at)}</span><small>${e(CALLBACK_LABELS[callback.status] || callback.status)}${overdue ? ' · 已到期' : ''}</small>` : '<span class="muted">未安排</span>'}</td><td><div class="ticket-row-actions">${action}${editable ? b(callback?.status === 'pending' ? '调整回访' : '安排回访', 'callback-plan', ticket.id, 'small') : ''}${editable && callback?.status === 'pending' ? b('登记回访结果', 'callback-result', ticket.id, 'small') : ''}</div></td></tr>`;
+    }).join('')}</tbody></table></div>` : empty(query ? '没有匹配的工单' : '当前没有符合条件的工单', '请调整搜索词或筛选条件。')}</div>`;
+  };
 })(window);
 
 </script>
@@ -709,6 +1468,185 @@
   V.permissions=function(){return `${heading('角色与职责','角色行为在业务命令入口校验；正式上线仍须由服务端校验身份与数据归属。')}<section class="panel"><div class="table-scroll"><table><thead><tr><th>角色</th><th>工作范围</th><th>明确禁止</th></tr></thead><tbody>${[['客户','本人的咨询、订单、服务申请和公开处理进度','其他客户资料、内部备注、核对依据、运行日志'],['一线客服','本人接待、本人工单、授权公共池、服务问题标记','未经接管回复、修改他人任务、知识发布与系统配置'],['服务经理','授权团队的分配、质量复核、整改验收、接待规则','冒充客服发送回复、编辑或发布知识'],['知识运营','知识和策略草稿、回归、发布、关联整改','工单办理、正式质检裁决、客户全量资料'],['系统管理员','接入状态、权限说明、审计记录与数据导出','直接参与客户接待、替运营发布知识']].map(row=>`<tr>${row.map(x=>`<td>${e(x)}</td>`).join('')}</tr>`).join('')}</tbody></table></div></section>`;};
   V.logs=function(s){return `${heading('操作审计','当前工作空间的实际操作记录；无成功回执的写入不会显示为成功。')}<section class="panel"><div class="table-scroll"><table><thead><tr><th>时间</th><th>操作者</th><th>动作</th><th>对象</th></tr></thead><tbody>${s.events.slice().reverse().slice(0,100).map(ev=>`<tr><td>${date(ev.at,true)}</td><td>${e(ev.actor)}</td><td>${e(ev.type)}</td><td>${e(ev.target||'—')}</td></tr>`).join('')}</tbody></table></div><p class="muted small-text">展示最近 100 条，完整记录包含在工作空间导出文件中。浏览器存储不是防篡改审计服务。</p></section>`;};
   V.data=function(){return `${heading('数据维护','导出当前工作空间，或保存旧版本的原始数据。')}<section class="panel narrow"><h2>当前工作空间</h2><p class="muted">数据仅保存在当前浏览器。换设备、清理站点数据或隐私模式都可能影响保留。本版不提供多人并发保证。</p>${b('导出工作空间 JSON','export-data','','primary')}<hr><h2>旧版本数据</h2><p class="muted">新版本使用独立存储，不覆盖旧版的会话、工单和草稿。旧数据不自动导入新状态模型，可先导出留存。</p>${b('导出旧版本原始数据','export-legacy')}<hr><h2>使用范围</h2><p class="muted">不要在此工作空间录入真实客户资料、支付信息或密钥。外部接入与服务端权限尚未完成。</p></section>`;};
+})(window);
+
+</script>
+<script>
+(function(root){
+  'use strict';
+  root.SupportWorkbench={create(ctx){
+    const {D,V,ui,store,identity,apply,modal,closeModal,render,cache,toast,intake:legacyIntake}=ctx;
+    const {e,b,field,options,date,empty}=V;
+    const $=s=>document.querySelector(s), hour=3600000;
+    const bj=ms=>ms?new Date(Number(ms)+8*hour).toISOString().slice(0,16):'';
+    const at=value=>value?Date.parse(value+':00+08:00'):NaN;
+    const requestKey=()=>crypto.randomUUID?.()||String(Date.now());
+    const draft=(key,defaults)=>({...defaults,...ui.drafts[key]});
+    const currentCase=id=>D.get(store.state,'cases',id);
+    const convFor=(caseId,id)=>id||(identity().role==='customer'?store.state.conversations.find(c=>c.caseIds.includes(caseId)&&c.id===ui.customerConversation)||store.state.conversations.find(c=>c.caseIds.includes(caseId)&&c.customerId===identity().id):store.state.conversations.find(c=>c.caseIds.includes(caseId)&&c.state==='human'&&c.ownerId===identity().id))?.id||'';
+    let pendingSuggestion=null,closing=null,pendingOrder=null,needsRender=false;const failedAi=new Set(),suppressedAi=new Set(ui.aiInputSuppressed||[]);
+    function owned(id){const c=D.get(store.state,'conversations',id);if(identity().role!=='agent'||c.ownerId!==identity().id||c.state!=='human')throw Error('请先取得本会话接待权');return c;}
+    function connected(){if(identity().role==='customer'&&D.customerConnection(store.state,identity().id)!=='online')throw Error('连接已断开，请先恢复在线；输入内容已保留。');}
+    function after(success){closeModal();render();if(success)toast(success);cache();}
+    function orderFacts(id,customerId){const o=store.state.orders.find(o=>o.id===id&&o.customerId===customerId);return o?`<div class="order-facts"><strong>${e(o.product)}</strong><p>${e(o.id)} · ${e(o.status)} · ¥${Number(o.price).toFixed(2)}</p><p>规格：${e(o.spec||o.variant||'待核对')}　数量：${e(o.quantity??'待核对')}</p><small>订单记录提供以上信息；退换货资格仍需客服核对。</small></div>`:'<p class="muted">请选择客户本人订单。未确认的信息保持为空。</p>';}
+    function intake(caseId,conversationId='',reuse=false){
+      const c=currentCase(caseId);if(c.kind!=='aftersales')return legacyIntake(caseId,conversationId);
+      if(identity().role==='customer'){connected();if(c.customerId!==identity().id)throw Error('无权查看该问题');}
+      else owned(convFor(caseId,conversationId));
+      const key='ticket-request:'+caseId,previous=reuse?ui.pendingTicket:null;
+      const v=draft(key,{title:c.title||'退换货申请',orderId:c.orderId||'',serviceType:'',description:'',exchangeRequest:'',extraNote:''});
+      const cv=convFor(caseId,conversationId),sop=cv?D.sopView(store.state,cv,caseId):null;
+      if(!ui.drafts[key]&&sop?.prefill)Object.assign(v,sop.prefill);
+      ui.pendingTicket={caseId,conversationId:cv,structured:true,requestKey:previous?.requestKey||requestKey(),draftKey:key};
+      const orders=store.state.orders.filter(o=>o.customerId===c.customerId),policy=D.retrieve(store.state,'退货规则');
+      const policyNote=policy&&!policy.conflict?`<details class="intake-policy"><summary>规则依据 · ${e(policy.title)} v${e(policy.version)}</summary><p>${e(policy.answer)}</p><small>${e(policy.source)}；具体资格待客服核实。</small></details>`:'<p class="muted">当前没有可直接采用的售后规则，请人工核实办理条件。</p>';
+      modal('退换货申请',`<form data-form="ticket-request" data-id="${e(caseId)}"><div class="readonly-context">客户：${e(c.customerId)} · 问题：${e(c.id)}<br>${e(c.title)}</div>${field('申请标题','title',v.title,'text','required maxlength="100"')}<label class="field"><span>核对订单</span><select name="orderId" required data-intake-order>${options([['','请选择订单'],...orders.map(o=>[o.id,o.id+' · '+o.product])],v.orderId)}</select></label><div data-order-facts>${orderFacts(v.orderId,c.customerId)}</div><label class="field"><span>申请类型</span><select name="serviceType" required data-intake-type>${options([['','请选择'],['return','退货'],['exchange','换货']],v.serviceType)}</select></label>${policyNote}${field('申请原因','description',v.description,'textarea','required maxlength="2000"')}${field('换货要求（换货时必填）','exchangeRequest',v.exchangeRequest,'textarea',`maxlength="200" ${v.serviceType==='exchange'?'required':''}`)}${field('补充说明','extraNote',v.extraNote,'textarea','maxlength="1000"')}<p class="muted small-text">预填内容来自当前问题与客户消息，请逐项核对。确认前不会创建工单。</p><div class="form-footer">${b('取消','close-modal')}<button type="submit" class="btn primary">核对申请</button></div></form>`);
+    }
+    function intakePreview(data){
+      const r=ui.pendingTicket;if(!r?.structured)throw Error('申请上下文已失效');
+      if(!['return','exchange'].includes(data.serviceType))throw Error('请选择申请类型');
+      if(!data.description.trim())throw Error('请填写申请原因');
+      if(data.serviceType==='exchange'&&!data.exchangeRequest.trim())throw Error('请填写换货要求');
+      const c=currentCase(r.caseId);if(!store.state.orders.some(o=>o.customerId===c.customerId&&o.id===data.orderId))throw Error('请选择客户本人订单');
+      ui.drafts[r.draftKey]={...data};ui.pendingTicket={...r,...data,previewToken:D.intakeToken(store.state,r.caseId,data.orderId,r.conversationId)};
+      modal('核对退换货申请',`<div class="preview-block"><h2>${e(data.title)}</h2><p>客户 ${e(c.customerId)} · 问题 ${e(c.id)}</p>${orderFacts(data.orderId,c.customerId)}<p>类型：${data.serviceType==='exchange'?'换货':'退货'}</p><p>申请原因：${e(data.description)}</p>${data.serviceType==='exchange'?`<p>换货要求：${e(data.exchangeRequest)}</p>`:''}<p>补充说明：${e(data.extraNote||'无')}</p></div><p class="muted">确认后登记或继续原工单，尚不代表退款或换货完成。</p><form data-form="ticket-confirm" data-id="${e(c.id)}"><div class="form-footer">${b('返回修改','intake-back')}${b('取消','close-modal')}<button class="btn primary" type="submit">确认提交申请</button></div></form>`);
+    }
+    function suggestionFor(el){const id=el.dataset.conversation||ui.visibleConversation,caseId=el.dataset.id||ui.sopCaseByConversation?.[id];owned(id);const suggestion=D.suggestion(store.state,id,caseId);if(suggestion.status!=='ready')throw Error(suggestion.reason||'当前没有可用的答复依据，请先核对问题');return {id,caseId,suggestion};}
+    function insertSuggestion(value,mode){
+      const fresh=D.suggestion(store.state,value.id,value.caseId);owned(value.id);if(fresh.token!==value.suggestion.token||fresh.status!=='ready')throw Error('答复依据已变化，请重新查看建议');
+      pauseWhileTyping(value.id);const key='reply:'+value.id,body=ui.drafts[key]?.body||'';
+      ui.composeMode='reply';ui.drafts[key]={body:mode==='append'&&body?body+'\n\n'+fresh.body:fresh.body};
+      ui.suggestionRefs||={};ui.suggestionRefs[identity().id+':'+value.id]={token:fresh.token,caseId:value.caseId,body:fresh.body};if(mode==='replace'&&ui.orderReplyRefs)delete ui.orderReplyRefs[identity().id+':'+value.id];
+      pendingSuggestion=null;after('已填入草稿，请核对后发送');$('#agent-input')?.focus();
+    }
+    function showSuggestion(el){const value=suggestionFor(el);if(ui.drafts['reply:'+value.id]?.body?.trim()){
+      pendingSuggestion=value;modal('草稿已有内容',`<p>保留并追加，或用以下建议替换草稿。</p><div class="result-note">${e(value.suggestion.body)}</div><div class="form-footer">${b('取消','close-modal')}${b('追加到草稿','suggestion-append')}${b('替换草稿','suggestion-replace','','primary')}</div>`);
+    }else insertSuggestion(value,'replace');}
+    function insertOrder(value,mode){
+      owned(value.id);const c=currentCase(value.caseId),order=store.state.orders.find(o=>o.id===c.orderId&&o.customerId===c.customerId);
+      if(!order||JSON.stringify(order)!==JSON.stringify(value.order))throw Error('订单信息已变化，请重新查询再采用');
+      pauseWhileTyping(value.id);const key='reply:'+value.id,body=ui.drafts[key]?.body||'';
+      ui.composeMode='reply';ui.drafts[key]={body:mode==='append'&&body?body+'\n\n'+value.body:value.body};
+      ui.orderReplyRefs||={};ui.orderReplyRefs[identity().id+':'+value.id]={caseId:value.caseId,order:D.copy(value.order),body:value.body};
+      if(mode==='replace'&&ui.suggestionRefs)delete ui.suggestionRefs[identity().id+':'+value.id];
+      pendingOrder=null;after('查询结果已填入草稿，请核对后发送');$('#agent-input')?.focus();
+    }
+    function orderDraft(el){
+      const id=el.dataset.conversation,c=currentCase(el.dataset.id);owned(id);
+      const query=c.workflow?.logistics,order=store.state.orders.find(o=>o.id===c.orderId&&o.customerId===c.customerId);
+      if(!query||!order||JSON.stringify(query.order)!==JSON.stringify(order))throw Error('请先重新查询当前订单');
+      const value={id,caseId:c.id,order:D.copy(order),body:`${order.product}：${order.status}。${order.delivery||'暂无物流说明'}`};
+      if(ui.drafts['reply:'+id]?.body?.trim()){pendingOrder=value;modal('草稿已有内容',`<p>查询结果来自刚才核对的订单。</p><div class="result-note">${e(value.body)}</div><div class="form-footer">${b('取消','close-modal')}${b('追加到草稿','order-draft-append')}${b('替换草稿','order-draft-replace','','primary')}</div>`);}
+      else insertOrder(value,'replace');
+    }
+    function source(el){const id=el.dataset.conversation||ui.visibleConversation;if(!D.deskView(store.state,identity()).conversations.some(c=>c.id===id))throw Error('无权查看依据');const v={suggestion:D.suggestion(store.state,id,el.dataset.id)},k=v.suggestion.knowledge;modal('建议依据',k?`<h2>${e(k.title)}</h2><p>${e(k.source)} · v${e(k.version)}</p><p>${e(k.answer)}</p><p class="muted">发送前会再次核对来源与当前问题；已发送的引用保留当时版本。</p>`:`<p>${e(v.suggestion.body)}</p>`);}
+    function closePanel(id){
+      const cv=owned(id),p=D.closePreview(store.state,id),key='close-summary:'+id;
+      closing={id,token:p.token,items:p.items,requestKey:closing?.id===id?closing.requestKey:requestKey()};
+      const v=draft(key,{reason:D.customerConnection(store.state,cv.customerId)==='online'?'本次沟通结束':'客户离线',summary:p.summary||''});
+      const cases=[...new Set([...p.items.map(x=>x.caseId),...cv.caseIds])];
+      const customer=D.get(store.state,'customers',cv.customerId),receptionist=D.actor(store.state,identity());
+      modal('结束沟通与后续安排',`<form data-form="close-summary" data-id="${e(id)}"><div class="readonly-context">客户：${e(customer.name)} · ${e(customer.id)}<br>会话：${e(cv.id)} · 接待人：${e(receptionist.name)}<br>开始时间：${e(bj(cv.createdAt).replace('T',' '))} UTC+08:00</div><p class="muted">结束沟通只关闭当前接待。以下事项仍会保留待处理状态，直至实际办理。同一问题共用跟进工单，各节点目标时间应一致。</p>${field('关闭原因','reason',v.reason,'text','required maxlength="200"')}${field('本次沟通摘要','summary',v.summary,'textarea','required maxlength="1000"')}<h3>尚未完成的 SOP 事项</h3>${p.items.map(item=>{
+        const i=item.caseId+'_'+item.nodeKey;
+        const tickets=store.state.tickets.filter(t=>t.caseId===item.caseId&&t.status!=='done');
+        return `<fieldset class="close-item"><legend>${e(item.caseTitle)} · ${e(item.title)}</legend><p>${e(item.reason||'待完成')}</p><label class="field"><span>后续安排</span><select name="action_${i}">${options([['new','创建跟进工单'],['existing','由已有工单跟进'],['callback','安排回访'],['na','不适用'],['withdrawn','客户撤回']],v['action_'+i]||(item.ticketId?'existing':'new'))}</select></label>${field('未完成原因 / 安排说明','reason_'+i,v['reason_'+i]||'','textarea','required maxlength="500"')}<label class="field"><span>关联工单（选择已有工单时）</span><select name="ticket_${i}">${options([['','请选择'],...tickets.map(t=>[t.id,t.id+' · '+t.title+' · '+(store.state.staff.find(a=>a.id===t.ownerId)?.name||'未分配')])],v['ticket_'+i]||item.ticketId||'')}</select></label>${field('目标时间（北京时间 UTC+08:00）','due_'+i,v['due_'+i]||bj(item.dueAt>Date.now()?item.dueAt:Date.now()+24*hour),'datetime-local')}</fieldset>`;
+      }).join('')||'<p class="muted">当前没有必须安排的未完成事项。</p>'}<h3>回访安排</h3><p class="muted small-text">回访记录仅保存在站内，不会自动向客户发送提醒。</p>${cases.map(caseId=>{const c=currentCase(caseId),t=store.state.tickets.find(t=>t.caseId===caseId&&t.status!=='done');return `<fieldset class="close-item"><legend>${e(c.title)}</legend><label class="row"><input type="checkbox" name="callback_${e(caseId)}" value="yes" ${v['callback_'+caseId]?'checked':''}>需要回访</label><p class="muted small-text">负责人：${e(store.state.staff.find(a=>a.id===(t?.ownerId||identity().id))?.name||'待分配')}（随工单负责人流转）</p>${field('回访目的','purpose_'+caseId,v['purpose_'+caseId]||'','textarea','maxlength="1000"')}${field('计划时间（北京时间 UTC+08:00）','at_'+caseId,v['at_'+caseId]||'','datetime-local')}${field('回访备注（内部）','note_'+caseId,v['note_'+caseId]||'','textarea','maxlength="1000"')}</fieldset>`;}).join('')}<div class="form-footer">${b('取消','close-modal')}${b('刷新待办清单','refresh-close',id)}<button type="submit" class="btn primary">保存安排并结束沟通</button></div></form>`);
+    }
+    function closeSubmit(data){
+      if(!closing)throw Error('请重新打开关闭面板');
+      const items=closing.items.map(item=>{const i=item.caseId+'_'+item.nodeKey,action=data['action_'+i],ticketId=data['ticket_'+i]||'',due=at(data['due_'+i]),t=store.state.tickets.find(t=>t.id===ticketId);if(['existing','new','callback'].includes(action)&&!Number.isFinite(due))throw Error('请为跟进事项填写有效目标时间');return {caseId:item.caseId,nodeKey:item.nodeKey,action,reason:data['reason_'+i],ticketId,...(action==='existing'&&t&&bj(t.dueAt)===data['due_'+i]?{}:{dueAt:due})};});
+      const callbacks=Object.keys(data).filter(k=>k.startsWith('callback_')&&data[k]==='yes').map(k=>{const caseId=k.slice(9);return {caseId,purpose:data['purpose_'+caseId],at:at(data['at_'+caseId]),note:data['note_'+caseId]||''};});
+      apply('closeWithSummary',{id:closing.id,token:closing.token,reason:data.reason,summary:data.summary,items,callbacks,requestKey:closing.requestKey});
+      delete ui.drafts['close-summary:'+closing.id];closing=null;after('沟通已结束，后续安排已保存');
+    }
+    function callbackPanel(id,result=false){
+      const t=D.get(store.state,'tickets',id);if(identity().role!=='agent'||t.ownerId!==identity().id)throw Error('只有当前工单负责人可以安排或记录回访');
+      const key=(result?'callback-result:':'callback-plan:')+id,v=draft(key,result?{result:'contacted',summary:'',nextAt:''}:{purpose:t.callback?.purpose||'',at:bj(t.callback?.at),note:t.callback?.note||''});
+      modal(result?'记录回访结果':'安排回访',`<p>${e(t.id)} · ${e(t.title)}</p><p class="muted">负责人：${e(D.actor(store.state,identity()).name)}，随工单负责人流转。仅作站内记录。</p>${t.callback?.history?.length?`<details><summary>回访历史</summary>${t.callback.history.map(h=>`<p>${e(bj(h.at).replace('T',' '))} UTC+08:00 · ${e({contacted:'已联系',unreachable:'未接通',cancelled:'已取消',rescheduled:'调整计划'}[h.result||h.action]||h.result||h.action)} · ${e(h.summary||h.previous?.purpose||'')} ${h.nextAt?'下次：'+e(bj(h.nextAt).replace('T',' ')):''}</p>`).join('')}</details>`:''}<form data-form="${result?'callback-result':'callback-plan'}" data-id="${e(id)}">${result?`<label class="field"><span>回访结果</span><select name="result">${options([['contacted','已联系'],['unreachable','未接通，重新安排'],['cancelled','取消回访']],v.result)}</select></label>${field('结果摘要 / 取消原因','summary',v.summary,'textarea','required maxlength="1000"')}${field('再次回访时间（未接通时必填，北京时间 UTC+08:00）','nextAt',v.nextAt,'datetime-local')}`:`${field('回访目的','purpose',v.purpose,'textarea','required maxlength="1000"')}${field('计划时间（北京时间 UTC+08:00）','at',v.at,'datetime-local','required')}${field('备注（仅内部可见）','note',v.note,'textarea','maxlength="1000"')}`}<div class="form-footer">${b('取消','close-modal')}<button type="submit" class="btn primary">保存回访记录</button></div></form>`);
+    }
+    const actions={
+      intake(el){intake(el.dataset.id);},
+      'staff-intake'(el){intake(el.dataset.id,el.dataset.conversation);},
+      'sop-intake'(el){intake(el.dataset.id,el.dataset.conversation);},
+      'intake-back'(){const r=ui.pendingTicket;if(!r)throw Error('申请草稿不存在');intake(r.caseId,r.conversationId,true);},
+      'select-sop-case'(el){ui.sopCaseByConversation||={};ui.sopCaseByConversation[el.dataset.conversation]=el.dataset.id;render();},
+      'toggle-sop-node'(el){ui.sopNodeByCase||={};ui.sopNodeByCase[el.dataset.case]=ui.sopNodeByCase[el.dataset.case]===el.dataset.id?'':el.dataset.id;render();},
+      'sop-query-order'(el){apply('queryOrder',{conversationId:el.dataset.conversation,caseId:el.dataset.id},'已查询订单，核对记录已保存');render();},
+      'sop-insert-order':orderDraft,
+      'order-draft-append'(){if(!pendingOrder)throw Error('查询结果已失效');insertOrder(pendingOrder,'append');},
+      'order-draft-replace'(){if(!pendingOrder)throw Error('查询结果已失效');insertOrder(pendingOrder,'replace');},
+      'sop-na'(el){mark(el,'na');},'sop-wait'(el){mark(el,'waiting');},
+      'ai-toggle'(el){const c=owned(el.dataset.id),enabled=!c.aiAssist?.enabled;apply('setAiAssist',{id:c.id,enabled});if(enabled)suppressedAi.delete(c.id);else suppressedAi.add(c.id);ui.aiInputSuppressed=[...suppressedAi];render();},
+      'dynamic-suggestion':showSuggestion,
+      'insert-suggestion'(el){showSuggestion({dataset:{id:ui.sopCaseByConversation?.[ui.visibleConversation],conversation:ui.visibleConversation}});},
+      'suggestion-source':source,
+      'suggestion-append'(){if(!pendingSuggestion)throw Error('建议已失效');insertSuggestion(pendingSuggestion,'append');},
+      'suggestion-replace'(){if(!pendingSuggestion)throw Error('建议已失效');insertSuggestion(pendingSuggestion,'replace');},
+      'recheck-suggestion'(el){const cv=owned(el.dataset.id),ref=ui.suggestionRefs?.[identity().id+':'+cv.id],fresh=ref&&D.suggestion(store.state,cv.id,ref.caseId);if(!fresh||fresh.status!=='ready'||fresh.token!==el.dataset.token)throw Error('依据再次变化，请重新核对');ref.token=fresh.token;after('已核对当前依据，请检查草稿并再次发送');},
+      'discard-draft-suggestion'(el){const key=identity().id+':'+el.dataset.id,ref=ui.suggestionRefs?.[key],draft=ui.drafts['reply:'+el.dataset.id];owned(el.dataset.id);if(ref&&draft)draft.body=draft.body.replace(ref.body,'').trim();if(ref)delete ui.suggestionRefs[key];after('已放弃建议，剩余草稿请人工核实');},
+      'dismiss-suggestion'(el){const v=suggestionFor(el);ui.dismissedSuggestionTokens||={};ui.dismissedSuggestionTokens[v.id+':'+v.caseId]=v.suggestion.token;render();},
+      'close-conversation'(el){closePanel(el.dataset.id);},
+      'refresh-close'(el){closePanel(el.dataset.id);},
+      'close-history'(el){
+        const cv=D.get(store.state,'conversations',el.dataset.id);
+        if(!D.deskView(store.state,identity()).conversations.some(c=>c.id===cv.id))throw Error('无权查看记录');
+        const h=D.closePreview(store.state,cv.id).history;
+        const actionNames={existing:'原工单跟进',new:'创建跟进工单',callback:'安排回访',na:'不适用',withdrawn:'客户撤回'};
+        const statusNames={idle:'未触发',todo:'待处理',doing:'处理中',waiting:'待客户补充',done:'已完成',na:'不适用',error:'异常'};
+        const time=value=>value?bj(value).replace('T',' ')+' UTC+08:00':'—';
+        modal('结束沟通记录',h.map(x=>`<article class="close-item"><h3>${e(time(x.at))}</h3><p>${e(x.reason)}</p><p>${e(x.summary)}</p><h3>当时的节点与后续安排</h3>${(x.items||[]).map(i=>`<div class="order-facts"><strong>${e(i.caseTitle)} · ${e(i.title||i.nodeKey)}</strong><p>${e(statusNames[i.status]||i.status)} · ${e(i.reason)}</p><p>${e(actionNames[i.action]||i.action)} ${e(i.ticketId||'')} · ${e(store.state.staff.find(a=>a.id===i.ownerId)?.name||i.ownerId||'无负责人')}</p>${i.dueAt?`<p>目标：${e(time(i.dueAt))}</p>`:''}</div>`).join('')||'<p>无未完成事项</p>'}<details><summary>全部节点快照</summary>${(x.sop||[]).map((nodes,i)=>`<p>问题 ${i+1}：${nodes.map(n=>e(n.title)+' · '+e(statusNames[n.status]||n.status)).join(' / ')}</p>`).join('')}</details><h3>当时的回访安排</h3>${(x.callbacks||[]).map(c=>`<div class="order-facts"><strong>${e(c.purpose)}</strong><p>${e(c.ticketId)} · ${e(store.state.staff.find(a=>a.id===c.ownerId)?.name||c.ownerId)}</p><p>${e(time(c.at))}</p><p>${e(c.note||'无备注')}</p></div>`).join('')||'<p>无回访安排</p>'}</article>`).join('')||empty('暂无结束沟通记录'));
+      },
+      'callback-plan'(el){callbackPanel(el.dataset.id);},'callback-result'(el){callbackPanel(el.dataset.id,true);},
+      'mobile-orders'(){modal('我的订单',V.mobileOrders(D.customerView(store.state,'C001'),ui));},
+      'mobile-progress'(){modal('服务进度',V.mobileProgress(D.customerView(store.state,'C001'),ui));},
+      'connection-toggle'(el){apply('customerConnection',{status:el.dataset.id});closeModal();render();toast(el.dataset.id==='online'?'连接已恢复':'已模拟客户离线');}
+    };
+    function mark(el,status){modal('记录节点状态',`<form data-form="sop-mark" data-id="${e(el.dataset.case+':'+el.dataset.id)}" data-node-key="${e(el.dataset.id)}" data-case="${e(el.dataset.case)}" data-conversation="${e(el.dataset.conversation)}" data-status="${status}">${field('原因说明','reason','','textarea','required maxlength="500"')}<button type="submit" class="btn primary">保存状态</button></form>`);}
+    function submit(form,data){
+      const f=form.dataset.form,id=form.dataset.id,key=f+':'+(id||'new');
+      if(identity().role==='customer'&&['customer-say','ticket-request','ticket-confirm','supplement','dispute'].includes(f))connected();
+      if(f==='ticket-request'&&ui.pendingTicket?.structured){intakePreview(data);cache();return true;}
+      if(f==='ticket-confirm'&&ui.pendingTicket?.structured){const r=ui.pendingTicket,value=apply('createTicket',{...r,confirmed:true});delete ui.drafts[r.draftKey];ui.pendingTicket=null;after(value.created?'申请已受理':'已继续原工单');return true;}
+      if(f==='close-summary'){closeSubmit(data);return true;}
+      if(f==='sop-intent')apply('confirmIntent',{conversationId:form.dataset.conversation,caseId:id,...data},'诉求已核对');
+      else if(f==='sop-order'){const r=apply('bindOrder',{conversationId:form.dataset.conversation,caseId:id,orderId:data.orderId},'订单已核对');if(r){ui.sopCaseByConversation||={};ui.sopCaseByConversation[form.dataset.conversation]=typeof r==='string'?r:r.caseId;}}
+      else if(f==='sop-mark'){apply('markSop',{conversationId:form.dataset.conversation,caseId:form.dataset.case,nodeKey:form.dataset.nodeKey,status:form.dataset.status,reason:data.reason});closeModal();}
+      else if(f==='callback-plan'){apply('saveCallback',{ticketId:id,purpose:data.purpose,at:at(data.at),note:data.note},'回访已安排');closeModal();}
+      else if(f==='callback-result'){apply('callbackResult',{ticketId:id,result:data.result,summary:data.summary,nextAt:at(data.nextAt)},'回访结果已记录');closeModal();}
+      else if(f==='reply'){
+        const ref=ui.suggestionRefs?.[identity().id+':'+id],orderRef=ui.orderReplyRefs?.[identity().id+':'+id];
+        if(ref){const fresh=D.suggestion(store.state,id,ref.caseId);if(fresh.token!==ref.token||fresh.status!=='ready'){modal('答复依据已变化',`<p>当前草稿已保留，发送前请重新核对。</p><div class="result-note">${e(fresh.body||fresh.reason)}</div>${fresh.knowledge?`<p>${e(fresh.knowledge.title)} · v${e(fresh.knowledge.version)} · ${e(fresh.knowledge.source)}</p>`:''}<div class="form-footer">${b('返回修改','close-modal')}${b('放弃建议','discard-draft-suggestion',id)}${fresh.status==='ready'?b('已核对，保留草稿','recheck-suggestion',id,'primary',`data-token="${e(fresh.token)}"`):''}</div>`);return true;}}
+        apply('reply',{id,body:data.body,...(orderRef?{orderCaseId:orderRef.caseId,orderSnapshot:orderRef.order}:{}),...(ref?{suggestionToken:ref.token,suggestionCaseId:ref.caseId}:{})},'回复已发送');
+        if(ref)delete ui.suggestionRefs[identity().id+':'+id];if(orderRef)delete ui.orderReplyRefs[identity().id+':'+id];
+      }else return false;
+      delete ui.drafts[key];render();cache();if(f==='reply')ctx.scrollMessages();return true;
+    }
+    function pauseWhileTyping(id){
+      const cv=D.get(store.state,'conversations',id);
+      if(cv.state!=='human'||cv.ownerId!==identity().id)return false;
+      suppressedAi.add(id);ui.aiInputSuppressed=[...suppressedAi];cache();
+      if(cv.aiAssist?.enabled){apply('setAiAssist',{id,enabled:false});toast('人工正在输入，AI 续答已暂停');return true;}
+      return false;
+    }
+    function input(form){
+      if(['reply','note'].includes(form.dataset.form)&&identity().role==='agent')return pauseWhileTyping(form.dataset.id);
+      return false;
+    }
+    function change(el){
+      if(el.dataset.intakeType!==undefined){const input=el.closest('form').elements.namedItem('exchangeRequest');if(input)input.required=el.value==='exchange';}
+      if(el.dataset.intakeOrder!==undefined&&ui.pendingTicket?.structured){const c=currentCase(ui.pendingTicket.caseId),target=$('[data-order-facts]');if(target)target.innerHTML=orderFacts(el.value,c.customerId);}
+    }
+    function tick(){
+      if(store.blocked)return;
+      let changed=false;
+      for(const c of store.state.conversations){if(suppressedAi.has(c.id))continue;const pending=D.aiPending(store.state,c.id);if(pending&&pending.dueAt<=Date.now()&&!failedAi.has(pending.token)){
+        try{store.dispatch({role:'agent',id:pending.ownerId},'aiContinue',{id:c.id,messageId:pending.messageId,token:pending.token});changed=true;}
+        catch(err){failedAi.add(pending.token);toast(err.message||'AI 续答已暂停，请检查会话',true);}
+      }}
+      if(changed){if($('#dialog').open)needsRender=true;else{needsRender=false;render();}}
+    }
+    return {actions,submit,input,change,tick,afterRender(){if(ui.workspace!=='desk'||ui.deskPage!=='inbox'||!ui.visibleConversation)return;const caseId=$('.sop-case-tab.active')?.dataset.id;if(!caseId)return;const sg=D.suggestion(store.state,ui.visibleConversation,caseId);if(sg.status!=='ready')return;ui.seenSuggestionTokens||={};const key=ui.visibleConversation+':'+caseId;if(ui.seenSuggestionTokens[key]!==sg.token){ui.seenSuggestionTokens[key]=sg.token;toast('有新的答复建议，请核对来源后使用');}},onClose(){const pending=needsRender;needsRender=false;return pending;}};
+  }};
 })(window);
 
 </script>
@@ -734,24 +1672,26 @@
   function clearFlowTest(){ui.flowTest=null;$('.query-result')?.remove();}
   function fail(err){const message=err?.message||'操作没有完成，请重试';if($('#dialog').open){$('#dialog-error').textContent=message;$('#dialog-error').hidden=false;}else toast(message,true);}
   function apply(type,data,success){const value=store.dispatch(identity(),type,data);if(success)toast(success);return value;}
-  function navigate(workspace,page){ui.workspace=workspace;if(workspace==='desk')ui.deskPage=page||ui.deskPage;if(workspace==='ops')ui.opsPage=page||ui.opsPage;history.pushState(null,'','#'+workspace+(workspace==='desk'?'/'+ui.deskPage:workspace==='ops'?'/'+ui.opsPage:''));cache();}
+  function navigate(workspace,page){ui.customerMode=workspace==='mobile'?'mobile':'desktop';ui.workspace=workspace==='mobile'?'customer':workspace;if(workspace==='desk')ui.deskPage=page||ui.deskPage;if(workspace==='ops')ui.opsPage=page||ui.opsPage;history.pushState(null,'','#'+workspace+(workspace==='desk'?'/'+ui.deskPage:workspace==='ops'?'/'+ui.opsPage:''));cache();}
   function route(){
-    if(customerOnly){ui.workspace='customer';return;}
+    if(customerOnly){ui.workspace='customer';ui.customerMode='desktop';return;}
     const hash=location.hash.slice(1);if(!hash)return;
     const legacy={playground:'customer',sessions:'desk/inbox',tickets:'desk/tickets',knowledge:'ops/knowledge',workflow:'ops/flow',quality:'ops/quality',architecture:'ops/data',integrations:'ops/integrations',overview:'ops/overview',robot:'ops/flow'};
     const [workspace,page]=(legacy[hash]||hash).split('/');
+    if(workspace==='mobile'){ui.workspace='customer';ui.customerMode='mobile';return;}
+    if(workspace==='customer')ui.customerMode='desktop';
     if(['customer','desk','ops'].includes(workspace)){ui.workspace=workspace;if(workspace==='desk')ui.deskPage=['inbox','tickets'].includes(page)?page:'inbox';if(workspace==='ops')ui.opsPage=page||'overview';}
     if(ui.workspace==='ops'&&!opsMenus[ui.opsRole].some(x=>x[0]===ui.opsPage)){ui.opsPage=opsMenus[ui.opsRole][0][0];history.replaceState(null,'','#ops/'+ui.opsPage);}
   }
   function top(s){const role=ui.workspace==='desk'?`<label class="role-picker"><span>当前客服</span><select aria-label="当前客服" data-select="agent">${options(s.staff.filter(a=>a.role==='agent').map(a=>[a.id,a.name]),ui.agentId)}</select></label>`:ui.workspace==='ops'?`<label class="role-picker"><span>工作角色</span><select aria-label="工作角色" data-select="ops-role">${options([['manager','服务经理'],['operator','知识运营'],['admin','系统管理员']],ui.opsRole)}</select></label>`:`<span class="customer-identity">${icon('users',16)} 我的账户</span><a class="icon-button" href="?view=customer#customer" target="_blank" rel="noopener" title="打开独立客户页" aria-label="打开独立客户页">${icon('external',16)}</a>`;
-    return `<header class="app-top"><a class="product-brand" href="#customer"><span class="brand-logo">${icon('chat',20)}</span><span>智能客服</span></a>${customerOnly?'<div class="standalone-heading">服务中心</div>':`<nav class="workspace-tabs" aria-label="工作区">${[['customer','客户服务','chat'],['desk','客服工作台','inbox'],['ops','运营后台','chart']].map(([key,label,glyph])=>`<button type="button" data-action="workspace" data-id="${key}" class="${ui.workspace===key?'active':''}" ${ui.workspace===key?'aria-current="page"':''}>${icon(glyph)}${label}</button>`).join('')}</nav>`}<div class="top-right">${customerOnly?'<span class="customer-identity">我的账户</span>':role}</div></header>`;
+    return `<header class="app-top"><a class="product-brand" href="#customer"><span class="brand-logo">${icon('chat',20)}</span><span>智能客服</span></a>${customerOnly?'<div class="standalone-heading">服务中心</div>':`<nav class="workspace-tabs" aria-label="工作区">${[['customer','客户服务','chat'],['mobile','手机端演示','chat'],['desk','客服工作台','inbox'],['ops','运营后台','chart']].map(([key,label,glyph])=>`<button type="button" data-action="workspace" data-id="${key}" class="${(ui.workspace==='customer'&&ui.customerMode==='mobile'?'mobile':ui.workspace)===key?'active':''}" ${(ui.workspace==='customer'&&ui.customerMode==='mobile'?'mobile':ui.workspace)===key?'aria-current="page"':''}>${icon(glyph)}${label}</button>`).join('')}</nav>`}<div class="top-right">${customerOnly?'<span class="customer-identity">我的账户</span>':role}</div></header>`;
   }
   function side(s){const menu=ui.workspace==='desk'?[['inbox','会话接待','inbox'],['tickets','工单处理','ticket']]:opsMenus[ui.opsRole];const active=ui.workspace==='desk'?ui.deskPage:ui.opsPage;const actor=identity();return `<aside class="workspace-sidebar"><div class="workspace-label">${ui.workspace==='desk'?'客户支持':'运营与管理'}</div>${menu.map(([key,label,glyph])=>`<button class="side-link ${active===key?'active':''}" type="button" data-action="${ui.workspace==='desk'?'desk-page':'ops-page'}" data-id="${key}">${icon(glyph)}<span>${label}</span></button>`).join('')}<div class="sidebar-bottom"><span class="workspace-dot"></span><strong>客户服务团队</strong><small>${ui.workspace==='desk'?'服务组 · 本人任务与公共池':{manager:'团队服务与质量',operator:'知识、策略与改进',admin:'系统接入与维护'}[ui.opsRole]}</small></div></aside>`;}
   function render(){
     if(store.blocked){$('#app').innerHTML=`<main class="fatal"><h1>工作空间暂时无法读取</h1><p>${e(store.blocked)}</p><p>不会用空白数据覆盖原记录。请先导出原始保存值，再排查数据格式。</p>${b('导出原始保存值','export-broken','','primary')}</main>`;return;}
     route();syncDrafts();const s=store.state;let content='';
     const focused=document.activeElement,focusKey=focused?.dataset.focus,selection=focused?.selectionStart;
-    if(ui.workspace==='customer')content=V.customer(D.customerView(s,'C001'),ui);
+    if(ui.workspace==='customer')content=(ui.customerMode==='mobile'?V.mobile:V.customer)(D.customerView(s,'C001'),ui);
     else if(ui.workspace==='desk'){const data=D.deskView(s,identity());content=ui.deskPage==='tickets'?V.tickets(s,data.tickets,ui):V.inbox(s,data,ui,D.actor(s,identity()));}
     else {
       switch(ui.opsPage){
@@ -767,19 +1707,23 @@
         case'data':content=V.data();break;
       }
     }
-    $('#app').innerHTML=top(s)+(ui.workspace==='customer'?`<main class="customer-main">${content}</main>`:`<div class="workspace-body">${side(s)}<main class="workspace-content ${ui.workspace==='desk'&&ui.deskPage==='inbox'?'inbox-page':''}">${content}</main></div>`);
+    const scrolls=[...document.querySelectorAll('.messages,.sop-workbench-scroll,.conversation-rows')].map(x=>[x.className,x.scrollTop,x.scrollHeight-x.clientHeight-x.scrollTop<40]);
+    const dialog=$('#dialog');if(dialog.parentElement!==document.body)document.body.append(dialog);
+    $('#app').innerHTML=top(s)+(ui.workspace==='customer'?`<main class="customer-main ${ui.customerMode==='mobile'?'mobile-main':''}">${content}</main>`:`<div class="workspace-body">${side(s)}<main class="workspace-content ${ui.workspace==='desk'&&ui.deskPage==='inbox'?'inbox-page':''}">${content}</main></div>`);
+    if(dialog.open&&ui.workspace==='customer'&&ui.customerMode==='mobile')$('.phone-overlay-host')?.append(dialog);
+    document.querySelectorAll('.messages,.sop-workbench-scroll,.conversation-rows').forEach(x=>{const old=scrolls.find(y=>y[0]===x.className);if(old)x.scrollTop=old[2]?x.scrollHeight:old[1];});
     if(focusKey&&!$('#dialog').open){const target=document.querySelector(`[data-focus="${CSS.escape(focusKey)}"]`);target?.focus();try{target?.setSelectionRange(selection,selection);}catch{}}
-    cache();
+    workbench.afterRender();cache();
   }
   function scrollMessages(){requestAnimationFrame(()=>document.querySelectorAll('.messages').forEach(x=>x.scrollTop=x.scrollHeight));}
-  function modal(title,body){focusBeforeDialog=document.activeElement;$('#dialog-title').textContent=title;$('#dialog-body').innerHTML=body;$('#dialog-body').querySelectorAll('form[data-form]').forEach(form=>{const draft=ui.drafts[form.dataset.form+':'+(form.dataset.id||'new')];if(draft)Object.entries(draft).forEach(([name,value])=>{const input=form.elements.namedItem(name);if(input)input.value=value;});});$('#dialog-error').hidden=true;$('#dialog-error').textContent='';if(!$('#dialog').open)$('#dialog').showModal();$('#dialog-body').querySelector('input:not([type=hidden]),textarea,select,button')?.focus();}
-  function closeModal(){if($('#dialog').open)$('#dialog').close();if(focusBeforeDialog?.isConnected)focusBeforeDialog.focus();}
+  function modal(title,body){focusBeforeDialog=document.activeElement;$('#dialog-title').textContent=title;$('#dialog-body').innerHTML=body;$('#dialog-body').querySelectorAll('form[data-form]').forEach(form=>{const draft=ui.drafts[form.dataset.form+':'+(form.dataset.id||'new')];if(draft)Object.entries(draft).forEach(([name,value])=>{const input=form.elements.namedItem(name);if(input){if(input.type==='checkbox')input.checked=Boolean(value);else input.value=value;}});});$('#dialog-error').hidden=true;$('#dialog-error').textContent='';const dialog=$('#dialog'),host=ui.workspace==='customer'&&ui.customerMode==='mobile'?$('.phone-overlay-host'):null;if(host){host.append(dialog);[...host.parentElement.children].filter(x=>x!==host).forEach(x=>x.inert=true);if(!dialog.open)dialog.show();}else{if(dialog.parentElement!==document.body)document.body.append(dialog);if(!dialog.open)dialog.showModal();}$('#dialog-body').querySelector('input:not([type=hidden]),textarea,select,button')?.focus();}
+  function closeModal(){document.querySelectorAll('.phone-screen>[inert]').forEach(x=>x.inert=false);if($('#dialog').open)$('#dialog').close();if(workbench.onClose())render();if(focusBeforeDialog?.isConnected)focusBeforeDialog.focus();}
   function customerConversation(){const list=D.customerView(store.state,'C001').conversations;let c=list.find(c=>c.id===ui.customerConversation)||list[0];if(!c){ui.customerConversation=apply('newConversation',{});c=D.get(store.state,'conversations',ui.customerConversation);}return c;}
-  function quick(body){const c=customerConversation();apply('say',{id:c.id,body});ui.customerConversation=c.id;render();scrollMessages();}
+  function quick(body){closeModal();const c=customerConversation();apply('say',{id:c.id,body});ui.customerConversation=c.id;render();scrollMessages();}
   function formDraft(key,defaults){return {...defaults,...ui.drafts[key]};}
   function ticketForUI(id){const s=store.state;if(ui.workspace==='customer'){const t=D.customerView(s,'C001').tickets.find(t=>t.id===id);if(!t)throw Error('无权查看此工单');return t;}if(ui.workspace==='desk'){const t=[...D.deskView(s,identity()).tickets,...D.deskView(s,identity()).relatedTickets].find(t=>t.id===id);if(!t)throw Error('此工单不在本人任务或公共池中');return t;}if(ui.opsRole==='manager'){const t=D.get(s,'tickets',id);if(!D.actor(s,identity()).teams.includes(t.teamId))throw Error('无权查看此工单');return t;}throw Error('当前角色无权查看工单详情');}
   function ticketDetail(id){const s=store.state,t=ticketForUI(id),customer=ui.workspace==='customer',canEdit=ui.workspace==='desk'&&t.ownerId===ui.agentId&&t.status!=='done';const c=customer?D.customerView(s,'C001').cases.find(c=>c.id===t.caseId):D.get(s,'cases',t.caseId);const draft=formDraft('ticket-update:'+id,{status:t.status,publicText:'',evidence:'',internalText:''});
-    modal('工单详情',`<div class="row between"><h2>${e(t.title)}</h2>${pill(t.status)}</div><p class="muted">${e(t.id)} · ${date(t.createdAt,true)} · ${e(t.orderId||'未关联订单')}</p><div class="result-note">${e(t.description)}</div><div class="timeline">${t.history.map(h=>`<div class="timeline-entry"><small>${date(h.at,true)} · ${e(h.actor||'客服')}</small><p>${e(h.publicText)}</p>${!customer&&h.internalText?`<div class="internal-evidence">内部备注：${e(h.internalText)}</div>`:''}${!customer&&h.evidence?`<div class="internal-evidence">核对依据：${e(h.evidence)}</div>`:''}</div>`).join('')}</div>${customer?t.status!=='done'?`<form data-form="supplement" data-id="${e(id)}">${field('补充信息','body',ui.drafts['supplement:'+id]?.body||'','textarea','required maxlength="2000"')}<button class="btn primary" type="submit">提交补充</button></form>`:`<div class="row">${c.feedback==='confirmed'?pill('客户已确认','good')+b('仍需帮助','dispute-case',c.id):`${b('确认已解决','confirm-case',c.id,'primary')}${b('仍需帮助','dispute-case',c.id)}`}</div>`:canEdit?`<form data-form="ticket-update" data-id="${e(id)}"><label class="field"><span>处理动作</span><select name="status">${options([['working','继续处理'],['waiting_customer','请客户补充'],['done','记录办理结果']],draft.status)}</select></label>${field('客户可见说明','publicText',draft.publicText,'textarea','required maxlength="2000"')}${field('核对依据（记录结果时必填，仅内部可见）','evidence',draft.evidence,'textarea','maxlength="2000"')}${field('内部协同备注','internalText',draft.internalText,'textarea','maxlength="2000"')}<p class="muted small-text">此操作记录处理结果，不会调用退款、支付或发货接口。</p><button class="btn primary" type="submit">提交处理记录</button></form>`:ui.workspace==='desk'&&!t.ownerId?b('领取工单','claim-ticket',id,'primary'):pill('只读记录')}`);
+    modal('工单详情',`<div class="row between"><h2>${e(t.title)}</h2>${pill(t.status)}</div><p class="muted">${e(t.id)} · ${date(t.createdAt,true)} · ${e(t.orderId||'未关联订单')}</p><div class="result-note">${e(t.description)}</div>${t.serviceType?`<dl><dt>申请类型</dt><dd>${t.serviceType==='exchange'?'换货':'退货'}</dd>${t.exchangeRequest?`<dt>换货要求</dt><dd>${e(t.exchangeRequest)}</dd>`:''}${t.extraNote?`<dt>补充说明</dt><dd>${e(t.extraNote)}</dd>`:''}</dl>`:''}<div class="timeline">${t.history.map(h=>`<div class="timeline-entry"><small>${date(h.at,true)} · ${e(h.actor||'客服')}</small><p>${e(h.publicText)}</p>${!customer&&h.internalText?`<div class="internal-evidence">内部备注：${e(h.internalText)}</div>`:''}${!customer&&h.evidence?`<div class="internal-evidence">核对依据：${e(h.evidence)}</div>`:''}</div>`).join('')}</div>${customer?t.status!=='done'?`<form data-form="supplement" data-id="${e(id)}">${field('补充信息','body',ui.drafts['supplement:'+id]?.body||'','textarea','required maxlength="2000"')}<button class="btn primary" type="submit">提交补充</button></form>`:`<div class="row">${c.feedback==='confirmed'?pill('客户已确认','good')+b('仍需帮助','dispute-case',c.id):`${b('确认已解决','confirm-case',c.id,'primary')}${b('仍需帮助','dispute-case',c.id)}`}</div>`:canEdit?`<form data-form="ticket-update" data-id="${e(id)}"><label class="field"><span>处理动作</span><select name="status">${options([['working','继续处理'],['waiting_customer','请客户补充'],['done','记录办理结果']],draft.status)}</select></label>${field('客户可见说明','publicText',draft.publicText,'textarea','required maxlength="2000"')}${field('核对依据（记录结果时必填，仅内部可见）','evidence',draft.evidence,'textarea','maxlength="2000"')}${field('内部协同备注','internalText',draft.internalText,'textarea','maxlength="2000"')}<p class="muted small-text">此操作记录处理结果，不会调用退款、支付或发货接口。</p><button class="btn primary" type="submit">提交处理记录</button></form>`:ui.workspace==='desk'&&!t.ownerId?b('领取工单','claim-ticket',id,'primary'):pill('只读记录')}`);
   }
   function intake(caseId,conversationId='',standalone=false){
     const s=store.state,c=caseId?D.get(s,'cases',caseId):null;
@@ -791,15 +1735,16 @@
   }
   function confirmation(title,body,action,id){modal(title,`<p>${e(body)}</p><div class="form-footer">${b('取消','close-modal')}${b('确认','confirm-action',id,'primary',`data-command="${e(action)}"`)}</div>`);}
   function download(name,value){const blob=new Blob([typeof value==='string'?value:JSON.stringify(value,null,2)],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+  const workbench=window.SupportWorkbench.create({D,V,ui,store,identity,apply,modal,closeModal,render,cache,toast,intake,scrollMessages});
   const actions={
     workspace(el){closeModal();navigate(el.dataset.id);render();scrollMessages();},
     'desk-page'(el){navigate('desk',el.dataset.id);render();},
     'ops-page'(el){if(!opsMenus[ui.opsRole].some(x=>x[0]===el.dataset.id))throw Error('当前角色无权打开这个页面');navigate('ops',el.dataset.id);render();},
-    'new-conversation'(){ui.customerConversation=apply('newConversation',{},'已开始新咨询，原服务记录仍保留');render();scrollMessages();},
+    'new-conversation'(){closeModal();ui.customerConversation=apply('newConversation',{},'已开始新咨询，原服务记录仍保留');render();scrollMessages();},
     'quick-policy'(){quick('七天无理由退货有什么条件？');},
     'order-query'(el){quick('查物流 '+el.dataset.id);},
     'order-return'(el){quick('申请退货 '+el.dataset.id);},
-    'request-human'(el){const c=el.dataset.id||customerConversation().id;apply('requestHuman',{id:c},'已提交人工请求');render();scrollMessages();},
+    'request-human'(el){closeModal();const c=el.dataset.id||customerConversation().id;apply('requestHuman',{id:c},'已提交人工请求');render();scrollMessages();},
     'cancel-queue'(el){apply('cancelQueue',{id:el.dataset.id},'已取消当前排队');render();},
     'customer-history'(){const data=D.customerView(store.state,'C001');modal('历史咨询',data.conversations.map(c=>`<button type="button" class="history-row" data-action="open-history" data-id="${e(c.id)}"><strong>${e(c.messages.find(m=>m.role==='customer')?.body||'新的咨询')}</strong><small>${e(c.id)} · ${date(c.createdAt,true)}</small>${pill(c.state)}</button>`).join('')||empty('暂无历史咨询'));},
     'open-history'(el){ui.customerConversation=el.dataset.id;closeModal();render();scrollMessages();},
@@ -837,7 +1782,8 @@
     'close-modal'(){closeModal();},
     'export-data'(){const data=apply('export',{});download('客服工作空间.json',data);toast('已生成工作空间导出文件');},
     'export-legacy'(){if(identity().role!=='admin')throw Error('需要系统管理员角色');const raw=localStorage.getItem('zhixu-customer-demo-v3.1');if(raw===null)throw Error('当前浏览器未读取到旧版本保存值');download('客服旧版本原始数据.json',raw);toast('已导出旧版本原始保存值，未做转换');},
-    'export-broken'(){if(store.original===null)throw Error('无法读取原始保存值，可能是浏览器禁用了存储');download('客服异常原始数据.json',store.original);}
+    'export-broken'(){if(store.original===null)throw Error('无法读取原始保存值，可能是浏览器禁用了存储');download('客服异常原始数据.json',store.original);},
+    ...workbench.actions
   };
   function assign(type,id){modal('分配负责人',`<form data-form="assign" data-id="${e(id)}" data-command="${type}"><label class="field"><span>接收客服</span><select name="ownerId">${options(store.state.staff.filter(a=>a.role==='agent').map(a=>[a.id,a.name]),'lin')}</select></label><p class="muted small-text">转派保留原受理时间和处理记录，原负责人不能继续修改任务。</p><button class="btn primary" type="submit">确认分配</button></form>`);}
   document.addEventListener('click',ev=>{const el=ev.target.closest('[data-action]');if(!el||el.disabled)return;try{const handler=actions[el.dataset.action];if(!handler)throw Error('此操作不可用');handler(el);cache();}catch(err){fail(err);}});
@@ -846,11 +1792,13 @@
     if(el.dataset.search){ui.search[el.dataset.search]=el.value;render();return;}
     const form=el.closest('form[data-form]');if(!form)return;
     ui.drafts[form.dataset.form+':'+(form.dataset.id||'new')]=Object.fromEntries(new FormData(form));cache();
+    try{if(workbench.input(form,el))render();}catch(err){fail(err);}
     if(form.dataset.form==='knowledge'){document.querySelectorAll('[data-action="test-knowledge"],[data-action="publish-knowledge"]').forEach(b=>b.disabled=true);clearFlowTest();}
     if(['flow','flow-query'].includes(form.dataset.form))clearFlowTest();
     if(form.dataset.form==='flow'){document.querySelectorAll('[data-action="test-flow"],[data-action="publish-flow"],[data-form="flow-query"] [type="submit"]').forEach(b=>b.disabled=true);$('[data-flow-unsaved]').hidden=false;}
   });
   document.addEventListener('change',ev=>{const el=ev.target;try{
+    const form=el.closest('form[data-form]');if(form)ui.drafts[form.dataset.form+':'+(form.dataset.id||'new')]=Object.fromEntries(new FormData(form));workbench.change(el);
     if(el.dataset.select==='agent'){ui.agentId=el.value;closeModal();ui.deskConversation='';render();}
     if(el.dataset.select==='ops-role'){ui.opsRole=el.value;closeModal();navigate('ops',opsMenus[ui.opsRole][0][0]);render();}
     if(el.dataset.select==='ticket-filter'){ui.ticketFilter=el.value;render();}
@@ -860,6 +1808,7 @@
     const form=ev.target.closest('form[data-form]');if(!form)return;ev.preventDefault();
     const f=form.dataset.form,id=form.dataset.id,data=Object.fromEntries(new FormData(form)),key=f+':'+(id||'new');
     try{
+      if(workbench.submit(form,data))return;
       if(f==='ticket-request'){
         ui.pendingTicket={...ui.pendingTicket,...data,draftKey:key};
         modal('核对服务申请',`<div class="preview-block"><h2>${e(data.title)}</h2><p>${e(data.description)}</p>${ui.pendingTicket.caseId?`<small>关联问题：${e(ui.pendingTicket.caseId)}</small>`:`<small>客户：${e(store.state.customers.find(c=>c.id===data.customerId)?.name)}</small>`}</div><p class="muted">确认后创建或继续原工单。取消不会产生受理记录，也不会执行退款。</p><form data-form="ticket-confirm" data-id="new"><div class="form-footer">${b('取消','close-modal')}<button class="btn primary" type="submit">确认提交申请</button></div></form>`);return;
@@ -884,12 +1833,13 @@
       if(f!=='flow-query')delete ui.drafts[key];cache();render();if(['customer-say','reply','note'].includes(f))scrollMessages();
     }catch(err){fail(err);}
   });
-  document.addEventListener('keydown',ev=>{if((ev.ctrlKey||ev.metaKey)&&ev.key==='Enter'&&ev.target.closest('.composer')){ev.preventDefault();ev.target.closest('form').requestSubmit();}});
+  document.addEventListener('keydown',ev=>{const dialog=$('#dialog');if(dialog.open&&dialog.parentElement?.classList.contains('phone-overlay-host')){if(ev.key==='Escape'){ev.preventDefault();closeModal();return;}if(ev.key==='Tab'){const fields=[...dialog.querySelectorAll('button,input,textarea,select,a[href]')].filter(x=>!x.disabled&&x.getClientRects().length);const first=fields[0],last=fields.at(-1);if(ev.shiftKey&&document.activeElement===first){ev.preventDefault();last?.focus();}else if(!ev.shiftKey&&document.activeElement===last){ev.preventDefault();first?.focus();}}}if((ev.ctrlKey||ev.metaKey)&&ev.key==='Enter'&&ev.target.closest('.composer')){ev.preventDefault();ev.target.closest('form').requestSubmit();}});
   window.addEventListener('hashchange',()=>{closeModal();render();scrollMessages();});
   window.addEventListener('popstate',()=>{closeModal();render();});
   window.addEventListener('storage',ev=>{if(ev.key===window.SupportStore.KEY)toast('其他页面更新了工作空间。请刷新后继续，当前输入保留。',true);});
   window.addEventListener('error',ev=>{console.error(ev.error);toast('页面出现异常；未提交的操作不会被视为成功。',true);});
   render();scrollMessages();
+  function tick(){workbench.tick();setTimeout(tick,1000);}setTimeout(tick,1000);
 })();
 
 </script>

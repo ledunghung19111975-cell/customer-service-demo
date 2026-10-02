@@ -2,7 +2,10 @@
 
 产出 Agent：Codex。
 
-- `copy-local-review.json`：当前默认文案与精确迁移运行时哈希、97项V4测试、6组真实HTTP检查、两路独立审查与证据边界。
+- `sop-mobile-review.json`：现役SOP与手机端运行时哈希、159项当前V4测试、16组真实HTTP检查、独立审查修复与未验证边界。
+- `sop-v4-tests.tap`：159项当前版本逻辑与真实入口事件测试。
+- `sop-all-tests.tap`：297项全量回归，含138项历史模块测试。
+- `copy-local-review.json`：默认文案集成基线的默认文案与精确迁移运行时哈希、97项V4测试、6组真实HTTP检查、两路独立审查与证据边界。
 - `copy-v4-tests.tap`：70项域/存储、7项入口事件、20项文案/迁移测试。
 - `copy-all-tests.tap`：235项全量回归，另含138项历史模块测试。
 - `v4-local-review.json`：三工作区初次集成基线运行时哈希、77项V4测试、18组真实HTTP检查、独立审查及未验证范围。
