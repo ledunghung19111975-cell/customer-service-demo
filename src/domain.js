@@ -1,6 +1,7 @@
 /* Pure domain commands. Local role checks model behavior; they are NOT server authorization. */
 (function (root) {
   'use strict';
+  const Copy = typeof module !== 'undefined' && module.exports ? require('./copy.js') : root.SupportCopy;
   const copy = x => JSON.parse(JSON.stringify(x));
   const assert = (ok, message) => { if (!ok) throw new Error(message); };
   const text = (v, label, max = 2000) => {
@@ -76,7 +77,7 @@
   function makeConversation(s, customerId, now) {
     const c = {id: uid(s, 'CV'), customerId, teamId: 'service', state: 'bot', ownerId: '', ownerHistory: [], caseIds: [], messages: [], runs: [], createdAt: now, updatedAt: now, flow: copy(s.flow.live), waitingSince: null, firstHumanAt: null, pendingCaseId: '', handoffReason: ''};
     s.conversations.unshift(c);
-    message(s, c, 'bot', '你好，我是青禾小助。订单进度、商品使用或售后问题，都可以在这里告诉我。请勿发送密码、验证码或完整银行卡信息。', now);
+    message(s, c, 'bot', Copy.greeting, now);
     return c;
   }
   function makeCase(s, conv, kind, title, orderId, now) {
@@ -156,13 +157,13 @@
         if (r.orderId) conv.pendingCaseId = '';
         const existing = s.tickets.find(t => t.caseId === c.id);
         if (existing) message(s, conv, 'bot', `此问题已受理，工单 ${existing.id}。可以继续在原记录查看进度或补充信息，无需重复提交。`, now, {caseId: c.id, ticketId: existing.id});
-        else if (!r.orderId) { conv.pendingCaseId = c.id; message(s, conv, 'bot', '请提供要申请售后的订单号。确认订单后，我会请你补充原因并核对申请。', now, {caseId: c.id}); }
+        else if (!r.orderId) { conv.pendingCaseId = c.id; message(s, conv, 'bot', '请提供要申请售后的订单号。确认订单后，请您补充原因并核对申请。', now, {caseId: c.id}); }
         else if (!s.orders.some(o => o.id === r.orderId && o.customerId === conv.customerId)) { message(s, conv, 'bot', '暂时无法核对此订单，请检查订单号或联系人工客服。', now); handoff(s, conv, '售后订单需要人工核实', now); }
         else message(s, conv, 'bot', '可以为这笔订单登记售后。请填写原因并核对申请，提交后由客服继续核实；受理不代表退款完成。', now, {caseId: c.id, intake: true});
       } else {
         makeCase(s, conv, 'support', query, '', now);
         if (r.kind === 'gap' || r.kind === 'conflict') gap(s, conv, query, r.kind === 'gap' ? '知识缺口' : '知识冲突', now);
-        if (r.kind !== 'handoff') message(s, conv, 'bot', r.kind === 'conflict' ? '查到的说明存在冲突，暂时不能给你确定答复。我会请人工核实。' : '目前没有找到可靠的答复依据。我会将这个问题交给人工核实。', now);
+        if (r.kind !== 'handoff') message(s, conv, 'bot', r.kind === 'conflict' ? '查到的说明存在冲突，暂时无法确认。我会请人工核实。' : '目前没有找到可靠的答复依据。我会将这个问题交给人工核实。', now);
         handoff(s, conv, r.reason || (r.kind === 'conflict' ? '知识来源冲突' : '没有命中已发布知识'), now);
       }
     }
@@ -240,7 +241,7 @@
         assert(a.available && s.settings.accepting, '当前未开放接待，请先调整接待状态');
         assert(s.conversations.filter(x => x.state === 'human' && x.ownerId === a.id).length < s.settings.capacity, '已达到个人接待容量');
         c.state = 'human'; c.ownerId = a.id; if (!c.ownerHistory.includes(a.id)) c.ownerHistory.push(a.id);
-        message(s, c, 'system', `${a.name}已接入，接下来由人工为你服务。`, now);
+        message(s, c, 'system', `${a.name}已接入，接下来由人工为您服务。`, now);
         c.caseIds.map(id => get(s, 'cases', id)).filter(x => x.status !== 'completed').forEach(x => x.humanTouched = true); break;
       }
       case 'reply': case 'note': {
@@ -263,7 +264,7 @@
         if (a.role === 'customer') owns(a, c);
         else { agentOwns(a, c); assert(c.state === 'human', '请先接管会话'); assert(c.caseIds.every(id => get(s, 'cases', id).status === 'completed' || activeTicket(s, get(s, 'cases', id))), '仍有未完成且无人跟进的问题，请记录结论或建立工单'); }
         assert(c.state !== 'closed', '会话已经结束'); c.state = 'closed'; c.ownerId = '';
-        message(s, c, 'system', '本次沟通已结束。未完成的办理记录会继续保留，你也可以在这里再次联系。', now); break;
+        message(s, c, 'system', '本次沟通已结束。未完成的办理记录会继续保留，您可以在这里继续咨询。', now); break;
       }
       case 'feedback': {
         const c = get(s, 'cases', data.id); owns(a, c); assert(c.status === 'completed', '尚未形成可确认的处理结果');
@@ -322,7 +323,7 @@
         const r = get(s, type === 'assignTicket' ? 'tickets' : 'conversations', data.id); managing(a, r);
         const next = get(s, 'staff', data.ownerId); assert(next.role === 'agent' && within(next, r), '请选择该服务组的客服');
         if (type === 'assignTicket') { assert(r.status !== 'done', '已完成工单不再转派'); r.ownerId = next.id; if (r.status === 'new') r.status = 'working'; r.history.push({at: now, publicText: '已安排客服继续处理。', actor: a.name, internalText: `转派给${next.name}`}); }
-        else { assert(['queued', 'human'].includes(r.state), '仅能分配待接待或接待中的会话'); assert(next.available && s.conversations.filter(v => v.state === 'human' && v.ownerId === next.id && v.id !== r.id).length < s.settings.capacity, '目标客服不可接待或已满载'); r.ownerId = next.id; r.state = 'human'; if (!r.ownerHistory.includes(next.id)) r.ownerHistory.push(next.id); message(s, r, 'system', `${next.name}将继续为你服务，已有信息会保留。`, now); } break;
+        else { assert(['queued', 'human'].includes(r.state), '仅能分配待接待或接待中的会话'); assert(next.available && s.conversations.filter(v => v.state === 'human' && v.ownerId === next.id && v.id !== r.id).length < s.settings.capacity, '目标客服不可接待或已满载'); r.ownerId = next.id; r.state = 'human'; if (!r.ownerHistory.includes(next.id)) r.ownerHistory.push(next.id); message(s, r, 'system', `${next.name}将继续为您服务，已有信息会保留。`, now); } break;
       }
       case 'presence': get(s, 'staff', a.id).available = Boolean(data.available); break;
       case 'serviceSettings': {

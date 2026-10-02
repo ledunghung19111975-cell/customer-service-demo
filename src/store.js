@@ -2,7 +2,9 @@
 (function(root){
   'use strict';
   const D=typeof module!=='undefined'&&module.exports?require('./domain.js'):root.SupportDomain;
-  const KEY='qinghe-support-v4';
+  const KEY='qinghe-support-v4'; // Keep this internal key to retain existing records.
+  const Copy=typeof module!=='undefined'&&module.exports?require('./copy.js'):root.SupportCopy;
+  const COPY_BACKUP_KEY=KEY+':before-copy-v1';
   function valid(s){
     if(!s||s.schema!==4||!Number.isInteger(s.revision)||!Number.isInteger(s.sequence))return false;
     const tables=['customers','staff','orders','knowledge','conversations','cases','tickets','gaps','events'];
@@ -19,7 +21,26 @@
   }
   function open(storage,seed){
     let current, original=null, blocked='';
-    try{original=storage.getItem(KEY);current=original?JSON.parse(original):seed();if(!valid(current))throw new Error('数据结构不兼容');}
+    try{
+      original=storage.getItem(KEY);current=original?JSON.parse(original):seed();
+      if(!valid(current))throw new Error('数据结构不兼容');
+      if(original){
+        const update=Copy.upgrade(current);
+        if(update.changed){
+          if(!valid(update.state))throw new Error('文案更新后的数据校验未通过');
+          if(storage.getItem(KEY)!==original)throw new Error('工作空间已在其他页面更新，请刷新后重试');
+          // Backup must succeed before replacing any persisted defaults.
+          let backupKey=COPY_BACKUP_KEY,suffix=0,backup=storage.getItem(backupKey);
+          while(backup!==null&&backup!==original){backupKey=COPY_BACKUP_KEY+':'+(++suffix);backup=storage.getItem(backupKey);}
+          if(backup===null)storage.setItem(backupKey,original);
+          if(storage.getItem(backupKey)!==original)throw new Error('原始记录备份未通过校验');
+          if(storage.getItem(KEY)!==original)throw new Error('工作空间已在其他页面更新，请刷新后重试');
+          const encoded=JSON.stringify(update.state);
+          storage.setItem(KEY,encoded);
+          current=update.state;original=encoded;
+        }
+      }
+    }
     catch(err){blocked=`无法读取工作空间：${err.message}。原始数据未被覆盖。`;current=null;}
     return {
       get state(){return current;},get blocked(){return blocked;},get original(){return original;},
@@ -38,5 +59,5 @@
       }
     };
   }
-  const api={KEY,valid,open};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SupportStore=api;
+  const api={KEY,COPY_BACKUP_KEY,valid,open};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SupportStore=api;
 })(typeof window!=='undefined'?window:globalThis);

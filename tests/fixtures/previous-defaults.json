@@ -1,0 +1,672 @@
+{
+  "schema": 4,
+  "revision": 12,
+  "sequence": 135,
+  "createdAt": 1790942400000,
+  "customers": [
+    {
+      "id": "C001",
+      "name": "林小夏",
+      "email": "xiaoxia@example.test",
+      "level": "青禾会员"
+    },
+    {
+      "id": "C002",
+      "name": "陈一诺",
+      "email": "yinuo@example.test",
+      "level": "青禾会员"
+    },
+    {
+      "id": "C003",
+      "name": "周安",
+      "email": "zhouan@example.test",
+      "level": "普通客户"
+    }
+  ],
+  "staff": [
+    {
+      "id": "lin",
+      "name": "客服小林",
+      "role": "agent",
+      "teams": [
+        "service"
+      ],
+      "available": true
+    },
+    {
+      "id": "zhou",
+      "name": "客服小周",
+      "role": "agent",
+      "teams": [
+        "service"
+      ],
+      "available": true
+    },
+    {
+      "id": "manager",
+      "name": "服务经理",
+      "role": "manager",
+      "teams": [
+        "service"
+      ]
+    },
+    {
+      "id": "operator",
+      "name": "知识运营",
+      "role": "operator",
+      "teams": [
+        "service"
+      ]
+    },
+    {
+      "id": "admin",
+      "name": "系统管理员",
+      "role": "admin",
+      "teams": []
+    }
+  ],
+  "orders": [
+    {
+      "id": "SO20260926001",
+      "customerId": "C001",
+      "product": "原木便携保温杯 · 雾白",
+      "price": 129,
+      "status": "运输中",
+      "delivery": "包裹已到达配送站，配送进度以承运方更新为准。",
+      "symbol": "◒"
+    },
+    {
+      "id": "SO20260926002",
+      "customerId": "C001",
+      "product": "棉麻收纳袋 · 自然色",
+      "price": 49,
+      "status": "待发货",
+      "delivery": "仓库正在备货，发出后更新物流。",
+      "symbol": "▧"
+    },
+    {
+      "id": "SO20260926009",
+      "customerId": "C002",
+      "product": "桌面收纳盒 · 木色",
+      "price": 89,
+      "status": "已签收",
+      "delivery": "订单已签收。",
+      "symbol": "▤"
+    }
+  ],
+  "settings": {
+    "capacity": 3,
+    "responseMinutes": 5,
+    "ticketHours": 24,
+    "accepting": true
+  },
+  "flow": {
+    "live": {
+      "version": 1,
+      "humanWords": [
+        "人工",
+        "投诉"
+      ],
+      "intakeEnabled": true
+    },
+    "draft": null,
+    "versions": [],
+    "validation": null
+  },
+  "conversations": [
+    {
+      "id": "CV00133",
+      "customerId": "C001",
+      "teamId": "service",
+      "state": "bot",
+      "ownerId": "",
+      "ownerHistory": [],
+      "caseIds": [],
+      "messages": [
+        {
+          "id": "MSG00134",
+          "role": "bot",
+          "body": "你好，我是青禾小助。订单进度、商品使用或售后问题，都可以在这里告诉我。请勿发送密码、验证码或完整银行卡信息。",
+          "at": 1790942280000,
+          "visibility": "public"
+        }
+      ],
+      "runs": [],
+      "createdAt": 1790942280000,
+      "updatedAt": 1790942280000,
+      "flow": {
+        "version": 1,
+        "humanWords": [
+          "人工",
+          "投诉"
+        ],
+        "intakeEnabled": true
+      },
+      "waitingSince": null,
+      "firstHumanAt": null,
+      "pendingCaseId": "",
+      "handoffReason": ""
+    },
+    {
+      "id": "CV00120",
+      "customerId": "C001",
+      "teamId": "service",
+      "state": "bot",
+      "ownerId": "",
+      "ownerHistory": [],
+      "caseIds": [
+        "SC00124"
+      ],
+      "messages": [
+        {
+          "id": "MSG00121",
+          "role": "bot",
+          "body": "你好，我是青禾小助。订单进度、商品使用或售后问题，都可以在这里告诉我。请勿发送密码、验证码或完整银行卡信息。",
+          "at": 1790941500000,
+          "visibility": "public"
+        },
+        {
+          "id": "MSG00123",
+          "role": "customer",
+          "body": "申请退货 SO20260926001",
+          "at": 1790941510000,
+          "visibility": "public"
+        },
+        {
+          "id": "MSG00125",
+          "role": "bot",
+          "body": "可以为这笔订单登记售后。请填写原因并核对申请，提交后由客服继续核实；受理不代表退款完成。",
+          "at": 1790941510000,
+          "visibility": "public",
+          "caseId": "SC00124",
+          "intake": true
+        },
+        {
+          "id": "MSG00128",
+          "role": "system",
+          "body": "已受理工单 TK00127：保温杯包装破损核实。请在“服务进度”查看后续处理。",
+          "at": 1790941520000,
+          "visibility": "public",
+          "ticketId": "TK00127"
+        },
+        {
+          "id": "MSG00131",
+          "role": "system",
+          "body": "TK00127：请补充商品是否受损、是否影响使用，以便核实后续处理方式。",
+          "at": 1790941610000,
+          "visibility": "public",
+          "ticketId": "TK00127"
+        }
+      ],
+      "runs": [
+        {
+          "at": 1790941510000,
+          "flowVersion": 1,
+          "query": "申请退货 SO20260926001",
+          "steps": [
+            "intake"
+          ]
+        }
+      ],
+      "createdAt": 1790941500000,
+      "updatedAt": 1790941610000,
+      "flow": {
+        "version": 1,
+        "humanWords": [
+          "人工",
+          "投诉"
+        ],
+        "intakeEnabled": true
+      },
+      "waitingSince": null,
+      "firstHumanAt": null,
+      "pendingCaseId": "",
+      "handoffReason": ""
+    },
+    {
+      "id": "CV00111",
+      "customerId": "C003",
+      "teamId": "service",
+      "state": "queued",
+      "ownerId": "",
+      "ownerHistory": [],
+      "caseIds": [
+        "SC00115"
+      ],
+      "messages": [
+        {
+          "id": "MSG00112",
+          "role": "bot",
+          "body": "你好，我是青禾小助。订单进度、商品使用或售后问题，都可以在这里告诉我。请勿发送密码、验证码或完整银行卡信息。",
+          "at": 1790940600000,
+          "visibility": "public"
+        },
+        {
+          "id": "MSG00114",
+          "role": "customer",
+          "body": "礼品卡可以分多次使用吗？",
+          "at": 1790940610000,
+          "visibility": "public"
+        },
+        {
+          "id": "MSG00117",
+          "role": "bot",
+          "body": "目前没有找到可靠的答复依据。我会将这个问题交给人工核实。",
+          "at": 1790940610000,
+          "visibility": "public"
+        },
+        {
+          "id": "MSG00118",
+          "role": "system",
+          "body": "已转入人工接待队列。你提供的信息会一并交给客服，不需要重新描述；等待时也可以继续补充。",
+          "at": 1790940610000,
+          "visibility": "public"
+        }
+      ],
+      "runs": [
+        {
+          "at": 1790940610000,
+          "flowVersion": 1,
+          "query": "礼品卡可以分多次使用吗？",
+          "steps": [
+            "gap"
+          ]
+        }
+      ],
+      "createdAt": 1790940600000,
+      "updatedAt": 1790940610000,
+      "flow": {
+        "version": 1,
+        "humanWords": [
+          "人工",
+          "投诉"
+        ],
+        "intakeEnabled": true
+      },
+      "waitingSince": 1790940610000,
+      "firstHumanAt": null,
+      "pendingCaseId": "",
+      "handoffReason": "没有命中已发布知识"
+    },
+    {
+      "id": "CV00101",
+      "customerId": "C002",
+      "teamId": "service",
+      "state": "closed",
+      "ownerId": "",
+      "ownerHistory": [],
+      "caseIds": [
+        "SC00105"
+      ],
+      "messages": [
+        {
+          "id": "MSG00102",
+          "role": "bot",
+          "body": "你好，我是青禾小助。订单进度、商品使用或售后问题，都可以在这里告诉我。请勿发送密码、验证码或完整银行卡信息。",
+          "at": 1790937000000,
+          "visibility": "public"
+        },
+        {
+          "id": "MSG00104",
+          "role": "customer",
+          "body": "七天无理由退货有什么条件？",
+          "at": 1790937010000,
+          "visibility": "public"
+        },
+        {
+          "id": "MSG00106",
+          "role": "bot",
+          "body": "签收后七天内，商品未使用且包装、配件完整，可登记退货申请；定制商品不适用。具体资格由客服结合订单核实，提交申请不代表退款完成。",
+          "at": 1790937010000,
+          "visibility": "public",
+          "caseId": "SC00105",
+          "citation": {
+            "id": "KB001",
+            "version": 1,
+            "title": "退货与售后政策",
+            "source": "青禾生活 / 售后服务政策",
+            "answer": "签收后七天内，商品未使用且包装、配件完整，可登记退货申请；定制商品不适用。具体资格由客服结合订单核实，提交申请不代表退款完成。"
+          }
+        },
+        {
+          "id": "MSG00109",
+          "role": "system",
+          "body": "本次沟通已结束。未完成的办理记录会继续保留，你也可以在这里再次联系。",
+          "at": 1790937040000,
+          "visibility": "public"
+        }
+      ],
+      "runs": [
+        {
+          "at": 1790937010000,
+          "flowVersion": 1,
+          "query": "七天无理由退货有什么条件？",
+          "steps": [
+            "answer"
+          ]
+        }
+      ],
+      "createdAt": 1790937000000,
+      "updatedAt": 1790937040000,
+      "flow": {
+        "version": 1,
+        "humanWords": [
+          "人工",
+          "投诉"
+        ],
+        "intakeEnabled": true
+      },
+      "waitingSince": null,
+      "firstHumanAt": null,
+      "pendingCaseId": "",
+      "handoffReason": ""
+    }
+  ],
+  "cases": [
+    {
+      "id": "SC00124",
+      "customerId": "C001",
+      "conversationIds": [
+        "CV00120"
+      ],
+      "kind": "aftersales",
+      "title": "售后申请",
+      "orderId": "SO20260926001",
+      "status": "waiting_customer",
+      "feedback": "none",
+      "result": null,
+      "resultHistory": [],
+      "createdAt": 1790941510000,
+      "completedAt": null,
+      "humanTouched": true
+    },
+    {
+      "id": "SC00115",
+      "customerId": "C003",
+      "conversationIds": [
+        "CV00111"
+      ],
+      "kind": "support",
+      "title": "礼品卡可以分多次使用吗？",
+      "orderId": "",
+      "status": "open",
+      "feedback": "none",
+      "result": null,
+      "resultHistory": [],
+      "createdAt": 1790940610000,
+      "completedAt": null,
+      "humanTouched": true
+    },
+    {
+      "id": "SC00105",
+      "customerId": "C002",
+      "conversationIds": [
+        "CV00101"
+      ],
+      "kind": "knowledge",
+      "title": "七天无理由退货有什么条件？",
+      "orderId": "",
+      "status": "completed",
+      "feedback": "confirmed",
+      "result": {
+        "publicText": "签收后七天内，商品未使用且包装、配件完整，可登记退货申请；定制商品不适用。具体资格由客服结合订单核实，提交申请不代表退款完成。",
+        "evidence": {
+          "kind": "knowledge",
+          "citation": {
+            "id": "KB001",
+            "version": 1,
+            "title": "退货与售后政策",
+            "source": "青禾生活 / 售后服务政策",
+            "answer": "签收后七天内，商品未使用且包装、配件完整，可登记退货申请；定制商品不适用。具体资格由客服结合订单核实，提交申请不代表退款完成。"
+          }
+        },
+        "by": "bot",
+        "at": 1790937010000
+      },
+      "resultHistory": [],
+      "createdAt": 1790937010000,
+      "completedAt": 1790937010000,
+      "humanTouched": false,
+      "confirmedAt": 1790937030000
+    }
+  ],
+  "tickets": [
+    {
+      "id": "TK00127",
+      "customerId": "C001",
+      "teamId": "service",
+      "caseId": "SC00124",
+      "title": "保温杯包装破损核实",
+      "description": "收到包裹时外盒有挤压，希望客服核实后告知处理方式。",
+      "orderId": "SO20260926001",
+      "status": "waiting_customer",
+      "priority": "normal",
+      "ownerId": "lin",
+      "createdAt": 1790941520000,
+      "dueAt": 1791027920000,
+      "requestKey": "initial-request",
+      "requestFingerprint": "{\"caseId\":\"SC00124\",\"title\":\"保温杯包装破损核实\",\"description\":\"收到包裹时外盒有挤压，希望客服核实后告知处理方式。\"}",
+      "history": [
+        {
+          "at": 1790941520000,
+          "publicText": "申请已受理，等待客服核实。",
+          "actor": "林小夏"
+        },
+        {
+          "at": 1790941600000,
+          "publicText": "客服已开始核实处理。",
+          "actor": "客服小林"
+        },
+        {
+          "at": 1790941610000,
+          "publicText": "请补充商品是否受损、是否影响使用，以便核实后续处理方式。",
+          "evidence": "",
+          "internalText": "先核对商品本体，暂不承诺退款。",
+          "actor": "客服小林"
+        }
+      ]
+    }
+  ],
+  "gaps": [
+    {
+      "id": "GAP00116",
+      "conversationId": "CV00111",
+      "query": "礼品卡可以分多次使用吗？",
+      "category": "知识缺口",
+      "status": "new",
+      "knowledgeId": "",
+      "cause": "",
+      "review": "",
+      "validation": null,
+      "createdAt": 1790940610000
+    }
+  ],
+  "events": [
+    {
+      "id": "EV00103",
+      "at": 1790937000000,
+      "actorId": "C002",
+      "actor": "陈一诺",
+      "type": "newConversation",
+      "target": "CV00101",
+      "detail": "操作已记录"
+    },
+    {
+      "id": "EV00107",
+      "at": 1790937010000,
+      "actorId": "C002",
+      "actor": "陈一诺",
+      "type": "say",
+      "target": "CV00101",
+      "detail": "操作已记录"
+    },
+    {
+      "id": "EV00108",
+      "at": 1790937030000,
+      "actorId": "C002",
+      "actor": "陈一诺",
+      "type": "feedback",
+      "target": "SC00105",
+      "detail": "操作已记录"
+    },
+    {
+      "id": "EV00110",
+      "at": 1790937040000,
+      "actorId": "C002",
+      "actor": "陈一诺",
+      "type": "closeConversation",
+      "target": "CV00101",
+      "detail": "操作已记录"
+    },
+    {
+      "id": "EV00113",
+      "at": 1790940600000,
+      "actorId": "C003",
+      "actor": "周安",
+      "type": "newConversation",
+      "target": "CV00111",
+      "detail": "操作已记录"
+    },
+    {
+      "id": "EV00119",
+      "at": 1790940610000,
+      "actorId": "C003",
+      "actor": "周安",
+      "type": "say",
+      "target": "CV00111",
+      "detail": "操作已记录"
+    },
+    {
+      "id": "EV00122",
+      "at": 1790941500000,
+      "actorId": "C001",
+      "actor": "林小夏",
+      "type": "newConversation",
+      "target": "CV00120",
+      "detail": "操作已记录"
+    },
+    {
+      "id": "EV00126",
+      "at": 1790941510000,
+      "actorId": "C001",
+      "actor": "林小夏",
+      "type": "say",
+      "target": "CV00120",
+      "detail": "操作已记录"
+    },
+    {
+      "id": "EV00129",
+      "at": 1790941520000,
+      "actorId": "C001",
+      "actor": "林小夏",
+      "type": "createTicket",
+      "target": "TK00127",
+      "detail": "操作已记录"
+    },
+    {
+      "id": "EV00130",
+      "at": 1790941600000,
+      "actorId": "lin",
+      "actor": "客服小林",
+      "type": "claimTicket",
+      "target": "TK00127",
+      "detail": "操作已记录"
+    },
+    {
+      "id": "EV00132",
+      "at": 1790941610000,
+      "actorId": "lin",
+      "actor": "客服小林",
+      "type": "updateTicket",
+      "target": "TK00127",
+      "detail": "操作已记录"
+    },
+    {
+      "id": "EV00135",
+      "at": 1790942280000,
+      "actorId": "C001",
+      "actor": "林小夏",
+      "type": "newConversation",
+      "target": "CV00133",
+      "detail": "操作已记录"
+    }
+  ],
+  "knowledge": [
+    {
+      "id": "KB001",
+      "live": {
+        "version": 1,
+        "title": "退货与售后政策",
+        "question": "七天无理由退货有什么条件？",
+        "keywords": [
+          "退货",
+          "规则",
+          "条件",
+          "无理由",
+          "政策",
+          "七天"
+        ],
+        "answer": "签收后七天内，商品未使用且包装、配件完整，可登记退货申请；定制商品不适用。具体资格由客服结合订单核实，提交申请不代表退款完成。",
+        "source": "青禾生活 / 售后服务政策",
+        "positive": "退货规则是什么？",
+        "negative": "我要查订单",
+        "effectiveAt": "2025-10-02T12:00:00.000Z",
+        "expiresAt": "",
+        "publishedAt": 1790856000000
+      },
+      "draft": null,
+      "versions": [],
+      "disabled": false,
+      "validation": null
+    },
+    {
+      "id": "KB002",
+      "live": {
+        "version": 1,
+        "title": "保温杯清洁与保养",
+        "question": "保温杯怎么清洗？",
+        "keywords": [
+          "保温杯",
+          "清洗",
+          "保养",
+          "材质"
+        ],
+        "answer": "建议使用软布和中性清洁剂清洗。首次使用前充分清洁，避免使用钢丝球；请勿放入微波炉加热。",
+        "source": "青禾生活 / 商品使用说明",
+        "positive": "保温杯怎么清洗？",
+        "negative": "保温杯可以开电子发票吗？",
+        "effectiveAt": "2025-10-02T12:00:00.000Z",
+        "expiresAt": "",
+        "publishedAt": 1790856000000
+      },
+      "draft": null,
+      "versions": [],
+      "disabled": false,
+      "validation": null
+    },
+    {
+      "id": "KB003",
+      "live": {
+        "version": 1,
+        "title": "人工服务时间",
+        "question": "服务时间是几点？",
+        "keywords": [
+          "服务时间",
+          "几点",
+          "营业时间"
+        ],
+        "answer": "人工服务时间为每天 09:00–21:00，实际接待以当前在线状态为准。非服务时段也可以提交问题，之后在咨询窗口查看回复。",
+        "source": "青禾生活 / 服务说明",
+        "positive": "服务时间是几点？",
+        "negative": "人工智能是什么？",
+        "effectiveAt": "2025-10-02T12:00:00.000Z",
+        "expiresAt": "",
+        "publishedAt": 1790856000000
+      },
+      "draft": null,
+      "versions": [],
+      "disabled": false,
+      "validation": null
+    }
+  ]
+}

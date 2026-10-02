@@ -1,0 +1,110 @@
+{
+  "producer": "Codex",
+  "date": "2026-10-02",
+  "baseline": "85bad90",
+  "scope": "默认文案差量合并与精确迁移；仅本地，未推送",
+  "node": {
+    "v4_domain": 70,
+    "v4_ui": 7,
+    "v4_copy": 20,
+    "v4_total": 97,
+    "legacy": 138,
+    "all": 235,
+    "failed": 0,
+    "commands": [
+      "node --test tests/domain.test.cjs tests/v4-ui.test.cjs tests/copy.test.cjs",
+      "node --test tests/*.test.cjs"
+    ]
+  },
+  "browser": {
+    "surface": "Codex In-app Browser",
+    "url": "http://127.0.0.1:8768/",
+    "storage": "native browser storage, exercised by refresh and UI only",
+    "checks": [
+      {
+        "id": "native-upgrade",
+        "passed": true,
+        "observation": "刷新旧V4工作空间后默认名称与首条欢迎语更新；原TK00163、TK00127编号、受理时间和状态保留，既有咨询问答保留"
+      },
+      {
+        "id": "citation",
+        "passed": true,
+        "observation": "点击已有退货政策答复来源，来源为售后服务政策，v1与原答复正文保留"
+      },
+      {
+        "id": "desk-history",
+        "passed": true,
+        "observation": "客服选项为客服 01/02；客户记录为客户 001；CV00133人工会话保留原内部备注“仅内部核对：验收标记ZX-1002”及人工结果、新待办"
+      },
+      {
+        "id": "operations",
+        "passed": true,
+        "observation": "知识运营策略页保留已发布v2和原测试输入；来源变更后原回归结果失效；经理概览展示客服 01/02及真实当前记录统计"
+      },
+      {
+        "id": "desktop-layout",
+        "passed": true,
+        "observation": "1280px客户页截图核对；DOM宽度1280、页面scrollWidth1280，重复ID为0"
+      },
+      {
+        "id": "standalone-build",
+        "passed": true,
+        "observation": "HTTP打开dist/智能客服.html，标题/欢迎语中性化、TK00163保留、无旧默认品牌和真实重复ID；?view=customer独立入口不显示工作区切换"
+      }
+    ]
+  },
+  "review": {
+    "mode": "两路独立只读审查，无降级",
+    "trigger": "持久化迁移及跨文件集成存在数据完整性和回退风险",
+    "roles": [
+      "正确性、异常路径与旧记录保留",
+      "范围、复杂度、证据有效性与现役回归保留"
+    ],
+    "candidate_counts": {
+      "P0": 0,
+      "P1": 2,
+      "P2": 3
+    },
+    "deduplicated": 5,
+    "disposition": [
+      "整包覆盖回退业务保护：选择性差量合并避免",
+      "整包覆盖回退UI修复：保留现役入口测试与交互修复",
+      "迁移重试漏备份最新原值：追加备份并逐字复核",
+      "同名及对象原型键导致署名误改：ID优先、歧义保留、仅自身映射键",
+      "知识来源依赖变化残留其他知识测试结果：清空所有受影响缓存，草稿保留"
+    ],
+    "remaining": {
+      "P0": 0,
+      "P1": 0,
+      "P2": 0
+    },
+    "cost_vs_rework": "低",
+    "recheck": "两位审查者独立复验关闭；235/235回归通过"
+  },
+  "build": {
+    "inline_scripts": 9,
+    "syntax": "passed",
+    "actual_duplicate_ids": 0,
+    "generic_checker": "源码入口通过；单文件检查器将JS模板中的data-id误报为重复id；HTMLParser与真实DOM复核无重复"
+  },
+  "not_verified": [
+    "文案迁移备份的真实浏览器字节值由逻辑Storage替身测试验证，浏览器仅观察刷新和可见记录",
+    "本轮未重跑上一轮18组完整业务HTTP流程或375px；原回归测试保持通过",
+    "导出文件实际下载落盘内容、原生file://存储未验证",
+    "未接入生产鉴权、模型、订单接口或多人并发"
+  ],
+  "sha256": {
+    "index.html": "a39720a6eea13ced4b020c5cb9056fe5dad7f130301b1b30b82da51563afdeda",
+    "src/copy.js": "9711a2c51cb4010a18da8648b61da958cc40c595567f3f4d880efcaa9b0de159",
+    "src/domain.js": "02670516de474c5f533947a1cbe3e79d1192830469cb4d9e5ef90699377e6658",
+    "src/store.js": "cd2d664501a8906ce32efceffab1d156b835448f672c26ddae160e434ca4f8c0",
+    "src/seed.js": "a08594cdf790610ed49d7158ba364f9996258a392f3a90f365139e26b4d7b15b",
+    "src/app.js": "37fb0cfb632645f732d1d1ac1d4c84453cf29252150e6d34215207ca33512fa8",
+    "src/styles.css": "2172d1f2d6017769a0f9dab2dad00143ad55e7bb19a68a2485bbac46dba1e5d3",
+    "src/views/customer.js": "24f4ef06c968545bce79efed25fb5358a56140d7e3fa93007fd8b03f6e7977f4",
+    "src/views/desk.js": "eeb2a6732c2046eec1c3f804d6fa755db09fa7b7ea50296f499f75401781fa57",
+    "src/views/operations.js": "baf09048cd5aaddec604956dcec8ae80666c027672d5db7f1b41d2110e51e263",
+    "src/views/shared.js": "f5e1f8622f70a25840a3ea79c084e622405bb319145abe75698f310f42fbe809",
+    "dist/智能客服.html": "bcfaf954f5c0199376bb48ce866ebb34242766ecb6b4e68c813c177b2c3a4eb6"
+  }
+}

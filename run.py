@@ -8,7 +8,7 @@ import threading
 import webbrowser
 
 def main():
-    parser = argparse.ArgumentParser(description='启动知序客服工作空间')
+    parser = argparse.ArgumentParser(description='启动智能客服工作空间')
     parser.add_argument('--port', type=int, default=8768)
     parser.add_argument('--no-open', action='store_true')
     args = parser.parse_args()
@@ -21,7 +21,7 @@ def main():
     except OSError as exc:
         raise SystemExit(f'无法启动：{exc}\n请关闭占用此端口的服务。不会自动切换端口，以免误用另一份浏览器数据。')
     url = f'http://127.0.0.1:{args.port}/'
-    print(f'知序客服：{url}\n按 Ctrl+C 停止。只允许本机访问。')
+    print(f'智能客服：{url}\n按 Ctrl+C 停止。只允许本机访问。')
     if not args.no_open:
         threading.Timer(0.3, lambda: webbrowser.open(url)).start()
     try:

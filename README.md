@@ -1,8 +1,8 @@
-# 知序 · 智能客服工作空间 V4
+# 智能客服工作空间 V4
 
 产出 Agent：Codex。集成、主写、参与与最终收敛 Agent：Codex。用户附件原始产出平台未标明。
 
-知序是面向电商服务场景的本地交互原型。客户服务、客服工作台、运营后台共用一份会话、客户问题、工单与知识记录，展示从咨询到办理、从服务问题到知识整改的完整操作链。
+智能客服是面向电商服务场景的本地交互原型。客户服务、客服工作台、运营后台共用一份会话、客户问题、工单与知识记录，展示从咨询到办理、从服务问题到知识整改的完整操作链。面客页面使用“服务中心”和“在线客服”，样例身份使用客户编号与客服 01 / 02。
 
 ## 本地运行
 
@@ -19,7 +19,7 @@ python3 run.py --no-open
 | 客户服务，默认工作区 | [客户服务](http://127.0.0.1:8768/#customer) |
 | 客服工作台 | [会话接待](http://127.0.0.1:8768/#desk/inbox) |
 | 运营后台 | [服务概览](http://127.0.0.1:8768/#ops/overview) |
-| 独立客户页面，无工作区切换 | [青禾客户服务](http://127.0.0.1:8768/?view=customer#customer) |
+| 独立客户页面，无工作区切换 | [服务中心](http://127.0.0.1:8768/?view=customer#customer) |
 
 演示时使用同一标签页切换工作区。后台入口按照当前运营角色显示可用页面；服务概览属于“服务经理”。角色切换用于演示岗位职责，不是登录认证。
 
@@ -35,6 +35,8 @@ python3 run.py --no-open
 
 V4 使用浏览器保存键 `qinghe-support-v4`。数据依赖浏览器及访问地址；不同协议、主机或端口的数据不共享。写入失败不更新当前业务状态；发现其他页面改写后会拒绝旧页面覆盖，提示刷新，但不提供多人并发保证。
 
+`src/copy.js` 对已有 V4 数据中的指定内置默认文案做精确更新，保留会话、订单、工单编号及业务关系，保留手写消息、备注和草稿。更新前将原始保存值原样备份到 `qinghe-support-v4:before-copy-v1`；相同原值可复用已有备份，不同原值使用 `:1`、`:2` 等后缀另存，已有备份不覆盖。备份或校验失败时停止更新。内置知识来源变化会使知识与策略的缓存回归结果失效，需要重新验证。
+
 旧保存键 `zhixu-customer-demo-v3.1` 保留，不自动导入 V4。需要查看旧数据时访问 [旧版入口](http://127.0.0.1:8768/legacy.html)；它运行旧模块，修改只属于旧版。系统管理员也可从“数据维护”导出旧版原始保存值。
 
 **当前问答使用关键词与确定性规则，业务数据来自虚构样例。** 没有真实模型、RAG、后端身份鉴权、外部订单、支付退款、短信邮件、多租户或跨设备同步。客户页面隐藏内部信息属于本地视图约束，不能作为生产安全隔离。记录办理结果不会执行退款。请勿录入真实客户资料、凭证或支付信息。
@@ -47,24 +49,25 @@ V4 使用浏览器保存键 `qinghe-support-v4`。数据依赖浏览器及访问
 python3 build_single.py
 ```
 
-输出为 `dist/知序客服.html`。日常运行和持久化验收使用上面的 HTTP 地址；直接打开文件时的浏览器存储行为需要单独验证。
+输出为 `dist/智能客服.html`。日常运行和持久化验收使用上面的 HTTP 地址；直接打开文件时的浏览器存储行为需要单独验证。
 
 逻辑测试需 Node.js：
 
 ```bash
 node --test tests/domain.test.cjs
 node --test tests/v4-ui.test.cjs
+node --test tests/copy.test.cjs
 node --test tests/*.test.cjs
 ```
 
-`tests/domain.test.cjs` 验证 V4 业务域与保存逻辑，`tests/v4-ui.test.cjs` 加载当前入口并用 VM 驱动页面事件。全量命令还会运行旧根模块测试，不能把总通过数写成 V4 覆盖数。旧 `tests/browser_smoke.py`、`tests/product_browser_smoke.py` 及旧 evidence 不适用于 V4。真实浏览器验收状态与证据范围见 [验收矩阵](docs/验收矩阵.md)。
+`tests/domain.test.cjs` 验证 V4 业务域与保存逻辑，`tests/v4-ui.test.cjs` 加载当前入口并用 VM 驱动页面事件，`tests/copy.test.cjs` 验证默认文案更新、原始值备份及用户内容保留。全量命令还会运行旧根模块测试，不能把总通过数写成 V4 覆盖数。旧 `tests/browser_smoke.py`、`tests/product_browser_smoke.py` 及旧 evidence 不适用于 V4。真实浏览器验收状态与证据范围见 [验收矩阵](docs/验收矩阵.md)。
 
 ## 文件导航
 
 | 文件 | 用途 |
 | --- | --- |
 | `index.html`、`src/app.js`、`src/views/`、`src/styles.css` | V4 默认入口、页面事件、视图与样式 |
-| `src/domain.js`、`src/seed.js`、`src/store.js` | 业务命令、虚构样例、浏览器保存 |
+| `src/domain.js`、`src/seed.js`、`src/store.js`、`src/copy.js` | 业务命令、虚构样例、浏览器保存、内置文案精确更新 |
 | `run.py`、`build_single.py` | 本地 HTTP 服务、单文件构建 |
 | `legacy.html`、根目录旧 `app.js` / `engine.js` / `flow-*.js` 等 | 旧版入口与历史模块，不被 V4 `index.html` 加载 |
 | [方案文档](方案文档.md) | 产品目标、状态与职责 |

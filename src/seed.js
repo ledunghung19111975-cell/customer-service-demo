@@ -4,11 +4,11 @@
   const D = typeof module !== 'undefined' && module.exports ? require('./domain.js') : root.SupportDomain;
   function create(now = Date.now(), populated = true) {
     let s = {
-      schema: 4, revision: 0, sequence: 100, createdAt: now,
-      customers: [{id:'C001',name:'林小夏',email:'xiaoxia@example.test',level:'青禾会员'}, {id:'C002',name:'陈一诺',email:'yinuo@example.test',level:'青禾会员'}, {id:'C003',name:'周安',email:'zhouan@example.test',level:'普通客户'}],
+      schema: 4, copyVersion: 1, revision: 0, sequence: 100, createdAt: now,
+      customers: [{id:'C001',name:'客户 001',email:'customer001@example.test',level:'会员'}, {id:'C002',name:'客户 002',email:'customer002@example.test',level:'会员'}, {id:'C003',name:'客户 003',email:'customer003@example.test',level:'普通客户'}],
       staff: [
-        {id:'lin',name:'客服小林',role:'agent',teams:['service'],available:true},
-        {id:'zhou',name:'客服小周',role:'agent',teams:['service'],available:true},
+        {id:'lin',name:'客服 01',role:'agent',teams:['service'],available:true},
+        {id:'zhou',name:'客服 02',role:'agent',teams:['service'],available:true},
         {id:'manager',name:'服务经理',role:'manager',teams:['service']},
         {id:'operator',name:'知识运营',role:'operator',teams:['service']},
         {id:'admin',name:'系统管理员',role:'admin',teams:[]}
@@ -23,9 +23,9 @@
       conversations:[],cases:[],tickets:[],gaps:[],events:[],knowledge:[]
     };
     const articles = [
-      ['KB001','退货与售后政策','七天无理由退货有什么条件？','退货,规则,条件,无理由,政策,七天','签收后七天内，商品未使用且包装、配件完整，可登记退货申请；定制商品不适用。具体资格由客服结合订单核实，提交申请不代表退款完成。','青禾生活 / 售后服务政策','退货规则是什么？','我要查订单'],
-      ['KB002','保温杯清洁与保养','保温杯怎么清洗？','保温杯,清洗,保养,材质','建议使用软布和中性清洁剂清洗。首次使用前充分清洁，避免使用钢丝球；请勿放入微波炉加热。','青禾生活 / 商品使用说明','保温杯怎么清洗？','保温杯可以开电子发票吗？'],
-      ['KB003','人工服务时间','服务时间是几点？','服务时间,几点,营业时间','人工服务时间为每天 09:00–21:00，实际接待以当前在线状态为准。非服务时段也可以提交问题，之后在咨询窗口查看回复。','青禾生活 / 服务说明','服务时间是几点？','人工智能是什么？']
+      ['KB001','退货与售后政策','七天无理由退货有什么条件？','退货,规则,条件,无理由,政策,七天','签收后七天内，商品未使用且包装、配件完整，可登记退货申请；定制商品不适用。具体资格由客服结合订单核实，提交申请不代表退款完成。','售后服务政策','退货规则是什么？','我要查订单'],
+      ['KB002','保温杯清洁与保养','保温杯怎么清洗？','保温杯,清洗,保养,材质','建议使用软布和中性清洁剂清洗。首次使用前充分清洁，避免使用钢丝球；请勿放入微波炉加热。','商品使用说明','保温杯怎么清洗？','保温杯可以开电子发票吗？'],
+      ['KB003','人工服务时间','服务时间是几点？','服务时间,几点,营业时间','人工服务时间为每天 09:00–21:00，实际接待以当前在线状态为准。非服务时段也可以提交问题，之后在咨询窗口查看回复。','客服服务说明','服务时间是几点？','人工智能是什么？']
     ];
     s.knowledge = articles.map(([id,title,question,keywords,answer,source,positive,negative]) => ({id,live:{version:1,title,question,keywords:keywords.split(','),answer,source,positive,negative,effectiveAt:new Date(now-86400000*365).toISOString(),expiresAt:'',publishedAt:now-86400000},draft:null,versions:[],disabled:false,validation:null}));
     if (!populated) return s;
