@@ -1,0 +1,786 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="referrer" content="no-referrer">
+  <title>知序 · 青禾客服</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 50'%3E%3Crect width='50' height='50' rx='14' fill='%23185343'/%3E%3Ctext x='11' y='35' font-size='30' fill='white'%3E知%3C/text%3E%3C/svg%3E">
+  <style>
+:root{--ink:#233a36;--muted:#75837f;--brand:#246b58;--brand-dark:#194f41;--line:#e4e9e6;--bg:#f6f8f6;--soft:#edf4ef;--gold:#a77b27;--danger:#b54a45;--radius:12px;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;font-size:14px;color:var(--ink);background:var(--bg);font-synthesis:none}*{box-sizing:border-box}body{margin:0}button,input,textarea,select{font:inherit}button,a,input,textarea,select{-webkit-tap-highlight-color:transparent}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.42}button,select,textarea,input{outline-offset:3px}button:focus-visible,a:focus-visible{outline:3px solid #74ad98}input:focus,textarea:focus,select:focus{outline:2px solid #9cc7b4;border-color:#91bda9}a{color:var(--brand);text-decoration:none}h1,h2,h3,p{margin:0}h1{font-size:26px;letter-spacing:-.7px;line-height:1.35}h2{font-size:16px;line-height:1.5}h3{font-size:13px;line-height:1.5}p{line-height:1.8}small{display:block;font-size:11px;line-height:1.6}svg{flex-shrink:0;vertical-align:middle}hr{border:0;border-top:1px solid var(--line);margin:25px 0}strong{font-weight:600}textarea{resize:vertical;min-height:70px}input,textarea,select{max-width:100%;border:1px solid var(--line);border-radius:7px;background:white;padding:10px 12px;color:var(--ink)}textarea::placeholder,input::placeholder{color:#99a59f}select{cursor:pointer}.row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.between{justify-content:space-between}.push-right{margin-left:auto}.muted{color:var(--muted)}.small-text{font-size:12px;line-height:1.8}.success-text{color:var(--brand)}.danger-text{color:var(--danger)}.full{width:100%;justify-content:center}.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;padding:8px 13px;line-height:1.4;border:1px solid #d9e2dc;border-radius:7px;background:#fff;color:var(--ink);font-size:12px;font-weight:500;transition:background .15s,border-color .15s}.btn:hover:not(:disabled){background:#eff4f0;border-color:#b3c8bd}.btn.primary{background:var(--brand);color:#fff;border-color:var(--brand)}.btn.primary:hover:not(:disabled){background:var(--brand-dark);border-color:var(--brand-dark)}.btn.text{background:transparent;border-color:transparent;color:var(--brand);padding-left:3px;padding-right:3px}.btn.small{min-height:30px;padding:6px 9px;font-size:11px}.pill{display:inline-flex;align-items:center;white-space:nowrap;font-size:10px;line-height:1.5;padding:3px 7px;border-radius:5px;background:#f0f3f1;color:#657870;font-weight:500}.pill.good{background:#e8f3ec;color:#327359}.pill.warn{background:#fcf1df;color:#9c752d}.status-dot,.workspace-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#62a989;margin-right:5px}.eyebrow{font-size:10px;color:#7f9489;letter-spacing:1.5px;font-weight:500}.app-top{height:70px;display:flex;align-items:center;padding:0 28px;background:#fff;border-bottom:1px solid var(--line);gap:35px;position:sticky;top:0;z-index:20}.product-brand{display:flex;align-items:center;gap:10px;color:var(--ink);font-size:19px;font-weight:600;min-width:192px}.brand-logo{display:grid;place-items:center;width:33px;height:35px;border-radius:10px;background:var(--brand-dark);color:#fff;font-size:18px}.brand-sub{font-size:11px;font-weight:400;color:var(--muted);margin-left:11px}.workspace-tabs{display:flex;align-items:stretch;height:100%;gap:8px}.workspace-tabs button{position:relative;display:flex;align-items:center;gap:9px;padding:0 22px;border:0;background:none;color:#7c8983;font-size:13px}.workspace-tabs button.active{color:var(--brand-dark);font-weight:600;background:linear-gradient(0deg,#f1f6f1,transparent)}.workspace-tabs button.active:after{content:"";height:3px;background:var(--brand);position:absolute;bottom:0;left:18px;right:18px;border-radius:3px 3px 0 0}.workspace-tabs button:hover{color:var(--brand)}.top-right{margin-left:auto;display:flex;align-items:center;gap:17px}.customer-identity{display:flex;gap:7px;align-items:center;font-size:12px;white-space:nowrap;color:#76827d}.icon-button{display:inline-grid;place-items:center;background:transparent;border:0;color:var(--muted);width:32px;height:32px;border-radius:6px}.icon-button:hover{background:var(--soft)}.role-picker{display:flex;align-items:center;gap:8px;white-space:nowrap;font-size:11px;color:var(--muted)}.role-picker select{font-size:12px;padding:7px 8px;max-width:145px}.standalone-heading{font-size:13px;color:var(--muted)}.customer-main{max-width:1400px;margin:auto;padding:31px 45px}.customer-layout{display:grid;grid-template-columns:320px minmax(0,1fr);gap:38px;align-items:start}.store-brand{display:flex;align-items:center;gap:10px;margin:0 0 24px}.brand-mark{background:#e8ede2;display:grid;place-items:center;width:34px;height:34px;border-radius:50%;font-size:17px;color:#6d7858;font-family:serif}.store-brand strong{font-size:16px;letter-spacing:2px}.store-brand small{color:#8c978c;font-size:10px;margin-top:2px;letter-spacing:1px}.welcome{background:#f0efdf;border:1px solid #e9e8d8;border-radius:var(--radius);padding:28px 23px;position:relative;overflow:hidden}.welcome h1{font-size:27px;line-height:1.6;font-weight:600;margin-top:10px;letter-spacing:-1px;color:#424f3e}.welcome p{font-size:12px;color:#8a907e;margin-top:10px;line-height:1.8}.welcome .eyebrow{font-size:9px;color:#87947e;letter-spacing:2px}.welcome-flower{position:absolute;right:13px;bottom:1px;line-height:1;font-size:110px;color:#c1c9aa;transform:rotate(9deg);opacity:.55}.customer-shortcuts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0 26px}.btn.shortcut{display:flex;justify-content:flex-start;gap:9px;padding:14px 11px;background:#fff;min-width:0}.shortcut span{font-size:11px;white-space:nowrap}.shortcut>svg:last-child{margin-left:auto;width:12px}.section-title{display:flex;justify-content:space-between;align-items:center;margin:22px 0 12px}.section-title h2{font-size:13px}.section-title>span{font-size:10px;color:#91a094}.order-card{padding:15px 12px 10px;border:1px solid var(--line);background:#fff;display:grid;grid-template-columns:45px 1fr;gap:10px;border-radius:10px;margin-bottom:10px}.product-symbol{width:45px;height:51px;display:grid;place-items:center;border-radius:7px;background:#f4f1e9;color:#a79a78;font-size:28px}.order-card strong{font-size:11px}.order-card small{font-size:9px;color:#9ba69e;margin:2px 0 7px}.price{font-size:10px;color:#7c8982;margin-left:auto}.order-actions{grid-column:1/-1;border-top:1px solid #f1f3ef;display:flex;justify-content:flex-end;gap:20px;padding-top:3px}.order-actions .btn{font-size:10px;min-height:23px}.progress-card{display:block;width:100%;text-align:left;padding:14px;border:1px solid var(--line);background:#fff;border-radius:10px;margin-bottom:10px}.progress-card:hover{border-color:#b6cec0}.progress-card strong{font-size:11px}.progress-card small{font-size:10px;color:var(--muted);margin:5px 0 10px}.messenger{display:flex;flex-direction:column;min-height:630px;height:calc(100vh - 131px);max-height:850px;border:1px solid #dfe7df;border-radius:15px;background:white;box-shadow:0 10px 45px #1e402009;overflow:hidden}.messenger-head{min-height:86px;padding:20px 25px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line)}.messenger-head strong{font-size:14px}.messenger-head small{font-size:10px;color:#92a296;margin-top:4px}.assistant-avatar{height:38px;width:38px;display:grid;place-items:center;background:var(--brand-dark);color:#dcebdd;border-radius:12px}.messenger-head .btn.text{font-size:11px}.messages{flex:1;min-height:150px;overflow:auto;padding:22px 24px;background:#fff;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#dce5de transparent}.customer-messages{padding:24px 28px;background:linear-gradient(135deg,#fbfcfa,#fff)}.message{max-width:90%;width:fit-content;margin:0 0 20px}.message-meta{font-size:10px;color:#91a094;display:flex;gap:16px;align-items:center;margin-bottom:6px}.message-meta time{font-size:9px;color:#abb5ad}.bubble{padding:13px 16px;border:1px solid #e5eae5;border-radius:0 10px 10px 10px;background:#f5f8f5;font-size:12px;line-height:1.9;overflow-wrap:anywhere;white-space:normal}.customer-messages .incoming{margin-left:auto}.customer-messages .incoming .bubble{background:var(--brand);color:white;border:0;border-radius:10px 0 10px 10px}.customer-messages .incoming .message-meta{justify-content:flex-end}.agent-conversation .outgoing{margin-left:auto}.agent-conversation .outgoing .bubble{background:#edf5ef;border-color:#dfebe2;border-radius:10px 0 10px 10px}.agent-conversation .incoming .bubble{background:#f7f8f7;border-color:#e9ece9}.agent-conversation .internal .bubble{background:#fff7e4;border-color:#efe3be;color:#786136}.message.internal .message-meta{color:#ac8e4f}.system-message{text-align:center;font-size:10px;color:#92a098;line-height:1.8;margin:10px auto 20px;max-width:90%;overflow-wrap:anywhere}.citation{display:flex;align-items:center;gap:5px;margin-top:7px;background:none;border:0;padding:0;color:#779283;font-size:10px;text-align:left}.message>.btn{margin-top:9px}.feedback-card{margin:0 0 20px 0;padding:13px 15px;background:#fff;border:1px solid #e3eae3;border-radius:8px;max-width:380px}.feedback-card strong{font-size:11px;font-weight:500;display:block;margin-bottom:8px}.composer{background:#fff;padding:15px 20px 17px;border-top:1px solid var(--line)}.composer textarea{display:block;width:100%;border:0;padding:8px 0;resize:none;font-size:12px;min-height:65px;outline-offset:0}.composer textarea:focus{outline:0}.composer:focus-within{box-shadow:inset 0 0 0 1px #a7c9b8}.composer .small-text{font-size:10px;max-width:75%}.customer-composer{margin:0 20px 18px;border:1px solid var(--line);border-radius:9px;padding:10px 15px 11px}.customer-composer .btn{min-height:31px;font-size:11px}.queue-footer{text-align:center;margin-top:-10px;padding:0 0 9px}.queue-footer .btn{font-size:10px}.workspace-body{display:flex;min-height:calc(100vh - 70px)}.workspace-sidebar{width:183px;flex-shrink:0;background:#f3f6f2;border-right:1px solid var(--line);padding:26px 13px 18px;display:flex;flex-direction:column;position:sticky;top:70px;align-self:flex-start;height:calc(100vh - 70px)}.workspace-label{font-size:10px;letter-spacing:1.2px;color:#97a597;padding:0 13px 18px}.side-link{display:flex;align-items:center;gap:11px;width:100%;padding:12px 13px;border:0;background:none;border-radius:7px;color:#819083;font-size:12px;text-align:left;margin-bottom:5px}.side-link.active{background:#e2ede3;color:#34614a;font-weight:600}.side-link:hover{background:#eaf1e9}.sidebar-bottom{margin-top:auto;padding:16px 9px 0;border-top:1px solid #e3e9df;font-size:12px}.sidebar-bottom small{color:#7a8c7a;font-size:10px;margin:5px 0 14px}.sidebar-bottom .small-text{font-size:9px}.workspace-content{padding:28px 30px 45px;flex:1;min-width:0;max-width:1800px}.page-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:25px}.page-heading h1{font-size:24px;margin:6px 0 7px;letter-spacing:-.5px}.page-heading p{font-size:11px;color:#8b978e;line-height:1.7}.page-heading .eyebrow{font-size:9px;letter-spacing:.8px}.page-heading .row{flex-shrink:0}.panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:22px;margin-bottom:20px;min-width:0}.panel-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}.panel-heading h2{font-size:14px}.panel-heading .muted,.panel-heading>span{font-size:10px}.panel p{font-size:12px}.narrow{max-width:780px}.narrow>h2{margin-bottom:10px}.narrow>p{margin-bottom:20px}.empty{padding:38px 16px;text-align:center;color:#8e9d91}.empty-icon{display:grid;place-items:center;width:53px;height:53px;border-radius:14px;background:#f0f5ef;color:#a4b7a4;margin:0 auto 14px}.empty h3{font-size:12px;margin-bottom:8px;color:#768a77}.empty p{font-size:11px;max-width:270px;margin:auto;color:#a0ada1}.inbox-page{padding:25px 24px 0}.inbox-page .page-heading{margin-bottom:20px}.inbox-shell{display:grid;grid-template-columns:242px minmax(290px,1fr) 260px;background:white;border:1px solid var(--line);border-bottom:0;border-radius:12px 12px 0 0;overflow:hidden;height:calc(100vh - 190px);min-height:550px}.conversation-list{border-right:1px solid var(--line);background:#fff;overflow:auto;scrollbar-width:thin}.list-tools{padding:17px 12px 15px}.segmented{display:flex;gap:3px;background:#f3f6f2;padding:3px;border-radius:7px;margin-bottom:13px}.segmented button{flex:1;white-space:nowrap;padding:7px 3px;border:0;border-radius:5px;font-size:10px;color:#849483;background:transparent}.segmented button.active{background:#fff;color:var(--brand);box-shadow:0 1px 3px #23421912}.search{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:7px;padding:0 9px;color:#a3b0a5;background:#fff}.search svg{width:14px}.search input{padding:9px 0;border:0;font-size:10px;width:100%;min-width:0;background:transparent;outline:0}.search:focus-within{border-color:#8fb8a0}.list-caption{display:flex;justify-content:space-between;padding:0 16px 11px;color:#97a399;font-size:10px}.conversation-row{display:block;width:100%;text-align:left;padding:17px 14px;border:0;border-top:1px solid #f0f3ef;border-left:3px solid transparent;background:white;min-height:120px}.conversation-row.selected{background:#edf4ef;border-left-color:#47816a}.conversation-row:hover{background:#f3f7f3}.conversation-row strong{font-size:12px}.conversation-row time{font-size:9px;color:#94a199;margin-left:auto}.conversation-row p{font-size:11px;color:#86988a;margin:10px 0 12px;line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.avatar{display:grid;place-items:center;background:#e7eddf;color:#849075;width:30px;height:30px;border-radius:50%;font-size:10px;flex-shrink:0}.avatar.large{width:40px;height:40px;font-size:13px}.sla{font-size:8px;color:#9c9775;display:flex;align-items:center;gap:3px;white-space:nowrap}.sla.late{color:#bb7364}.agent-conversation{display:flex;flex-direction:column;min-width:0;overflow:hidden}.conversation-header{padding:18px 20px;min-height:77px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:8px}.conversation-header h2{font-size:14px;margin-bottom:3px}.conversation-header small{font-size:9px;color:#98a59b}.handoff-banner{display:flex;gap:10px;background:#edf3ed;border:1px solid #dfebdf;padding:12px 14px;border-radius:8px;margin:0 0 21px;color:#6e8e73}.handoff-banner strong{font-size:10px}.handoff-banner p{font-size:11px;margin-top:3px}.compose-tabs{display:flex;gap:20px;border-bottom:1px solid #eff2ed}.compose-tabs button{background:none;border:0;font-size:10px;color:#91a18e;padding:6px 1px 10px;border-bottom:2px solid transparent}.compose-tabs button.active{color:var(--brand);border-color:var(--brand)}.note-composer{background:#fffbf1}.note-composer textarea{background:transparent}.read-only-bar{padding:18px;border-top:1px solid var(--line);background:#fafcf9;font-size:10px;color:#8d9c8f;text-align:center}.customer-context{border-left:1px solid var(--line);overflow:auto;background:#fcfdfb;scrollbar-width:thin}.context-section{padding:18px 19px;border-bottom:1px solid var(--line)}.context-section h3{display:flex;gap:8px;align-items:center;font-size:11px;color:#71896e;margin-bottom:13px}.context-section strong{font-size:11px}.context-section small{font-size:9px;color:#8d9d8a}.context-section>.small-text{font-size:10px;margin:8px 0}.context-section>.btn{margin-top:9px}.context-section dl{margin:0}.context-section dt{font-size:9px;color:#a2b19b;margin:12px 0 5px}.context-section dd{margin:0;font-size:10px;color:#778a72;line-height:1.8;overflow-wrap:anywhere}.context-section dl+small{font-size:8px;color:#a7b39f;margin-top:12px}.case-card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:11px;margin:0 0 10px}.case-card>strong{display:block;margin-bottom:7px}.case-card>.row+.row{margin-top:11px;gap:5px}.case-card .btn{font-size:9px}.compact-order strong{font-size:10px}.compact-order small{margin:3px 0 7px}.compact-order{margin:12px 0}.metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:17px;margin-bottom:23px}.metric-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px}.metric-card .row{font-size:11px;color:#829180}.metric-card svg{color:#a0b09b;width:17px}.metric-card>strong{display:block;font-size:36px;line-height:1.5;font-weight:500;letter-spacing:-1px;margin:10px 0 7px}.metric-card small{font-size:10px;color:#a2aea0}.overview-grid{display:grid;grid-template-columns:1.45fr 1fr;gap:22px}.result-summary{display:flex;justify-content:space-between;padding:4px 0 22px}.result-summary>div{display:flex;flex-direction:column;gap:7px}.result-summary strong{font-size:28px;font-weight:500}.result-summary span{font-size:10px;color:#a2ad9e}.progress-track{height:6px;background:#eef3e9;border-radius:10px;margin:6px 0 18px;overflow:hidden}.progress-track span{display:block;background:#82ab87;height:100%;border-radius:10px}.metric-definition{background:#f6f8f2;padding:13px 15px;margin-top:18px;border-radius:8px;color:#8a987f;font-size:10px}.metric-definition p{font-size:10px;margin-top:6px}.attention-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:17px 0;border-top:1px solid #eef2e9;font-size:11px;color:#8a997f}.attention-row strong{color:#526d4f}.attention-row small{font-size:10px}.attention-row+.btn{margin-top:18px}.staff-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}.staff-card{display:flex;align-items:center;gap:12px;padding:13px 17px;border:1px solid #e8eee3;border-radius:9px}.staff-card strong{font-size:12px}.staff-card small{font-size:10px;color:#9ca994;margin-top:3px}.staff-card>.push-right{font-size:18px;font-weight:500}.table-toolbar{display:flex;justify-content:space-between;gap:15px;margin-bottom:19px}.table-toolbar .search{width:300px}.table-toolbar select{font-size:11px;padding:7px 10px}.table-scroll{overflow:auto}table{width:100%;border-collapse:collapse;text-align:left;white-space:nowrap}th{font-size:10px;font-weight:500;color:#95a28d;background:#f7f9f4;padding:13px 12px;border-bottom:1px solid #e6edde}td{font-size:11px;padding:18px 12px;border-bottom:1px solid #edf1e7;line-height:1.7}td small{font-size:9px;color:#a6b19f;margin-top:5px}.table-title{background:none;border:0;padding:0;color:#54794f;font-size:12px;text-align:left}.table-title:hover{text-decoration:underline}.field{display:flex;flex-direction:column;gap:8px;margin-bottom:18px;font-size:12px}.field>span{font-size:11px;color:#72866b}.field textarea{font-size:12px;line-height:1.8}.field input,.field select{font-size:12px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.form-footer{display:flex;align-items:center;justify-content:flex-end;gap:11px;margin-top:20px;flex-wrap:wrap}.form-footer>.muted{margin-right:auto;font-size:10px}.knowledge-layout{display:grid;grid-template-columns:240px minmax(0,1fr);gap:22px}.knowledge-list{padding:15px 10px;align-self:start}.knowledge-list .panel-heading{padding:4px 8px 0}.knowledge-row{display:block;background:#fff;border:0;border-radius:8px;padding:15px 12px;text-align:left;width:100%;margin-bottom:5px}.knowledge-row.selected{background:#edf5e9}.knowledge-row:hover{background:#f3f7ef}.knowledge-row strong{font-size:11px;display:block}.knowledge-row small{font-size:9px;color:#9aac8c;margin:5px 0 9px}.knowledge-editor{max-width:990px}.release-actions{display:flex;align-items:center;gap:12px;border-top:1px solid var(--line);padding-top:19px;margin-top:22px;flex-wrap:wrap}.release-actions .small-text{font-size:10px}.test-report{border:1px solid #e5edde;background:#fcfdf9;border-radius:9px;padding:17px;margin-top:22px}.test-report>p{font-size:10px;margin:8px 0 13px}.test-report>.row{font-size:12px}.test-row{display:flex;align-items:start;gap:12px;padding:10px 0;border-top:1px solid #edf2e7;font-size:11px}.test-row small{font-size:9px;color:#96a28b;margin-top:3px}.test-row strong{font-size:10px}.test-row>span{font-size:14px}.flow-strip{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0}.flow-step{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:20px 12px;border:1px solid #e5ecdf;background:#fafcf7;border-radius:10px;flex:1;min-width:0}.flow-step svg{color:#8aa080}.flow-step strong{font-size:11px}.flow-step small{font-size:9px;color:#9da991}.flow-arrow{color:#b0be9e}.checkbox{display:flex;align-items:center;gap:10px;font-size:11px;color:#839776;margin:10px 0}.checkbox input{accent-color:var(--brand)}.query-result{margin-top:20px;padding:15px;background:#f4f8ed;border-radius:8px;font-size:11px}.query-result p{margin-top:8px}.quality-card h2{margin:19px 0 11px;font-size:16px}.quality-card .review-note{background:#f6f8f1;border-radius:7px;padding:12px 15px;margin:15px 0;color:#79916a;font-size:11px}.quality-card .review-note p{font-size:11px;margin-top:5px}.quality-card>.row:not(:first-child){margin-top:18px}.quality-card .small-text{margin-bottom:10px}details{border-top:1px solid var(--line);margin-top:20px;padding-top:16px}summary{cursor:pointer;font-size:11px;color:#869b76}.history-versions>div{padding:15px 0;border-bottom:1px solid var(--line);font-size:11px}.evidence-messages{padding:10px;color:#809474}.evidence-messages p{font-size:11px;margin:10px 0}.integration-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}.integration-card{padding:26px;margin:0}.integration-icon{display:grid;place-items:center;width:44px;height:44px;background:#edf3e4;color:#8ca576;border-radius:11px;margin-bottom:18px}.integration-card h2{font-size:14px;margin:0 0 14px}.integration-card p{font-size:11px;color:#98a68a;margin-top:19px;line-height:1.9}.history-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:17px;border:1px solid var(--line);background:#fff;border-radius:8px;width:100%;text-align:left;margin-bottom:12px}.history-row strong{display:block;width:100%;font-size:12px}.history-row small{font-size:10px;color:var(--muted)}dialog{width:min(620px,calc(100vw - 32px));max-height:calc(100vh - 64px);padding:0;border:1px solid #dbe7d1;border-radius:13px;color:var(--ink);box-shadow:0 24px 90px #173b2633}dialog::backdrop{background:#1e332655;backdrop-filter:blur(3px)}.dialog-head{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:15px;z-index:2}.dialog-head h2{font-size:16px}.dialog-head button{border:0;background:none;font-size:23px;color:#96a987;cursor:pointer}.dialog-body{padding:23px 25px 27px}.dialog-body p{font-size:12px;margin-bottom:16px}.dialog-body h2{font-size:17px;margin-bottom:10px}.dialog-body h3{margin:20px 0 10px}.dialog-body dl{font-size:12px;margin:15px 0}.dialog-body dt{color:#9aae88;font-size:11px;margin-bottom:5px}.dialog-body dd{margin:0 0 15px;font-size:12px;line-height:1.9;overflow-wrap:anywhere}.dialog-error{margin:0 24px 20px;padding:12px 14px;background:#fff0ea;border-radius:8px;font-size:12px;color:#a5503d;line-height:1.7}.timeline-entry{border-left:2px solid #dfe9d4;padding:5px 0 15px 15px;margin:5px 0}.timeline-entry>small{color:#9cae8b;font-size:10px;margin-bottom:7px}.timeline-entry p{margin:5px 0;font-size:12px}.internal-note{background:#fff8e5;padding:12px;border:1px solid #f0e5c0;border-radius:7px;color:#9a834d;font-size:11px;line-height:1.8}.result-note{padding:15px;border:1px solid #e0ebd4;background:#f4f8ed;border-radius:8px;font-size:12px;line-height:1.8}.toast{position:fixed;bottom:26px;left:50%;transform:translate(-50%,14px);opacity:0;pointer-events:none;max-width:min(580px,90vw);padding:13px 20px;border-radius:9px;background:#254b2b;color:white;font-size:12px;line-height:1.7;box-shadow:0 8px 30px #1c391d22;transition:all .18s;z-index:100}.toast.visible{opacity:1;transform:translate(-50%,0)}.toast.error{background:#984b37}.fatal{max-width:680px;margin:100px auto;padding:30px}.fatal h1{margin-bottom:20px}.fatal p{margin-bottom:20px}.sr-only{position:absolute;clip:rect(0,0,0,0);width:1px;height:1px;overflow:hidden;white-space:nowrap}.loading{margin:100px auto;text-align:center;color:#7f9272}button,td,.panel,.message,.field{overflow-wrap:anywhere}@media(min-width:1600px){.inbox-shell{grid-template-columns:275px minmax(420px,1fr) 300px}.customer-main{padding-top:43px}.customer-layout{gap:50px;grid-template-columns:340px 1fr}.messenger{height:calc(100vh - 158px)}.bubble{font-size:13px}.context-section dd{font-size:11px}.workspace-content{padding-left:35px;padding-right:35px}}@media(max-width:1200px){.app-top{gap:15px;padding:0 18px}.product-brand{min-width:150px}.brand-sub{display:none}.workspace-tabs button{padding:0 15px;font-size:12px}.customer-main{padding:25px}.customer-layout{gap:22px;grid-template-columns:290px minmax(0,1fr)}.workspace-sidebar{width:156px;padding-left:8px;padding-right:8px}.workspace-content{padding-left:20px;padding-right:20px}.inbox-page{padding-left:15px;padding-right:15px}.inbox-shell{grid-template-columns:210px minmax(260px,1fr) 215px}.context-section{padding:16px 12px}.conversation-row{padding:14px 10px}.sla{font-size:7px}.metric-card{padding:18px}.integration-grid{gap:15px}.integration-card{padding:21px}.page-heading p{max-width:590px}}@media(max-width:980px){.top-right{gap:8px}.product-brand{min-width:90px}.workspace-tabs button{padding:0 12px}.workspace-tabs button svg{display:none}.role-picker>span{display:none}.workspace-sidebar{width:145px}.inbox-shell{grid-template-columns:190px minmax(260px,1fr)}.customer-context{grid-column:1/-1;border-top:1px solid var(--line);max-height:400px;display:grid;grid-template-columns:1fr 1fr;overflow:auto}.inbox-shell{height:auto;overflow:visible;min-height:0}.agent-conversation,.conversation-list{height:650px}.agent-conversation{border-left:0}.inbox-page{padding-bottom:30px}.metric-grid{gap:10px;grid-template-columns:1fr 1fr}.overview-grid{grid-template-columns:1fr}.integration-grid{grid-template-columns:1fr 1fr}.knowledge-layout{grid-template-columns:200px 1fr;gap:14px}.form-grid{grid-template-columns:1fr;gap:0}.customer-layout{grid-template-columns:250px minmax(0,1fr);gap:20px}.customer-main{padding:22px 20px}.welcome{padding:22px 18px}.welcome h1{font-size:23px}.customer-shortcuts{gap:7px}.btn.shortcut{padding:11px 8px;gap:4px}.shortcut svg{width:15px}.shortcut span{font-size:10px}.messenger-head{padding:17px 15px;gap:8px}.messenger-head .row{gap:4px}.messenger-head .btn{font-size:9px}.assistant-avatar{width:31px;height:33px}.messenger-head strong{font-size:12px}.customer-messages{padding:22px 18px}.composer .small-text{max-width:60%}.flow-strip{flex-wrap:wrap}.flow-step{min-width:110px}.flow-arrow{display:none}}@media(max-width:700px){.app-top{height:auto;min-height:62px;flex-wrap:wrap;padding:12px 15px 0;gap:9px}.product-brand{font-size:17px;min-width:0;gap:8px}.brand-logo{width:28px;height:29px;font-size:15px;border-radius:8px}.workspace-tabs{order:3;height:43px;width:100%;justify-content:space-between;gap:0}.workspace-tabs button{flex:1;justify-content:center;padding:0 8px;font-size:12px}.top-right{font-size:11px;gap:8px}.customer-identity{font-size:10px}.role-picker select{font-size:10px;max-width:125px}.standalone-heading{font-size:10px;flex:1;text-align:center;padding-bottom:11px}.standalone-heading+.top-right{padding-bottom:11px}.customer-main{padding:20px 16px}.customer-layout{display:flex;flex-direction:column;gap:22px}.customer-home{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:10px}.store-brand{grid-column:1/-1;margin:0 0 5px}.welcome{grid-column:1/-1;padding:20px 22px}.welcome h1{font-size:23px;line-height:1.5}.welcome p{font-size:11px;margin-top:8px}.welcome p br{display:none}.welcome-flower{font-size:140px;right:20px}.customer-shortcuts{grid-column:1/-1;margin:3px 0 2px;gap:10px}.btn.shortcut{padding:14px 13px;gap:9px}.shortcut span{font-size:11px}.section-title{grid-column:1/-1;margin:6px 0 0}.order-card{display:block;margin:0;padding:13px 11px;min-width:0}.product-symbol{display:none}.order-card strong{display:block;font-size:10px;line-height:1.7;min-height:35px}.order-card .row{gap:4px}.order-card .pill{font-size:9px;padding:2px 5px}.order-card small{font-size:8px;white-space:nowrap}.price{font-size:9px}.order-actions{justify-content:space-between;gap:6px;margin-top:9px}.order-actions .btn{font-size:9px}.progress-card{grid-column:1/-1;margin:0}.messenger{width:100%;min-height:520px;height:620px;max-height:none}.messenger-head{padding:17px 14px;min-height:76px}.messenger-head .row{gap:6px}.customer-composer{margin:0 12px 12px;padding:10px}.customer-messages{padding:20px 16px}.bubble{font-size:12px;padding:11px 13px}.customer-composer .small-text{font-size:9px}.message{max-width:94%}.workspace-body{display:block}.workspace-sidebar{width:100%;height:auto;position:static;display:flex;flex-direction:row;overflow:auto;gap:4px;padding:10px 12px;align-items:center;border-bottom:1px solid var(--line);border-right:0}.workspace-label,.sidebar-bottom{display:none}.side-link{width:auto;white-space:nowrap;margin:0;gap:6px;padding:9px 10px;font-size:11px}.side-link svg{width:14px}.workspace-content{padding:23px 15px}.page-heading{gap:9px;align-items:flex-start;margin-bottom:18px}.page-heading h1{font-size:22px}.page-heading p{font-size:10px;max-width:85%}.page-heading .row{font-size:10px;gap:5px}.page-heading .eyebrow{font-size:8px}.page-heading>.row{max-width:130px;justify-content:flex-end}.inbox-page .page-heading p{max-width:230px}.inbox-shell{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;overflow:hidden}.conversation-list{height:auto;max-height:290px;border:0}.list-tools{padding:12px}.list-tools .segmented{margin-bottom:10px}.list-caption{padding-bottom:10px}.conversation-row{min-height:0;padding:13px 15px}.conversation-row p{margin:7px 0}.conversation-row .avatar{width:24px;height:24px;font-size:9px}.agent-conversation{height:600px;border-top:1px solid var(--line)}.customer-context{display:block;max-height:none;border-left:0}.context-section{padding:17px 20px}.context-section h3,.context-section dd,.context-section strong{font-size:11px}.context-section>.small-text{font-size:11px}.context-section dt,.context-section small{font-size:10px}.inbox-shell .customer-context .context-section:first-child{background:#f4f8f0}.metric-card{padding:16px}.metric-card>strong{font-size:29px}.metric-card .row{font-size:10px;gap:5px}.metric-card small{font-size:9px}.metric-card svg{width:14px}.metric-grid{margin-bottom:16px}.panel{padding:17px;margin-bottom:16px}.overview-grid{gap:0}.staff-grid{grid-template-columns:1fr;gap:12px}.knowledge-layout{grid-template-columns:1fr;gap:0}.knowledge-list{display:flex;overflow:auto;gap:7px;padding:10px}.knowledge-list .panel-heading{display:none}.knowledge-row{width:170px;flex-shrink:0;padding:11px;margin:0}.knowledge-row strong{font-size:10px}.knowledge-row small{font-size:9px}.integration-grid{gap:13px}.integration-card{padding:17px}.integration-card h2{font-size:12px}.integration-card p{font-size:10px;margin-top:12px}.integration-icon{width:35px;height:35px;margin-bottom:13px}.integration-icon svg{width:20px}.table-toolbar{gap:10px}.table-toolbar .search{width:auto;flex:1;min-width:0}.table-toolbar select{font-size:10px;max-width:125px}.flow-step{min-width:85px;padding:15px 6px}.flow-step strong{font-size:10px}.flow-step small{font-size:8px}.flow-strip{gap:8px}.dialog-head{padding:18px 20px}.dialog-body{padding:20px}.toast{font-size:11px}.form-footer>.muted{width:100%}.release-actions{gap:10px}.result-summary strong{font-size:24px}.quality-card h2{font-size:14px}.fatal{margin:45px auto;padding:25px}.standalone-heading~.workspace-tabs{display:none}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+
+#dialog-body{padding:23px 25px 27px}#dialog-body p{font-size:12px;margin-bottom:16px}#dialog-body h2{font-size:17px;margin-bottom:10px}#dialog-body h3{margin:20px 0 10px}#dialog-error{margin:16px 24px 0;padding:12px 14px;background:#fff0ea;border-radius:8px;font-size:12px;color:#a5503d;line-height:1.7}.preview-block{margin-bottom:20px}.ticket-timeline{margin:18px 0}.ticket-timeline>div{padding:12px 0;border-top:1px solid var(--line)}.ticket-timeline p{font-size:12px;margin:7px 0}.ticket-timeline small{color:var(--muted)}
+@media(max-width:700px){.customer-layout>.messenger{order:1}.customer-layout>.customer-home{order:2}}
+.internal-evidence{padding:10px 12px;background:#fff8e5;border:1px solid #eee2ba;border-radius:6px;font-size:11px;color:#917c48;margin:8px 0;line-height:1.7}
+
+</style>
+  
+  
+  
+  
+  
+  
+  
+  
+</head>
+<body>
+  <div id="app"><div class="loading">正在打开青禾客服工作空间…</div></div>
+  <dialog id="dialog" aria-labelledby="dialog-title"><div class="dialog-head"><h2 id="dialog-title"></h2><button type="button" class="icon-button" data-action="close-modal" aria-label="关闭弹窗">×</button></div><div id="dialog-error" class="form-error" role="alert" hidden></div><div id="dialog-body"></div></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <noscript>请启用 JavaScript 后使用客户服务工作空间。</noscript>
+<script>
+/* Pure domain commands. Local role checks model behavior; they are NOT server authorization. */
+(function (root) {
+  'use strict';
+  const copy = x => JSON.parse(JSON.stringify(x));
+  const assert = (ok, message) => { if (!ok) throw new Error(message); };
+  const text = (v, label, max = 2000) => {
+    assert(typeof v === 'string', `请填写${label}`);
+    const s = v.trim(); assert(s.length > 0 && s.length <= max, `${label}须为 1–${max} 字`); return s;
+  };
+  const uid = (s, prefix) => `${prefix}${String(++s.sequence).padStart(5, '0')}`;
+  const get = (s, table, id) => { const x = s[table].find(v => v.id === id); assert(x, '记录不存在，请刷新后重试'); return x; };
+  const normalize = s => String(s || '').toLowerCase().replace(/[\s，,。.!！?？]/g, '');
+  const split = s => [...new Set(String(s).split(/[,，\n]/).map(x => x.trim()).filter(Boolean))];
+  const roles = {
+    customer: ['newConversation', 'say', 'requestHuman', 'cancelQueue', 'feedback', 'createTicket', 'supplement', 'closeConversation'],
+    agent: ['claimConversation', 'reply', 'note', 'completeCase', 'closeConversation', 'createTicket', 'claimTicket', 'updateTicket', 'flag', 'presence'],
+    manager: ['assignTicket', 'assignConversation', 'reviewGap', 'acceptGap', 'serviceSettings'],
+    operator: ['saveKnowledge', 'testKnowledge', 'publishKnowledge', 'disableKnowledge', 'saveFlow', 'testFlow', 'publishFlow', 'linkGap'],
+    admin: ['export']
+  };
+  function actor(s, who) {
+    assert(who && typeof who.id === 'string', '缺少操作者');
+    if (who.role === 'customer') { get(s, 'customers', who.id); return {id: who.id, role: 'customer', name: get(s, 'customers', who.id).name, teams: []}; }
+    const a = get(s, 'staff', who.id); assert(a.role === who.role, '操作者角色不匹配'); return a;
+  }
+  function owns(a, record) { assert(a.role === 'customer' && record.customerId === a.id, '无权访问这条客户记录'); }
+  const within = (a, r) => a.teams?.includes(r.teamId);
+  function agentOwns(a, r) { assert(a.role === 'agent' && r.ownerId === a.id && within(a, r), '请先领取本人有权处理的任务'); }
+  function managing(a, r) { assert(a.role === 'manager' && within(a, r), '不在授权管理范围内'); }
+  const activeTicket = (s, c) => s.tickets.find(t => t.caseId === c.id && t.status !== 'done');
+  const activeArticles = (s, now) => s.knowledge.filter(k => k.live && !k.disabled && Date.parse(k.live.effectiveAt) <= now && (!k.live.expiresAt || now < Date.parse(k.live.expiresAt)));
+  function retrieve(s, query, now = Date.now()) {
+    const q = normalize(query);
+    const candidates = activeArticles(s, now).map(k => {
+      const exact = q.includes(normalize(k.live.question));
+      const hits = k.live.keywords.filter(w => q.includes(normalize(w))).length;
+      return {k, exact, hits};
+    }).filter(x => x.exact || x.hits >= 2).sort((a, b) => Number(b.exact) - Number(a.exact) || b.hits - a.hits);
+    if (!candidates.length) return null;
+    const first = candidates[0];
+    if (candidates.some(x => x !== first && x.exact === first.exact && x.hits === first.hits && x.k.live.answer !== first.k.live.answer)) return {conflict: true};
+    return {id: first.k.id, ...copy(first.k.live)};
+  }
+  function intentions(query, config) {
+    const lower = query.toLowerCase();
+    const declined = lower.replace(/人工(?:智能|费|成本)/g, '').replace(/(?:不需要|不要|不用|不想|无需|别)(?:帮我|给我|再|先)?(?:转接|转|找|联系)?人工(?:客服)?/g, '').replace(/人工(?:客服)?(?:就|先)?(?:不用|不要|不需要)了?/g, '');
+    const human = config.humanWords.some(w => declined.includes(w.toLowerCase()));
+    const id = query.match(/\bSO[A-Z0-9]+\b/i)?.[0].toUpperCase() || '';
+    const onlyId = /^(?:订单号[是为：:]?\s*)?SO[A-Z0-9]+[。！!]?$/i.test(query.trim());
+    const policy = /(规则|条件|政策|无理由|如何退|怎么退|退货运费|了解)/.test(query) && /(退|售后)/.test(query);
+    const negatedReturn = /(不要|不想|不需要|暂不|先不).{0,6}(退货|退款|换货|申请)/.test(query);
+    const intake = !negatedReturn && (/(申请|办理).{0,6}(退货|退款|换货|售后)/.test(query) || /(想|要|需要|帮我)(退货|退款|换货)/.test(query));
+    const lookup = !/(不查|不要查)/.test(query) && (/(查|看|查询|到哪|在哪|进度).{0,8}(订单|物流|快递)/.test(query) || /(订单|物流|快递).{0,8}(到哪|在哪|进度|状态)/.test(query) || /^(订单|物流|快递)$/.test(query.trim()));
+    return {human, id, onlyId, policy, intake, lookup};
+  }
+  function classify(s, query, customerId, now = Date.now(), config = s.flow.live, options = {}) {
+    const p = intentions(query, config);
+    if (p.human) return [{kind: 'handoff', reason: '客户要求人工协助'}];
+    const orderIds = new Set((query.match(/\bSO[A-Z0-9]+\b/gi) || []).map(id => id.toUpperCase()));
+    if (orderIds.size > 1) return [{kind: 'handoff', reason: '同时涉及多个订单，需要逐项核实对应诉求'}];
+    const results = [];
+    if (p.lookup || p.onlyId) {
+      const order = p.id && s.orders.find(o => o.id === p.id && o.customerId === customerId);
+      results.push(!p.id ? {kind: 'askOrder'} : !order ? {kind: 'orderDenied'} : options.orderFailure ? {kind: 'orderFailure'} : {kind: 'order', order: copy(order)});
+    }
+    if (p.intake) results.push({kind: config.intakeEnabled ? 'intake' : 'handoff', orderId: p.id, reason: '售后申请需要人工受理'});
+    if (p.policy || !results.length) {
+      const question = p.policy ? query.split(/[，,。；;]/).find(x => /(规则|条件|政策|无理由|如何退|怎么退|退货运费)/.test(x)) || query : query;
+      const knowledge = retrieve(s, question, now);
+      results.push(knowledge?.conflict ? {kind: 'conflict'} : knowledge ? {kind: 'answer', knowledge} : {kind: 'gap'});
+    }
+    return results;
+  }
+  function event(s, a, type, target, detail, now) { s.events.push({id: uid(s, 'EV'), at: now, actorId: a.id, actor: a.name, type, target, detail}); }
+  function message(s, conv, role, body, now, extra = {}) { conv.messages.push({id: uid(s, 'MSG'), role, body, at: now, visibility: 'public', ...extra}); conv.updatedAt = now; }
+  function makeConversation(s, customerId, now) {
+    const c = {id: uid(s, 'CV'), customerId, teamId: 'service', state: 'bot', ownerId: '', ownerHistory: [], caseIds: [], messages: [], runs: [], createdAt: now, updatedAt: now, flow: copy(s.flow.live), waitingSince: null, firstHumanAt: null, pendingCaseId: '', handoffReason: ''};
+    s.conversations.unshift(c);
+    message(s, c, 'bot', '你好，我是青禾小助。订单进度、商品使用或售后问题，都可以在这里告诉我。请勿发送密码、验证码或完整银行卡信息。', now);
+    return c;
+  }
+  function makeCase(s, conv, kind, title, orderId, now) {
+    let c = kind === 'aftersales' && orderId ? s.cases.find(x => x.customerId === conv.customerId && x.kind === kind && x.orderId === orderId && (x.status !== 'completed' || x.feedback === 'pending')) : null;
+    if (!c) {
+      c = {id: uid(s, 'SC'), customerId: conv.customerId, conversationIds: [], kind, title, orderId: orderId || '', status: 'open', feedback: 'none', result: null, resultHistory: [], createdAt: now, completedAt: null, humanTouched: false};
+      s.cases.unshift(c);
+    }
+    if (!conv.caseIds.includes(c.id)) conv.caseIds.push(c.id);
+    if (!c.conversationIds.includes(conv.id)) c.conversationIds.push(conv.id);
+    return c;
+  }
+  function handoff(s, conv, reason, now) {
+    if (conv.state !== 'human' && conv.state !== 'queued') { conv.state = 'queued'; conv.ownerId = ''; conv.waitingSince = now; conv.firstHumanAt = null; }
+    conv.handoffReason = reason;
+    conv.caseIds.map(id => get(s, 'cases', id)).filter(c => c.status !== 'completed').forEach(c => c.humanTouched = true);
+    const body = s.settings.accepting ? '已转入人工接待队列。你提供的信息会一并交给客服，不需要重新描述；等待时也可以继续补充。' : '人工客服当前不在线，问题已保留在待接待列表。你可以继续补充信息，之后在这里查看回复。';
+    message(s, conv, 'system', body, now);
+  }
+  function complete(s, c, publicText, evidence, by, now) {
+    if (c.result) c.resultHistory.push(copy(c.result));
+    c.result = {publicText, evidence, by, at: now}; c.status = 'completed'; c.feedback = 'pending'; c.completedAt = now;
+  }
+  function gap(s, conv, query, category, now) {
+    const prior = s.gaps.find(g => g.conversationId === conv.id && normalize(g.query) === normalize(query) && g.status !== 'closed');
+    if (prior) return prior;
+    const g = {id: uid(s, 'GAP'), conversationId: conv.id, query, category, status: 'new', knowledgeId: '', cause: '', review: '', validation: null, createdAt: now}; s.gaps.unshift(g); return g;
+  }
+  function aftersalesCase(s, conv, pending, orderId, now) {
+    if (pending?.kind !== 'aftersales') return makeCase(s, conv, 'aftersales', '售后申请', orderId, now);
+    assert(!pending.result && !s.tickets.some(t => t.caseId === pending.id), '已有办理记录，请继续原问题');
+    const existing = orderId && s.cases.find(c => c.id !== pending.id && c.customerId === conv.customerId && c.kind === 'aftersales' && c.orderId === orderId && (c.status !== 'completed' || c.feedback === 'pending'));
+    if (!existing) { pending.orderId = orderId; return pending; }
+    // Collapse only the unfinished order-collection placeholder, retaining all conversation links.
+    for (const conversation of s.conversations) {
+      if (!conversation.caseIds.includes(pending.id)) continue;
+      conversation.caseIds = [...new Set(conversation.caseIds.map(id => id === pending.id ? existing.id : id))];
+      if (conversation.pendingCaseId === pending.id) conversation.pendingCaseId = '';
+      for (const m of conversation.messages) if (m.caseId === pending.id) m.caseId = existing.id;
+      if (!existing.conversationIds.includes(conversation.id)) existing.conversationIds.push(conversation.id);
+    }
+    s.cases = s.cases.filter(c => c.id !== pending.id);
+    return existing;
+  }
+  function run(s, conv, query, now, options = {}) {
+    const plan = intentions(query, conv.flow);
+    const pending = conv.pendingCaseId && get(s, 'cases', conv.pendingCaseId);
+    if (plan.onlyId && pending && pending.kind === 'aftersales') {
+      const c = aftersalesCase(s, conv, pending, plan.id, now); conv.pendingCaseId = '';
+      const valid = s.orders.some(o => o.id === plan.id && o.customerId === conv.customerId);
+      const existing = valid && s.tickets.find(t => t.caseId === c.id);
+      const body = existing ? `此问题已受理，工单 ${existing.id}。请继续原记录，无需重复提交。` : valid ? '订单已核对。请填写售后原因，核对后再提交申请。' : '暂时无法核对此订单，请检查订单号或联系人工客服。';
+      message(s, conv, 'bot', body, now, {caseId: c.id, intake: valid && !existing, ...(existing ? {ticketId: existing.id} : {})});
+      if (!valid) handoff(s, conv, '订单归属未通过核对', now);
+      conv.runs.push({at: now, flowVersion: conv.flow.version, query, steps: [valid ? 'intake' : 'orderDenied']});
+      return;
+    }
+    const results = classify(s, query, conv.customerId, now, conv.flow, options);
+    conv.runs.push({at: now, flowVersion: conv.flow.version, query, steps: results.map(r => r.kind)});
+    for (const r of results) {
+      if (r.kind === 'answer') {
+        const c = makeCase(s, conv, 'knowledge', query, '', now);
+        const citation = {id: r.knowledge.id, version: r.knowledge.version, title: r.knowledge.title, source: r.knowledge.source, answer: r.knowledge.answer};
+        complete(s, c, r.knowledge.answer, {kind: 'knowledge', citation}, 'bot', now);
+        message(s, conv, 'bot', r.knowledge.answer, now, {caseId: c.id, citation});
+      } else if (['order', 'askOrder', 'orderDenied', 'orderFailure'].includes(r.kind)) {
+        const c = pending?.kind === 'order' && plan.onlyId ? pending : makeCase(s, conv, 'order', '查询订单与物流', plan.id, now);
+        if (r.kind === 'order') {
+          c.orderId = r.order.id; conv.pendingCaseId = '';
+          const body = `${r.order.product}：${r.order.status}。${r.order.delivery}`;
+          complete(s, c, body, {kind: 'local-order', id: r.order.id, snapshot: copy(r.order)}, 'bot', now);
+          message(s, conv, 'bot', body, now, {caseId: c.id, orderId: r.order.id});
+        } else if (r.kind === 'askOrder') { conv.pendingCaseId = c.id; message(s, conv, 'bot', '请提供订单号，也可以从“我的订单”选择要查询的订单。', now, {caseId: c.id}); }
+        else { message(s, conv, 'bot', r.kind === 'orderDenied' ? '暂时无法核对此订单。请确认订单号及购买账户；我不会展示其他账户的订单信息。' : '订单查询暂时不可用，没有取得最新状态。我会将已有信息交给人工核实。', now, {caseId: c.id}); handoff(s, conv, r.kind === 'orderDenied' ? '订单归属未通过核对' : '订单查询失败', now); }
+      } else if (r.kind === 'intake') {
+        const c = aftersalesCase(s, conv, pending, r.orderId, now);
+        if (r.orderId) conv.pendingCaseId = '';
+        const existing = s.tickets.find(t => t.caseId === c.id);
+        if (existing) message(s, conv, 'bot', `此问题已受理，工单 ${existing.id}。可以继续在原记录查看进度或补充信息，无需重复提交。`, now, {caseId: c.id, ticketId: existing.id});
+        else if (!r.orderId) { conv.pendingCaseId = c.id; message(s, conv, 'bot', '请提供要申请售后的订单号。确认订单后，我会请你补充原因并核对申请。', now, {caseId: c.id}); }
+        else if (!s.orders.some(o => o.id === r.orderId && o.customerId === conv.customerId)) { message(s, conv, 'bot', '暂时无法核对此订单，请检查订单号或联系人工客服。', now); handoff(s, conv, '售后订单需要人工核实', now); }
+        else message(s, conv, 'bot', '可以为这笔订单登记售后。请填写原因并核对申请，提交后由客服继续核实；受理不代表退款完成。', now, {caseId: c.id, intake: true});
+      } else {
+        makeCase(s, conv, 'support', query, '', now);
+        if (r.kind === 'gap' || r.kind === 'conflict') gap(s, conv, query, r.kind === 'gap' ? '知识缺口' : '知识冲突', now);
+        if (r.kind !== 'handoff') message(s, conv, 'bot', r.kind === 'conflict' ? '查到的说明存在冲突，暂时不能给你确定答复。我会请人工核实。' : '目前没有找到可靠的答复依据。我会将这个问题交给人工核实。', now);
+        handoff(s, conv, r.reason || (r.kind === 'conflict' ? '知识来源冲突' : '没有命中已发布知识'), now);
+      }
+    }
+  }
+  function validateArticle(a) {
+    assert(a, '没有待验证的知识草稿');
+    for (const key of ['title', 'question', 'answer', 'source', 'positive', 'negative']) text(a[key], key === 'source' ? '知识来源' : '知识必填项', key === 'answer' ? 4000 : 2000);
+    assert(a.keywords.length >= 2 && a.keywords.length <= 20 && a.keywords.every(w => w.length <= 60), '请填写 2–20 个关键词，每个不超过 60 字');
+    assert(Number.isFinite(Date.parse(a.effectiveAt)), '生效日期无效');
+    assert(!a.expiresAt || Date.parse(a.expiresAt) > Date.parse(a.effectiveAt), '失效日期必须晚于生效日期');
+    assert(normalize(a.positive) !== normalize(a.negative), '正例与反例不能相同');
+  }
+  function validateFlow(f) {
+    assert(f, '没有待验证的策略草稿');
+    assert(Array.isArray(f.humanWords) && f.humanWords.length > 0 && f.humanWords.every(w => w.length > 0 && w.length <= 30), '人工触发词不能为空，单词不超过 30 字');
+    assert(f.humanWords.includes('人工'), '必须保留客户明确要求人工的路由');
+    assert(typeof f.intakeEnabled === 'boolean', '售后受理配置无效');
+  }
+  function fingerprint(s) { return JSON.stringify({knowledge: s.knowledge.map(k => ({id: k.id, live: k.live, disabled: k.disabled})), flow: s.flow.live}); }
+  function candidate(s, id, mode) {
+    const x = copy(s);
+    if (mode === 'knowledge') { const k = get(x, 'knowledge', id); assert(k.draft, '没有待验证的草稿'); k.live = {...copy(k.draft), version: (k.live?.version || 0) + 1}; k.disabled = false; }
+    else { assert(x.flow.draft, '没有流程草稿'); x.flow.live = {...copy(x.flow.draft), version: x.flow.live.version + 1}; }
+    return x;
+  }
+  function regression(s, now, articleId) {
+    const cases = [
+      {name: '明确转人工', query: '我要转人工', expected: 'handoff'},
+      {name: '拒绝转人工不应升级', query: '不要转人工，我只问退货规则', absent: 'handoff'},
+      {name: '本人订单查询', query: '查物流 SO20260926001', expected: 'order'},
+      {name: '其他客户订单不可读', query: '查物流 SO20260926009', expected: 'orderDenied'},
+      {name: '查询失败不能宣称成功', query: '查物流 SO20260926001', expected: 'orderFailure', fault: true},
+      {name: '多诉求分别处理', query: '查物流 SO20260926001，再申请退货', expected: s.flow.live.intakeEnabled ? 'intake' : 'handoff', also: 'order'}
+    ];
+    const rows = cases.map(c => { const rs = classify(s, c.query, 'C001', now, s.flow.live, {orderFailure: c.fault}); const kinds = rs.map(r => r.kind); return {name: c.name, query: c.query, actual: kinds.join(' → '), pass: c.absent ? !kinds.includes(c.absent) : kinds.includes(c.expected) && (!c.also || kinds.includes(c.also))}; });
+    for (const k of activeArticles(s, now)) {
+      const positive = classify(s, k.live.positive, 'C001', now).find(r => r.knowledge?.id === k.id);
+      const negative = classify(s, k.live.negative, 'C001', now).find(r => r.knowledge?.id === k.id);
+      rows.push({name: `${k.id} 正例`, query: k.live.positive, actual: positive ? k.id : '未命中预期知识', pass: Boolean(positive)});
+      rows.push({name: `${k.id} 反例`, query: k.live.negative, actual: negative ? '错误命中' : '未误命中', pass: !negative});
+    }
+    if (articleId) rows.push({name: '待发布知识生效区间', query: articleId, actual: activeArticles(s, now).some(k => k.id === articleId) ? '可用' : '尚未生效或已过期', pass: activeArticles(s, now).some(k => k.id === articleId)});
+    return {at: now, fingerprint: fingerprint(s), rows, passed: rows.every(r => r.pass)};
+  }
+  function execute(state, identity, type, data = {}, now = Date.now()) {
+    const s = copy(state), a = actor(s, identity);
+    assert(roles[a.role]?.includes(type), '当前角色无权执行此操作');
+    let value;
+    switch (type) {
+      case 'newConversation': {
+        const c = makeConversation(s, a.id, now);
+        if (data.caseId) { const issue = get(s, 'cases', data.caseId); owns(a, issue); c.caseIds.push(issue.id); issue.conversationIds.push(c.id); if (issue.status !== 'completed' || s.tickets.some(t => t.caseId === issue.id)) handoff(s, c, '继续跟进已有问题', now); }
+        value = c.id; break;
+      }
+      case 'say': {
+        const c = get(s, 'conversations', data.id); owns(a, c); const body = text(data.body, '问题');
+        if (c.state === 'closed') { c.state = c.ownerHistory.length || c.caseIds.some(id => activeTicket(s, get(s, 'cases', id))) ? 'queued' : 'bot'; if (c.state === 'queued') {c.waitingSince = now; c.firstHumanAt = null;} }
+        message(s, c, 'customer', body, now);
+        if (c.state === 'bot') run(s, c, body, now);
+        else if (!c.caseIds.some(id => get(s, 'cases', id).status !== 'completed')) {
+          const issue = makeCase(s, c, 'support', body, '', now);
+          issue.humanTouched = true;
+          c.messages.at(-1).caseId = issue.id;
+        }
+        value = c.id; break;
+      }
+      case 'requestHuman': {
+        const c = get(s, 'conversations', data.id); owns(a, c); assert(['bot', 'closed'].includes(c.state), '已经在人工接待流程中');
+        if (!c.caseIds.some(id => get(s, 'cases', id).status !== 'completed')) makeCase(s, c, 'support', '人工协助', '', now);
+        handoff(s, c, '客户主动要求人工协助', now); break;
+      }
+      case 'cancelQueue': { const c = get(s, 'conversations', data.id); owns(a, c); assert(c.state === 'queued', '当前不可取消排队'); c.state = 'bot'; c.ownerId = ''; message(s, c, 'system', '已取消当前排队。已有工单及未完成问题仍保留。', now); break; }
+      case 'claimConversation': {
+        const c = get(s, 'conversations', data.id); assert(c.state === 'queued' && !c.ownerId && within(a, c), '会话不在可领取队列中');
+        assert(a.available && s.settings.accepting, '当前未开放接待，请先调整接待状态');
+        assert(s.conversations.filter(x => x.state === 'human' && x.ownerId === a.id).length < s.settings.capacity, '已达到个人接待容量');
+        c.state = 'human'; c.ownerId = a.id; if (!c.ownerHistory.includes(a.id)) c.ownerHistory.push(a.id);
+        message(s, c, 'system', `${a.name}已接入，接下来由人工为你服务。`, now);
+        c.caseIds.map(id => get(s, 'cases', id)).filter(x => x.status !== 'completed').forEach(x => x.humanTouched = true); break;
+      }
+      case 'reply': case 'note': {
+        const c = get(s, 'conversations', data.id); agentOwns(a, c); assert(c.state === 'human', '会话不在人工接待状态');
+        message(s, c, 'agent', text(data.body, type === 'note' ? '内部备注' : '回复'), now, {author: a.name, visibility: type === 'note' ? 'internal' : 'public'});
+        if (type === 'reply') c.firstHumanAt ||= now; break;
+      }
+      case 'completeCase': {
+        const c = get(s, 'cases', data.id), conv = get(s, 'conversations', data.conversationId); agentOwns(a, conv);
+        assert(conv.state === 'human' && conv.caseIds.includes(c.id), '问题不属于当前接待');
+        assert(!s.tickets.some(t => t.caseId === c.id), '已有办理工单，请从工单提交结果，不能绕过工单');
+        assert(c.status !== 'completed', '此问题已记录处理结果');
+        const conclusion = text(data.conclusion, '处理结论'), evidence = text(data.evidence, '核对依据');
+        complete(s, c, conclusion, {kind: 'agent-record', text: evidence, actor: a.name}, a.id, now); c.humanTouched = true;
+        for (const id of c.conversationIds) { const v = get(s, 'conversations', id); if (v.pendingCaseId === c.id) v.pendingCaseId = ''; }
+        message(s, conv, 'agent', conclusion, now, {author: a.name, caseId: c.id}); conv.firstHumanAt ||= now; break;
+      }
+      case 'closeConversation': {
+        const c = get(s, 'conversations', data.id);
+        if (a.role === 'customer') owns(a, c);
+        else { agentOwns(a, c); assert(c.state === 'human', '请先接管会话'); assert(c.caseIds.every(id => get(s, 'cases', id).status === 'completed' || activeTicket(s, get(s, 'cases', id))), '仍有未完成且无人跟进的问题，请记录结论或建立工单'); }
+        assert(c.state !== 'closed', '会话已经结束'); c.state = 'closed'; c.ownerId = '';
+        message(s, c, 'system', '本次沟通已结束。未完成的办理记录会继续保留，你也可以在这里再次联系。', now); break;
+      }
+      case 'feedback': {
+        const c = get(s, 'cases', data.id); owns(a, c); assert(c.status === 'completed', '尚未形成可确认的处理结果');
+        if (data.confirmed === true) { c.feedback = 'confirmed'; c.confirmedAt = now; }
+        else {
+          const reason = text(data.reason, '未解决原因'); c.feedback = 'disputed'; c.status = 'open'; c.completedAt = null;
+          const t = s.tickets.find(t => t.caseId === c.id && t.status === 'done');
+          if (t) { t.status = t.ownerId ? 'working' : 'new'; t.dueAt = now + s.settings.ticketHours * 3600000; t.history.push({at: now, publicText: `客户反馈仍需处理：${reason}`, actor: a.name}); }
+          let conv = c.conversationIds.map(id => get(s, 'conversations', id)).find(v => v.state !== 'closed');
+          if (!conv) { conv = makeConversation(s, a.id, now); conv.caseIds.push(c.id); c.conversationIds.push(conv.id); }
+          message(s, conv, 'customer', `这个问题还没有解决：${reason}`, now, {caseId: c.id}); handoff(s, conv, '客户对处理结果提出异议', now);
+          value = conv.id;
+        }
+        break;
+      }
+      case 'createTicket': {
+        const title = text(data.title, '工单标题', 100), description = text(data.description, '问题描述');
+        assert(data.confirmed === true, '请核对申请后再确认受理');
+        let c = data.caseId && get(s, 'cases', data.caseId);
+        if (a.role === 'customer') { assert(c, '请选择要办理的问题'); owns(a, c); assert(c.kind === 'aftersales', '该问题请由客服协助受理'); assert(s.orders.some(o => o.id === c.orderId && o.customerId === a.id), '订单归属尚未核对'); }
+        else if (c) { const conv = get(s, 'conversations', data.conversationId); agentOwns(a, conv); assert(conv.state === 'human' && conv.caseIds.includes(c.id), '无法从这段会话受理此问题'); }
+        else { get(s, 'customers', data.customerId); c = {id: uid(s, 'SC'), customerId: data.customerId, conversationIds: [], kind: 'support', title, orderId: '', status: 'open', feedback: 'none', result: null, resultHistory: [], createdAt: now, completedAt: null, humanTouched: true}; s.cases.unshift(c); }
+        assert(c.status !== 'completed', '问题已完成；需要继续处理时请先反馈未解决');
+        for (const id of c.conversationIds) { const v = get(s, 'conversations', id); if (v.pendingCaseId === c.id) v.pendingCaseId = ''; }
+        const fp = JSON.stringify({caseId: c.id, title, description});
+        const byKey = data.requestKey && s.tickets.find(t => t.requestKey === data.requestKey);
+        if (byKey) { assert(byKey.requestFingerprint === fp, '提交标识被用于不同内容，请重新核对'); value = {id: byKey.id, created: false}; break; }
+        const existing = activeTicket(s, c);
+        if (existing) { value = {id: existing.id, created: false}; break; }
+        assert(c.kind !== 'aftersales' || !s.tickets.some(t => t.customerId === c.customerId && t.orderId === c.orderId && t.status !== 'done' && get(s, 'cases', t.caseId).kind === 'aftersales'), '同一订单已有办理中的售后，请继续原工单');
+        const t = {id: uid(s, 'TK'), customerId: c.customerId, teamId: 'service', caseId: c.id, title, description, orderId: c.orderId, status: 'new', priority: 'normal', ownerId: '', createdAt: now, dueAt: now + s.settings.ticketHours * 3600000, requestKey: data.requestKey || '', requestFingerprint: fp, history: [{at: now, publicText: '申请已受理，等待客服核实。', actor: a.name}]};
+        s.tickets.unshift(t); c.humanTouched = true; c.status = 'open';
+        for (const id of c.conversationIds) message(s, get(s, 'conversations', id), 'system', `已受理工单 ${t.id}：${title}。请在“服务进度”查看后续处理。`, now, {ticketId: t.id});
+        value = {id: t.id, created: true}; break;
+      }
+      case 'claimTicket': { const t = get(s, 'tickets', data.id); assert(within(a, t) && !t.ownerId && t.status === 'new', '工单已被领取或不在可领取范围'); t.ownerId = a.id; t.status = 'working'; t.history.push({at: now, publicText: '客服已开始核实处理。', actor: a.name}); break; }
+      case 'updateTicket': {
+        const t = get(s, 'tickets', data.id); agentOwns(a, t);
+        assert(['working', 'waiting_customer'].includes(t.status), '工单当前不可修改');
+        assert(['working', 'waiting_customer', 'done'].includes(data.status), '工单状态无效');
+        const publicText = text(data.publicText, '客户可见说明');
+        const evidence = data.status === 'done' ? text(data.evidence, '结果核对依据') : String(data.evidence || '').trim();
+        assert(evidence.length <= 2000 && String(data.internalText || '').length <= 2000, '核对依据或内部备注不能超过 2000 字');
+        t.status = data.status; t.history.push({at: now, publicText, evidence, internalText: String(data.internalText || '').trim(), actor: a.name});
+        const c = get(s, 'cases', t.caseId);
+        if (t.status === 'done') complete(s, c, publicText, {kind: 'ticket-record', ticketId: t.id, text: evidence, actor: a.name}, a.id, now);
+        else c.status = t.status === 'waiting_customer' ? 'waiting_customer' : 'open';
+        for (const id of c.conversationIds) message(s, get(s, 'conversations', id), 'system', `${t.id}：${publicText}`, now, {ticketId: t.id}); break;
+      }
+      case 'supplement': {
+        const t = get(s, 'tickets', data.id); owns(a, t); assert(t.status !== 'done', '已有处理结果；如有异议，请使用“仍需帮助”');
+        t.history.push({at: now, publicText: `客户补充：${text(data.body, '补充信息')}`, actor: a.name});
+        if (t.status === 'waiting_customer') t.status = t.ownerId ? 'working' : 'new'; get(s, 'cases', t.caseId).status = 'open'; break;
+      }
+      case 'assignTicket': case 'assignConversation': {
+        const r = get(s, type === 'assignTicket' ? 'tickets' : 'conversations', data.id); managing(a, r);
+        const next = get(s, 'staff', data.ownerId); assert(next.role === 'agent' && within(next, r), '请选择该服务组的客服');
+        if (type === 'assignTicket') { assert(r.status !== 'done', '已完成工单不再转派'); r.ownerId = next.id; if (r.status === 'new') r.status = 'working'; r.history.push({at: now, publicText: '已安排客服继续处理。', actor: a.name, internalText: `转派给${next.name}`}); }
+        else { assert(['queued', 'human'].includes(r.state), '仅能分配待接待或接待中的会话'); assert(next.available && s.conversations.filter(v => v.state === 'human' && v.ownerId === next.id && v.id !== r.id).length < s.settings.capacity, '目标客服不可接待或已满载'); r.ownerId = next.id; r.state = 'human'; if (!r.ownerHistory.includes(next.id)) r.ownerHistory.push(next.id); message(s, r, 'system', `${next.name}将继续为你服务，已有信息会保留。`, now); } break;
+      }
+      case 'presence': get(s, 'staff', a.id).available = Boolean(data.available); break;
+      case 'serviceSettings': {
+        const cap = Number(data.capacity), mins = Number(data.responseMinutes), hours = Number(data.ticketHours);
+        assert(Number.isInteger(cap) && cap >= 1 && cap <= 20, '个人接待容量应为 1–20'); assert(Number.isFinite(mins) && mins >= 1 && mins <= 120, '首响目标应为 1–120 分钟'); assert(Number.isFinite(hours) && hours >= 1 && hours <= 168, '工单目标应为 1–168 小时');
+        s.settings = {capacity: cap, responseMinutes: mins, ticketHours: hours, accepting: data.accepting === true}; break;
+      }
+      case 'flag': { const c = get(s, 'conversations', data.id); agentOwns(a, c); const q = [...c.messages].reverse().find(m => m.role === 'customer'); assert(q, '尚无客户提问'); gap(s, c, q.body, '答复疑义', now); break; }
+      case 'saveKnowledge': {
+        const draft = {title: text(data.title, '标题', 120), question: text(data.question, '标准问题', 300), keywords: split(data.keywords), answer: text(data.answer, '答复内容', 4000), source: text(data.source, '来源', 300), effectiveAt: data.effectiveAt, expiresAt: data.expiresAt || '', positive: text(data.positive, '正例问题', 300), negative: text(data.negative, '反例问题', 300)};
+        validateArticle(draft); let k = data.id && get(s, 'knowledge', data.id);
+        if (!k) { k = {id: uid(s, 'KB'), live: null, versions: [], disabled: false}; s.knowledge.push(k); }
+        k.draft = draft; k.validation = null; value = k.id; break;
+      }
+      case 'testKnowledge': { const k = get(s, 'knowledge', data.id); validateArticle(k.draft); k.validation = regression(candidate(s, k.id, 'knowledge'), now, k.id); value = copy(k.validation); break; }
+      case 'publishKnowledge': {
+        const k = get(s, 'knowledge', data.id); const fresh = regression(candidate(s, k.id, 'knowledge'), now, k.id);
+        assert(k.validation?.passed && k.validation.fingerprint === fresh.fingerprint && fresh.passed, '草稿或依赖已变化，或知识已失效；请重新测试且全部通过后发布');
+        if (k.live) k.versions.push(copy(k.live)); k.live = {...copy(k.draft), version: (k.live?.version || 0) + 1, publishedAt: now}; k.draft = null; k.disabled = false; k.validation = null; break;
+      }
+      case 'disableKnowledge': { const k = get(s, 'knowledge', data.id); assert(k.live && !k.disabled, '知识未在使用中'); k.disabled = true; k.disabledReason = text(data.reason, '停用原因', 300); break; }
+      case 'saveFlow': { const f = {humanWords: split(data.humanWords), intakeEnabled: data.intakeEnabled === true}; validateFlow(f); s.flow.draft = f; s.flow.validation = null; break; }
+      case 'testFlow': { validateFlow(s.flow.draft); s.flow.validation = regression(candidate(s, '', 'flow'), now); value = copy(s.flow.validation); break; }
+      case 'publishFlow': {
+        const fresh = regression(candidate(s, '', 'flow'), now); assert(s.flow.validation?.passed && s.flow.validation.fingerprint === fresh.fingerprint && fresh.passed, '流程或知识已变化，请重新运行测试后发布');
+        s.flow.versions.push(copy(s.flow.live)); s.flow.live = {...copy(s.flow.draft), version: s.flow.live.version + 1}; s.flow.draft = null; s.flow.validation = null; break;
+      }
+      case 'reviewGap': {
+        const g = get(s, 'gaps', data.id); managing(a, get(s, 'conversations', g.conversationId)); assert(g.status !== 'closed', '已验收记录不可改判');
+        assert(['confirmed', 'dismissed'].includes(data.status), '复核结论无效'); g.review = text(data.review, '复核依据'); g.status = data.status;
+        if (g.status === 'confirmed') g.cause = text(data.cause, '根因说明'); break;
+      }
+      case 'linkGap': { const g = get(s, 'gaps', data.id); assert(['confirmed', 'fixing'].includes(g.status), '请先由经理确认问题'); get(s, 'knowledge', data.knowledgeId); g.knowledgeId = data.knowledgeId; g.status = 'fixing'; g.validation = null; break; }
+      case 'acceptGap': {
+        const g = get(s, 'gaps', data.id); managing(a, get(s, 'conversations', g.conversationId)); assert(g.status === 'fixing', '尚未关联整改措施');
+        const k = get(s, 'knowledge', g.knowledgeId); assert(k.live && !k.draft && !k.disabled, '整改知识尚未发布，或还有待发布草稿');
+        const rs = classify(s, g.query, get(s, 'conversations', g.conversationId).customerId, now);
+        assert(rs.some(r => r.knowledge?.id === k.id), '原始问题未命中关联知识，不能验收');
+        const all = regression(s, now); assert(all.passed, '全量回归未通过，不能验收');
+        g.acceptance = text(data.acceptance, '验收说明'); g.validation = {at: now, fingerprint: fingerprint(s), version: k.live.version, rows: all.rows}; g.status = 'closed'; break;
+      }
+      case 'export': value = copy(s); break;
+      default: throw new Error('未知操作');
+    }
+    if (type !== 'export') { s.revision++; event(s, a, type, data.id || value?.id || (typeof value === 'string' ? value : ''), '操作已记录', now); }
+    return {state: s, value};
+  }
+  function customerView(s, customerId) {
+    get(s, 'customers', customerId);
+    return {
+      customer: copy(get(s, 'customers', customerId)),
+      orders: copy(s.orders.filter(o => o.customerId === customerId)),
+      conversations: s.conversations.filter(c => c.customerId === customerId).map(c => ({id: c.id, customerId: c.customerId, state: c.state, caseIds: [...c.caseIds], createdAt: c.createdAt, updatedAt: c.updatedAt, messages: copy(c.messages.filter(m => m.visibility === 'public'))})),
+      cases: s.cases.filter(c => c.customerId === customerId).map(c => ({id: c.id, kind: c.kind, title: c.title, orderId: c.orderId, status: c.status, feedback: c.feedback, conversationIds: [...c.conversationIds], createdAt: c.createdAt, result: c.result ? {publicText: c.result.publicText, at: c.result.at} : null})),
+      tickets: s.tickets.filter(t => t.customerId === customerId).map(t => ({id: t.id, caseId: t.caseId, title: t.title, description: t.description, orderId: t.orderId, status: t.status, createdAt: t.createdAt, history: t.history.map(h => ({at: h.at, publicText: h.publicText, actor: h.actor}))}))
+    };
+  }
+  function deskView(s, identity) {
+    const a = actor(s, identity); assert(a.role === 'agent', '无权打开客服工作台');
+    const conversations = s.conversations.filter(c => within(a, c) && ((c.state === 'queued' && !c.ownerId) || c.ownerId === a.id || (c.state === 'closed' && c.ownerHistory.includes(a.id))));
+    const tickets = s.tickets.filter(t => within(a, t) && (t.ownerId === a.id || (!t.ownerId && t.status === 'new')));
+    const relatedTickets = s.tickets.filter(t => within(a,t) && !tickets.some(x=>x.id===t.id) && conversations.some(c=>c.caseIds.includes(t.caseId)));
+    const visibleCustomers = new Set([...conversations, ...tickets].map(x => x.customerId));
+    return copy({conversations, tickets, relatedTickets, customers: s.customers.filter(c => visibleCustomers.has(c.id)), orders: s.orders.filter(o => visibleCustomers.has(o.customerId)), cases: s.cases.filter(c => conversations.some(x => x.caseIds.includes(c.id)) || tickets.some(t => t.caseId === c.id))});
+  }
+  function metrics(s, now = Date.now()) {
+    const completed = s.cases.filter(c => c.status === 'completed');
+    const confirmed = completed.filter(c => c.feedback === 'confirmed');
+    return {conversations: s.conversations.length, cases: s.cases.length, completed: completed.length, confirmed: confirmed.length, botConfirmed: confirmed.filter(c => !c.humanTouched).length, waiting: s.conversations.filter(c => c.state === 'queued').length, activeTickets: s.tickets.filter(t => t.status !== 'done').length, overdue: s.tickets.filter(t => t.status !== 'done' && t.dueAt < now).length, gaps: s.gaps.filter(g => !['closed', 'dismissed'].includes(g.status)).length};
+  }
+  const api = {copy, get, split, roles, actor, retrieve, intentions, classify, execute, customerView, deskView, metrics, regression, fingerprint, activeArticles};
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.SupportDomain = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* Fictional store data. No external order or payment system is connected. */
+(function (root) {
+  'use strict';
+  const D = typeof module !== 'undefined' && module.exports ? require('./domain.js') : root.SupportDomain;
+  function create(now = Date.now(), populated = true) {
+    let s = {
+      schema: 4, revision: 0, sequence: 100, createdAt: now,
+      customers: [{id:'C001',name:'林小夏',email:'xiaoxia@example.test',level:'青禾会员'}, {id:'C002',name:'陈一诺',email:'yinuo@example.test',level:'青禾会员'}, {id:'C003',name:'周安',email:'zhouan@example.test',level:'普通客户'}],
+      staff: [
+        {id:'lin',name:'客服小林',role:'agent',teams:['service'],available:true},
+        {id:'zhou',name:'客服小周',role:'agent',teams:['service'],available:true},
+        {id:'manager',name:'服务经理',role:'manager',teams:['service']},
+        {id:'operator',name:'知识运营',role:'operator',teams:['service']},
+        {id:'admin',name:'系统管理员',role:'admin',teams:[]}
+      ],
+      orders: [
+        {id:'SO20260926001',customerId:'C001',product:'原木便携保温杯 · 雾白',price:129,status:'运输中',delivery:'包裹已到达配送站，配送进度以承运方更新为准。',symbol:'◒'},
+        {id:'SO20260926002',customerId:'C001',product:'棉麻收纳袋 · 自然色',price:49,status:'待发货',delivery:'仓库正在备货，发出后更新物流。',symbol:'▧'},
+        {id:'SO20260926009',customerId:'C002',product:'桌面收纳盒 · 木色',price:89,status:'已签收',delivery:'订单已签收。',symbol:'▤'}
+      ],
+      settings:{capacity:3,responseMinutes:5,ticketHours:24,accepting:true},
+      flow:{live:{version:1,humanWords:['人工','投诉'],intakeEnabled:true},draft:null,versions:[],validation:null},
+      conversations:[],cases:[],tickets:[],gaps:[],events:[],knowledge:[]
+    };
+    const articles = [
+      ['KB001','退货与售后政策','七天无理由退货有什么条件？','退货,规则,条件,无理由,政策,七天','签收后七天内，商品未使用且包装、配件完整，可登记退货申请；定制商品不适用。具体资格由客服结合订单核实，提交申请不代表退款完成。','青禾生活 / 售后服务政策','退货规则是什么？','我要查订单'],
+      ['KB002','保温杯清洁与保养','保温杯怎么清洗？','保温杯,清洗,保养,材质','建议使用软布和中性清洁剂清洗。首次使用前充分清洁，避免使用钢丝球；请勿放入微波炉加热。','青禾生活 / 商品使用说明','保温杯怎么清洗？','保温杯可以开电子发票吗？'],
+      ['KB003','人工服务时间','服务时间是几点？','服务时间,几点,营业时间','人工服务时间为每天 09:00–21:00，实际接待以当前在线状态为准。非服务时段也可以提交问题，之后在咨询窗口查看回复。','青禾生活 / 服务说明','服务时间是几点？','人工智能是什么？']
+    ];
+    s.knowledge = articles.map(([id,title,question,keywords,answer,source,positive,negative]) => ({id,live:{version:1,title,question,keywords:keywords.split(','),answer,source,positive,negative,effectiveAt:new Date(now-86400000*365).toISOString(),expiresAt:'',publishedAt:now-86400000},draft:null,versions:[],disabled:false,validation:null}));
+    if (!populated) return s;
+    const doIt = (id,role,type,data,offset) => { const r=D.execute(s,{id,role},type,data,now+offset);s=r.state;return r.value; };
+    let c=doIt('C002','customer','newConversation',{},-5400000);
+    doIt('C002','customer','say',{id:c,body:'七天无理由退货有什么条件？'},-5390000);
+    doIt('C002','customer','feedback',{id:s.conversations[0].caseIds[0],confirmed:true},-5370000);
+    doIt('C002','customer','closeConversation',{id:c},-5360000);
+    c=doIt('C003','customer','newConversation',{},-1800000);
+    doIt('C003','customer','say',{id:c,body:'礼品卡可以分多次使用吗？'},-1790000);
+    c=doIt('C001','customer','newConversation',{},-900000);
+    doIt('C001','customer','say',{id:c,body:'申请退货 SO20260926001'},-890000);
+    const caseId=s.conversations[0].caseIds[0];
+    doIt('C001','customer','createTicket',{caseId,title:'保温杯包装破损核实',description:'收到包裹时外盒有挤压，希望客服核实后告知处理方式。',confirmed:true,requestKey:'initial-request'},-880000);
+    doIt('lin','agent','claimTicket',{id:s.tickets[0].id},-800000);
+    doIt('lin','agent','updateTicket',{id:s.tickets[0].id,status:'waiting_customer',publicText:'请补充商品是否受损、是否影响使用，以便核实后续处理方式。',internalText:'先核对商品本体，暂不承诺退款。'},-790000);
+    c=doIt('C001','customer','newConversation',{},-120000);
+    // The newest customer conversation intentionally starts with a normal greeting.
+    return s;
+  }
+  if(typeof module!=='undefined'&&module.exports)module.exports={create};else root.SupportSeed={create};
+})(typeof window!=='undefined'?window:globalThis);
+
+</script>
+<script>
+/* Persist before announcing success. Old v3 data is never overwritten or auto-imported. */
+(function(root){
+  'use strict';
+  const D=typeof module!=='undefined'&&module.exports?require('./domain.js'):root.SupportDomain;
+  const KEY='qinghe-support-v4';
+  function valid(s){
+    if(!s||s.schema!==4||!Number.isInteger(s.revision)||!Number.isInteger(s.sequence))return false;
+    const tables=['customers','staff','orders','knowledge','conversations','cases','tickets','gaps','events'];
+    if(!tables.every(k=>Array.isArray(s[k])&&s[k].every(x=>x&&typeof x.id==='string')&&new Set(s[k].map(x=>x.id)).size===s[k].length))return false;
+    if(!s.flow?.live||!Array.isArray(s.flow.live.humanWords)||!Array.isArray(s.flow.versions)||typeof s.flow.live.intakeEnabled!=='boolean'||!s.settings||!Number.isInteger(s.settings.capacity))return false;
+    const has=(table,id)=>s[table].some(x=>x.id===id),a=Array.isArray;
+    return s.staff.every(x=>a(x.teams)&&D.roles[x.role])&&s.customers.every(x=>typeof x.name==='string')&&
+      s.orders.every(x=>has('customers',x.customerId)&&typeof x.price==='number')&&
+      s.knowledge.every(k=>a(k.versions)&&(k.live||k.draft)&&(!k.live||a(k.live.keywords)))&&
+      s.conversations.every(c=>has('customers',c.customerId)&&a(c.messages)&&a(c.runs)&&a(c.ownerHistory)&&a(c.caseIds)&&c.caseIds.every(id=>has('cases',id))&&(!c.pendingCaseId||(c.caseIds.includes(c.pendingCaseId)&&s.cases.some(x=>x.id===c.pendingCaseId&&x.customerId===c.customerId&&x.conversationIds?.includes(c.id))))&&a(c.flow?.humanWords)&&['bot','queued','human','closed'].includes(c.state)&&c.messages.every(m=>typeof m.body==='string'))&&
+      s.cases.every(c=>has('customers',c.customerId)&&a(c.resultHistory)&&a(c.conversationIds)&&c.conversationIds.every(id=>has('conversations',id))&&['open','waiting_customer','completed'].includes(c.status))&&
+      s.tickets.every(t=>has('cases',t.caseId)&&has('customers',t.customerId)&&a(t.history)&&['new','working','waiting_customer','done'].includes(t.status))&&
+      s.gaps.every(g=>has('conversations',g.conversationId));
+  }
+  function open(storage,seed){
+    let current, original=null, blocked='';
+    try{original=storage.getItem(KEY);current=original?JSON.parse(original):seed();if(!valid(current))throw new Error('数据结构不兼容');}
+    catch(err){blocked=`无法读取工作空间：${err.message}。原始数据未被覆盖。`;current=null;}
+    return {
+      get state(){return current;},get blocked(){return blocked;},get original(){return original;},
+      dispatch(identity,type,data){
+        if(blocked)throw new Error(blocked);
+        const raw=storage.getItem(KEY);
+        // Detect a changed tab before writing; not an atomic multi-user lock.
+        if(raw!==original){throw new Error('工作空间已在其他页面更新。请刷新后重试，当前输入仍保留。');}
+        const result=D.execute(current,identity,type,data);
+        if(type!=='export'){
+          const encoded=JSON.stringify(result.state);
+          storage.setItem(KEY,encoded); // A quota/permission failure leaves memory unchanged.
+          current=result.state;original=encoded;
+        }
+        return result.value;
+      }
+    };
+  }
+  const api={KEY,valid,open};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SupportStore=api;
+})(typeof window!=='undefined'?window:globalThis);
+
+</script>
+<script>
+(function(root){
+  'use strict';
+  const e=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const icons={chat:'M4 4h16v12H9l-5 4V4Z',inbox:'M4 4h16v16H4V4Zm0 10h5l2 3h2l2-3h5',ticket:'M3 6h18v4a2 2 0 0 0 0 4v4H3v-4a2 2 0 0 0 0-4V6Zm12 0v12',book:'M12 5v15M12 5C8 2 4 3 2 4v15c4-2 7-1 10 1 3-2 6-3 10-1V4c-4-2-7-1-10 1Z',chart:'M4 20V4m0 16h17M8 16v-5m5 5V7m5 9V3',shield:'M12 2 3 6v6c0 5 9 10 9 10s9-5 9-10V6L12 2Zm-5 9 3 3 7-7',flow:'M4 3h6v6H4V3Zm10 12h6v6h-6v-6ZM7 9v9h7m3-9V6h-7',settings:'M3 6h18M3 12h18M3 18h18M8 3v6m8 0v6M7 15v6',plug:'M8 2v6m8-6v6M5 8h14v4a7 7 0 0 1-14 0V8Zm7 11v3',arrow:'m9 5 7 7-7 7',check:'m4 12 5 5L20 6',plus:'M12 4v16M4 12h16',search:'M21 21l-6-6M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z',users:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m20 0v-2a4 4 0 0 0-3-3.8M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm8 0a4 4 0 0 1 0 8',clock:'M12 8v5l3 2M22 12A10 10 0 1 1 2 12a10 10 0 0 1 20 0Z',send:'m3 3 19 9-19 9 4-9-4-9Zm4 9h15',close:'m6 6 12 12M6 18 18 6',bolt:'m13 2-9 12h7l-1 8 10-13h-7l1-7Z',external:'M14 3h7v7m0-7-11 11M10 3H3v18h18v-7'};
+  const icon=(name,size=18)=>`<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${icons[name]||icons.chat}"/></svg>`;
+  const b=(label,action,id='',cls='',extra='')=>`<button type="button" class="btn ${cls}" data-action="${action}" data-id="${e(id)}" ${extra}>${label}</button>`;
+  const labels={bot:'智能接待',queued:'待人工接待',human:'人工接待中',closed:'沟通已结束',new:'待领取',working:'处理中',waiting_customer:'待客户补充',done:'结果已记录',open:'待处理',completed:'处理完成',confirmed:'已确认',fixing:'整改中',dismissed:'已排除',pending:'待客户反馈',disputed:'客户有异议'};
+  const pill=(label,kind='')=>`<span class="pill ${e(kind)}">${e(labels[label]||label)}</span>`;
+  const date=(n,full=false)=>new Date(n).toLocaleString('zh-CN',full?{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}:{hour:'2-digit',minute:'2-digit',hour12:false});
+  const empty=(title,body='')=>`<div class="empty"><div class="empty-icon">${icon('inbox',28)}</div><h3>${e(title)}</h3><p>${e(body)}</p></div>`;
+  const field=(label,name,value='',type='text',extra='')=>`<label class="field"><span>${e(label)}</span>${type==='textarea'?`<textarea name="${e(name)}" rows="4" ${extra}>${e(value)}</textarea>`:`<input name="${e(name)}" type="${type}" value="${e(value)}" ${extra}>`}</label>`;
+  const heading=(title,sub,actions='')=>`<div class="page-heading"><div><div class="eyebrow">青禾客服 / 工作空间</div><h1>${e(title)}</h1><p>${e(sub)}</p></div><div class="row">${actions}</div></div>`;
+  const options=(arr,selected)=>arr.map(([id,label])=>`<option value="${e(id)}" ${id===selected?'selected':''}>${e(label)}</option>`).join('');
+  const search=(name,value,placeholder)=>`<label class="search">${icon('search')}<input data-search="${name}" data-focus="search-${name}" value="${e(value||'')}" placeholder="${e(placeholder)}" aria-label="${e(placeholder)}"></label>`;
+  function messages(conv,customer=false){return conv.messages.map(m=>{
+    if(customer&&m.visibility!=='public')return '';
+    if(m.role==='system')return `<div class="system-message">${e(m.body)}</div>`;
+    const isCustomer=m.role==='customer';
+    return `<article class="message ${isCustomer?'incoming':'outgoing'} ${m.visibility==='internal'?'internal':''}"><div class="message-meta">${e(isCustomer?'客户':m.author||'青禾小助')}${m.visibility==='internal'?' · 仅内部可见':''}<time>${date(m.at)}</time></div><div class="bubble">${e(m.body).replace(/\n/g,'<br>')}</div>${m.citation?`<button type="button" class="citation" data-action="citation" data-id="${e(m.id)}">${icon('book',13)} ${e(m.citation.title)} · v${m.citation.version}</button>`:''}${customer&&m.intake?b('填写售后申请','intake',m.caseId,'small'):''}</article>`;
+    }).join('');}
+  function testReport(report){return report?`<div class="test-report"><div class="row between"><strong>回归结果</strong>${pill(report.passed?'全部通过':'存在失败',report.passed?'good':'warn')}</div><p class="muted small-text">${date(report.at,true)} · 校验路由和知识命中，不代表语义质量评分</p>${report.rows.map(r=>`<div class="test-row"><span class="${r.pass?'success-text':'danger-text'}">${r.pass?'✓':'×'}</span><div><strong>${e(r.name)}</strong><small>${e(r.query)} → ${e(r.actual)}</small></div></div>`).join('')}</div>`:empty('还没有测试结果','保存草稿后运行回归，全部通过才能发布。');}
+  root.SupportViews={e,icon,b,pill,date,empty,field,heading,options,search,messages,testReport,labels};
+})(window);
+
+</script>
+<script>
+(function(root){
+  'use strict';const V=root.SupportViews,{e,icon,b,pill,date,empty,messages}=V;
+  V.customer=function(data,ui){
+    const conv=data.conversations.find(c=>c.id===ui.customerConversation)||data.conversations[0];
+    const service=data.cases.filter(c=>c.kind==='aftersales'||c.feedback==='disputed');
+    return `<div class="customer-layout"><aside class="customer-home"><div class="store-brand"><span class="brand-mark">青</span><div><strong>青禾生活</strong><small>把日子过得简单一点</small></div></div><div class="welcome"><div class="eyebrow">CUSTOMER CARE</div><h1>你好，小夏。<br>有什么可以帮你？</h1><p>从一个问题开始，<br>后续进度也都在这里。</p><span class="welcome-flower" aria-hidden="true">✳</span></div><div class="customer-shortcuts">${b(`${icon('book')}<span>服务规则</span>${icon('arrow')}`,'quick-policy','','shortcut')}${b(`${icon('users')}<span>联系人工</span>${icon('arrow')}`,'request-human',conv?.id||'','shortcut')}</div><div class="section-title"><h2>我的订单</h2><span>${data.orders.length} 笔</span></div>${data.orders.map(o=>`<div class="order-card"><div class="product-symbol">${e(o.symbol)}</div><div><strong>${e(o.product)}</strong><small>${e(o.id)}</small><div class="row">${pill(o.status)}<span class="price">¥${o.price.toFixed(2)}</span></div></div><div class="order-actions">${b('查物流','order-query',o.id,'text')}${b('申请售后','order-return',o.id,'text')}</div></div>`).join('')}<div class="section-title"><h2>服务进度</h2><span>${service.length} 项</span></div>${data.tickets.map(t=>`<button class="progress-card" type="button" data-action="ticket-detail" data-id="${e(t.id)}"><div class="row between"><strong>${e(t.title)}</strong>${icon('arrow',15)}</div><small>${e(t.id)} · ${date(t.createdAt,true)}</small>${pill(t.status,t.status==='waiting_customer'?'warn':'')}</button>`).join('')||'<p class="muted">暂时没有需要继续办理的服务。</p>'}</aside><section class="messenger"><header class="messenger-head"><div class="assistant-avatar">${icon('bolt',22)}</div><div><strong>${conv?.state==='human'?'青禾人工客服':'青禾在线服务'}</strong><small><span class="status-dot"></span>${conv?e(V.labels[conv.state]):'随时为你服务'}</small></div><div class="row push-right">${b('历史咨询','customer-history','','text')}${b(`${icon('plus')} 新咨询`,'new-conversation','','small')}</div></header>${conv?`<div class="messages customer-messages" id="customer-messages">${messages(conv,true)}${data.cases.filter(c=>conv.caseIds.includes(c.id)&&c.status==='completed').map(c=>`<div class="feedback-card"><strong>${e(c.kind==='knowledge'?'这条答复对你有帮助吗？':'这项问题处理好了吗？')}</strong>${c.feedback==='confirmed'?pill('你已确认','good')+b('仍需帮助','dispute-case',c.id,'small text'):`<div class="row">${b('已解决','confirm-case',c.id,'small')}${b('仍需帮助','dispute-case',c.id,'small text')}</div>`}</div>`).join('')}</div><form class="composer customer-composer" data-form="customer-say" data-id="${e(conv.id)}"><label class="sr-only" for="customer-input">描述你的问题</label><textarea id="customer-input" data-focus="customer-input" name="body" rows="2" maxlength="2000" required placeholder="描述你的问题，或补充订单号…">${e(ui.drafts['customer-say:'+conv.id]?.body||'')}</textarea><div class="row between"><span class="muted small-text">${conv.state==='queued'?'已在排队，补充信息会一并交给客服。':conv.state==='closed'?'继续发送即可重新联系，原记录会保留。':'请勿发送密码或验证码。'}</span><button class="btn primary" type="submit">发送 ${icon('send',15)}</button></div></form>${conv.state==='queued'?`<div class="queue-footer">${b('取消排队，继续咨询','cancel-queue',conv.id,'text')}</div>`:''}`:empty('开始你的第一段咨询','点击新咨询，与青禾客服取得联系。')}</section></div>`;
+  };
+})(window);
+
+</script>
+<script>
+(function(root){
+  'use strict';const V=root.SupportViews,{e,icon,b,pill,date,empty,heading,search,messages}=V;
+  function due(conv,s){if(conv.firstHumanAt||!conv.waitingSince||!['queued','human'].includes(conv.state))return '';const left=Math.ceil((conv.waitingSince+s.settings.responseMinutes*60000-Date.now())/60000);return `<span class="sla ${left<0?'late':''}">${icon('clock',12)}${left<0?'首响已超 '+Math.abs(left)+' 分钟':'首响剩余 '+left+' 分钟'}</span>`;}
+  V.inbox=function(s,data,ui,actor){
+    const all=data.conversations, group=ui.deskFilter||'queue', query=(ui.search.inbox||'').toLowerCase();
+    const names={queue:'待接待',mine:'我接待中',history:'我的历史'};
+    const filtered=all.filter(c=>group==='queue'?c.state==='queued':group==='mine'?c.state==='human'&&c.ownerId===actor.id:c.state==='closed').filter(c=>(c.id+' '+(data.customers.find(x=>x.id===c.customerId)?.name||'')+' '+c.messages.map(m=>m.body).join(' ')).toLowerCase().includes(query));
+    const selected=filtered.find(c=>c.id===ui.deskConversation)||filtered[0];
+    ui.visibleConversation=selected?.id||'';
+    const customer=selected&&data.customers.find(c=>c.id===selected.customerId);
+    const owned=selected?.state==='human'&&selected.ownerId===actor.id;
+    const cases=selected?data.cases.filter(c=>selected.caseIds.includes(c.id)):[];
+    const latest=selected&&[...selected.messages].reverse().find(m=>m.role==='customer');
+    const knowledge=latest&&root.SupportDomain.retrieve(s,latest.body);
+    return `${heading('会话接待','先接住客户的问题，再把需要继续办理的事情交接清楚。',`<span class="muted">${actor.available?'接待中':'暂离'}</span>${b(actor.available?'设为暂离':'恢复接待','presence',actor.id,'small')}`)}<div class="inbox-shell"><aside class="conversation-list"><div class="list-tools"><div class="segmented">${Object.entries(names).map(([key,label])=>`<button type="button" class="${key===group?'active':''}" data-action="inbox-filter" data-id="${key}">${label}</button>`).join('')}</div>${search('inbox',query,'搜索客户或对话内容')}</div><div class="list-caption">${e(names[group])}<span>${filtered.length}</span></div>${filtered.map(c=>{const person=data.customers.find(x=>x.id===c.customerId);const last=[...c.messages].reverse().find(m=>m.role==='customer');return `<button type="button" class="conversation-row ${c.id===selected?.id?'selected':''}" data-action="select-conversation" data-id="${e(c.id)}"><div class="row"><span class="avatar">${e(person?.name.slice(-2))}</span><strong>${e(person?.name)}</strong><time>${date(c.updatedAt)}</time></div><p>${e(last?.body||'尚未提问')}</p><div class="row between">${pill(c.state,c.state==='queued'?'warn':'')}${due(c,s)}</div></button>`;}).join('')||empty(query?'没有匹配的会话':'当前没有会话',query?'换一个关键词试试。':'客户发起人工请求后，会出现在待接待队列。')}</aside><section class="agent-conversation">${selected?`<header class="conversation-header"><div><h2>${e(customer.name)}</h2><small>${e(selected.id)} · Web 在线咨询</small></div><div class="row">${selected.state==='queued'?b('接管会话','claim-conversation',selected.id,'primary'):owned?b('结束沟通','close-conversation',selected.id,'small'):pill('只读记录')}</div></header><div class="messages" id="agent-messages">${selected.handoffReason?`<div class="handoff-banner">${icon('bolt')}<div><strong>转人工原因</strong><p>${e(selected.handoffReason)}</p></div></div>`:''}${messages(selected)}</div>${owned?`<form class="composer ${ui.composeMode==='note'?'note-composer':''}" data-form="${ui.composeMode==='note'?'note':'reply'}" data-id="${e(selected.id)}"><div class="compose-tabs"><button type="button" data-action="compose-mode" data-id="reply" class="${ui.composeMode!=='note'?'active':''}">公开回复</button><button type="button" data-action="compose-mode" data-id="note" class="${ui.composeMode==='note'?'active':''}">内部备注</button></div><label class="sr-only" for="agent-input">${ui.composeMode==='note'?'内部备注':'回复客户'}</label><textarea id="agent-input" data-focus="agent-input" name="body" rows="3" maxlength="2000" required placeholder="${ui.composeMode==='note'?'仅同事可见，不会发送给客户':'输入要发送给客户的内容…'}">${e(ui.drafts[(ui.composeMode==='note'?'note':'reply')+':'+selected.id]?.body||'')}</textarea><div class="row between"><span class="muted small-text">${ui.composeMode==='note'?'内部备注与公开回复分别保存草稿。':'发送回复不会自动完成客户问题。'}</span><button type="submit" class="btn primary">${ui.composeMode==='note'?'保存备注':'发送回复'} ${icon('send',14)}</button></div></form>`:`<div class="read-only-bar">${selected.state==='queued'?'接管后即可回复，机器人不会继续抢答。':'这段沟通已结束，历史记录只读保留。'}</div>`}`:empty('选择一段会话','客户消息、交接信息和回复都集中在这里。')}</section><aside class="customer-context">${selected?`<div class="context-section"><div class="row"><span class="avatar large">${e(customer.name.slice(-2))}</span><div><strong>${e(customer.name)}</strong><small>${e(customer.level)}</small></div></div><p class="muted small-text">${e(customer.email)}</p></div><div class="context-section"><h3>${icon('bolt',16)} 交接摘要</h3><dl><dt>最初问题</dt><dd>${e(selected.messages.find(m=>m.role==='customer')?.body||'尚未提问')}</dd><dt>最近补充</dt><dd>${e(latest?.body||'无')}</dd><dt>已执行步骤</dt><dd>${e(selected.runs.at(-1)?.steps.map(x=>({answer:'检索知识并答复',order:'核对订单',intake:'采集售后申请',gap:'未命中知识',handoff:'转人工',askOrder:'等待订单号',orderDenied:'订单核对未通过'}[x]||x)).join(' → ')||'暂无自动处理记录')}</dd></dl><small class="muted">依据实际消息与执行记录整理</small></div><div class="context-section"><h3>${icon('ticket',16)} 当前客户问题</h3>${cases.map(c=>{const t=[...data.tickets,...data.relatedTickets].find(t=>t.caseId===c.id);return `<div class="case-card"><strong>${e(c.title)}</strong><div class="row">${pill(c.status,c.status==='completed'?'good':'')}${c.feedback==='confirmed'?pill('客户已确认','good'):''}</div>${t?b(`${e(t.id)} · 查看工单`,'ticket-detail',t.id,'text'):owned&&c.status!=='completed'?`<div class="row">${b('记录结果','complete-case',c.id,'small',`data-conversation="${e(selected.id)}"`)}${b('建工单','staff-intake',c.id,'small',`data-conversation="${e(selected.id)}"`)}</div>`:''}</div>`;}).join('')||'<p class="muted">尚无待处理问题。</p>'}</div><div class="context-section"><h3>${icon('book',16)} 答复依据</h3>${knowledge&&!knowledge.conflict?`<strong>${e(knowledge.title)}</strong><p class="small-text">${e(knowledge.answer)}</p><small class="muted">${e(knowledge.source)} · v${knowledge.version}</small>${owned?b('插入公开回复草稿','insert-suggestion',knowledge.id,'small'):''}`:'<p class="muted small-text">当前没有可靠的知识建议。请核实后回复，不直接补写结论。</p>'}${owned?b('标记服务问题','flag',selected.id,'text'):''}</div><div class="context-section"><h3>相关订单</h3>${data.orders.filter(o=>o.customerId===customer.id).map(o=>`<div class="compact-order"><strong>${e(o.product)}</strong><small>${e(o.id)}</small>${pill(o.status)}</div>`).join('')||'<p class="muted">暂无关联订单。</p>'}</div>`:empty('客户上下文','选择会话后显示。')}</aside></div>`;
+  };
+  V.tickets=function(s,rows,ui,manager=false){const filter=ui.ticketFilter||'all',q=(ui.search.tickets||'').toLowerCase();const list=rows.filter(t=>filter==='all'||filter==='pool'&&!t.ownerId||t.status===filter).filter(t=>(t.id+' '+t.title+' '+t.description).toLowerCase().includes(q));return `${heading(manager?'团队协同':'工单处理',manager?'统一查看待办与负责人，调整分工，不改变原受理记录。':'只在需要后续办理时建单；沟通结束后，工单仍继续跟进。',manager?'':b(`${icon('plus')} 新建工单`,'standalone-ticket','','primary'))}<div class="panel"><div class="table-toolbar">${search('tickets',q,'搜索工单编号或问题')}<select aria-label="工单状态" data-select="ticket-filter">${V.options([['all','全部状态'],['pool','待领取'],['working','处理中'],['waiting_customer','待客户补充'],['done','结果已记录']],filter)}</select></div>${list.length?`<div class="table-scroll"><table><thead><tr><th>工单 / 客户问题</th><th>状态</th><th>负责人</th><th>受理时间</th><th>处理目标</th><th></th></tr></thead><tbody>${list.map(t=>`<tr><td><button type="button" class="table-title" data-action="ticket-detail" data-id="${e(t.id)}">${e(t.title)}</button><small>${e(t.id)} · ${e(s.customers.find(c=>c.id===t.customerId)?.name||'未关联')}</small></td><td>${pill(t.status,t.status==='waiting_customer'?'warn':t.status==='done'?'good':'')}</td><td>${e(s.staff.find(a=>a.id===t.ownerId)?.name||'待领取')}</td><td>${date(t.createdAt,true)}</td><td>${t.status==='done'?'—':`<span class="${t.dueAt<Date.now()?'danger-text':''}">${date(t.dueAt,true)}${t.dueAt<Date.now()?' · 已超时':''}</span>`}</td><td>${manager&&t.status!=='done'?b('转派','assign-ticket',t.id,'small'):!t.ownerId?b('领取','claim-ticket',t.id,'small'):b('处理','ticket-detail',t.id,'small')}</td></tr>`).join('')}</tbody></table></div>`:empty(q?'没有匹配的工单':'当前没有工单',q?'请调整搜索词或筛选条件。':'需要继续办理的问题受理后会出现在这里。')}</div>`;};
+})(window);
+
+</script>
+<script>
+(function(root){
+  'use strict';const V=root.SupportViews,{e,icon,b,pill,date,empty,heading,field,options,testReport}=V;
+  V.overview=function(s){const m=root.SupportDomain.metrics(s),ratio=m.cases?Math.round(m.confirmed/m.cases*100):0;return `${heading('服务概览','当前工作空间 · 全部服务记录 · 按客户问题汇总。',pill('当前快照'))}<div class="metric-grid">${[['待人工接待',m.waiting,'进入队列，尚未被接管','chat'],['办理中工单',m.activeTickets,`${m.overdue} 张超过处理目标`,'ticket'],['处理完成',m.completed,'已经答复或记录办理结果','check'],['客户明确确认',m.confirmed,'不把沉默或关窗视为解决','shield']].map(([label,value,desc,glyph])=>`<div class="metric-card"><div class="row between"><span>${label}</span>${icon(glyph)}</div><strong>${value}</strong><small>${desc}</small></div>`).join('')}</div><div class="overview-grid"><section class="panel"><div class="panel-heading"><h2>服务结果</h2><span class="muted">按客户问题统计</span></div><div class="result-summary"><div><strong>${m.cases}</strong><span>客户问题</span></div><div><strong>${m.completed}</strong><span>处理完成</span></div><div><strong>${m.confirmed}</strong><span>明确确认</span></div></div><div class="progress-track"><span style="width:${ratio}%"></span></div><p class="muted small-text">客户明确确认 / 全部问题：${m.confirmed} / ${m.cases}。其中 ${m.botConfirmed} 项没有人工介入。此处不推算完整自动解决率或满意度。</p><div class="metric-definition"><strong>统计口径</strong><p>“处理完成”是服务方已形成答复或结果记录；“客户明确确认”是客户主动表示已解决。异议重开后不再计入当前已完成。</p></div></section><section class="panel"><div class="panel-heading"><h2>需要关注</h2>${icon('bolt')}</div><div class="attention-row"><span>知识与服务问题待复核</span><strong>${m.gaps}</strong></div><div class="attention-row"><span>尚未分配的办理工单</span><strong>${s.tickets.filter(t=>!t.ownerId&&t.status!=='done').length}</strong></div><div class="attention-row"><span>待客户补充信息</span><strong>${s.tickets.filter(t=>t.status==='waiting_customer').length}</strong></div>${b('进入质量复核','ops-page','quality','primary full')}</section></div><section class="panel"><div class="panel-heading"><h2>接待负荷</h2><span class="muted">每人最多 ${s.settings.capacity} 段同时接待</span></div><div class="staff-grid">${s.staff.filter(a=>a.role==='agent').map(a=>`<div class="staff-card"><span class="avatar">${e(a.name.slice(-2))}</span><div><strong>${e(a.name)}</strong><small>${a.available?'可接待':'暂离'}</small></div><strong class="push-right">${s.conversations.filter(c=>c.ownerId===a.id&&c.state==='human').length}<span class="muted"> / ${s.settings.capacity}</span></strong></div>`).join('')}</div></section>`;};
+  V.knowledge=function(s,ui){const id=ui.knowledgeId||s.knowledge[0]?.id,k=id==='new'?null:s.knowledge.find(k=>k.id===id),v=k?.draft||k?.live||{title:'',question:ui.prefillQuery||'',keywords:[],answer:'',source:'',positive:ui.prefillQuery||'',negative:'我要查订单',effectiveAt:new Date().toISOString(),expiresAt:''};const formKey='knowledge:'+(k?.id||'new'), draft=ui.drafts[formKey];const x=draft?{...v,...draft}:v;return `${heading('知识与答复','编辑草稿 → 验证命中与边界 → 发布。客户答复保留引用版本。',b(`${icon('plus')} 新建知识`,'new-knowledge','','primary'))}<div class="knowledge-layout"><aside class="panel knowledge-list"><div class="panel-heading"><h2>服务知识</h2><span>${s.knowledge.length}</span></div>${s.knowledge.map(article=>`<button type="button" class="knowledge-row ${article.id===k?.id?'selected':''}" data-action="select-knowledge" data-id="${e(article.id)}"><strong>${e((article.draft||article.live)?.title||'未命名')}</strong><small>${e(article.id)} · ${article.live?'v'+article.live.version:'尚未发布'}</small><div class="row">${pill(article.disabled?'已停用':article.live?'已发布':'草稿',article.disabled?'warn':article.live?'good':'')}${article.draft&&article.live?pill('有草稿'):''}</div></button>`).join('')}</aside><section class="panel knowledge-editor"><div class="panel-heading"><div><h2>${k?'维护知识':'新增知识'}</h2><small class="muted">${k?.live?`当前客户可用版本 v${k.live.version}`:'保存后才能测试和发布'}</small></div>${k?.live&&!k.disabled?b('停用','disable-knowledge',k.id,'small text'):''}</div><form data-form="knowledge" data-id="${e(k?.id||'new')}"><div class="form-grid">${field('标题','title',x.title,'text','required maxlength="120"')}${field('标准问题','question',x.question,'text','required maxlength="300"')}</div>${field('答复内容','answer',x.answer,'textarea','required maxlength="4000"')}${field('来源 / 审核依据','source',x.source,'text','required maxlength="300" placeholder="例如：青禾生活 / 已审核售后政策"')}${field('匹配关键词，用逗号分隔','keywords',Array.isArray(x.keywords)?x.keywords.join(','):x.keywords,'text','required maxlength="500"')}<div class="form-grid">${field('生效日期','effectiveAt',x.effectiveAt?.slice(0,10),'date','required')}${field('失效日期（可留空）','expiresAt',x.expiresAt?.slice(0,10),'date')}</div><div class="form-grid">${field('正例：应该用这条知识回答','positive',x.positive,'text','required maxlength="300"')}${field('反例：不应误命中这条知识','negative',x.negative,'text','required maxlength="300"')}</div><div class="form-footer"><span class="muted small-text">${draft?'有未保存的修改':'草稿不会直接影响客户答复'}</span><button class="btn primary" type="submit">保存草稿</button></div></form><div class="release-actions">${b('运行回归','test-knowledge',k?.id||'','',!k?.draft||draft?'disabled':'')}${b('发布当前草稿','publish-knowledge',k?.id||'','primary',!k?.validation?.passed||draft?'disabled':'')}<span class="muted small-text">${k?.draft?'发布后，下一次知识检索使用新版本':'发布内容与草稿分开保存'}</span></div>${testReport(k?.validation)}${k?.versions.length?`<details class="history-versions"><summary>历史发布版本（${k.versions.length}）</summary>${k.versions.map(v=>`<div><strong>v${v.version} · ${e(v.title)}</strong><p>${e(v.answer)}</p><small>${e(v.source)}</small></div>`).join('')}</details>`:''}</section></div>`;};
+  V.flow=function(s,ui){const draft=ui.drafts['flow:new'],v=draft||s.flow.draft||s.flow.live;return `${heading('接待策略与测试','管理诉求路由、人工交接与售后受理规则，验证后发布。',pill('发布版本 v'+s.flow.live.version,'good'))}<section class="panel"><div class="panel-heading"><h2>接待路径</h2><span class="muted">每段新咨询保存当时的策略版本</span></div><div class="flow-strip">${[['chat','客户表达','接收问题与已知订单'],['flow','识别诉求','多诉求分开处理'],['book','执行服务','知识 / 订单 / 售后'],['shield','核对边界','来源 / 归属 / 明确确认'],['users','完成或交接','结果记录 / 人工接续']].map(([glyph,title,sub],i)=>`${i?'<span class="flow-arrow">→</span>':''}<div class="flow-step">${icon(glyph,23)}<strong>${title}</strong><small>${sub}</small></div>`).join('')}</div></section><div class="overview-grid"><section class="panel"><div class="panel-heading"><h2>策略草稿</h2>${s.flow.draft?pill('待发布'):pill('与已发布策略一致')}</div><form data-form="flow" data-id="new">${field('明确转人工的触发词','humanWords',Array.isArray(v.humanWords)?v.humanWords.join(','):v.humanWords,'text','required')}<label class="field"><span>售后受理</span><select name="intakeEnabled">${options([['true','开启：核对订单后，填写并确认申请'],['false','关闭：交给人工协助登记']],String(v.intakeEnabled))}</select></label><p class="muted small-text">客户明确要求人工始终优先；订单必须属于当前客户。上述边界不可通过配置关闭。</p><div class="form-footer"><button class="btn primary" type="submit">保存策略草稿</button></div></form><div class="release-actions">${b('运行回归','test-flow','','',!s.flow.draft||draft?'disabled':'')}${b('发布策略','publish-flow','','primary',!s.flow.validation?.passed||draft?'disabled':'')}</div></section><section class="panel"><div class="panel-heading"><h2>草稿测试</h2>${pill('隔离运行')}</div><form data-form="flow-query" data-id="new">${field('输入问题','query',ui.drafts['flow-query:new']?.query||'查物流 SO20260926001，再申请退货','textarea','required')}<label class="checkbox"><input type="checkbox" name="orderFailure" value="true" ${ui.drafts['flow-query:new']?.orderFailure?'checked':''}>本次测试让订单查询失败</label><p class="muted small-text">使用林小夏的订单权限。测试不会创建客户会话、工单或修改接待配置。</p><p class="muted small-text" data-flow-unsaved ${draft?'':'hidden'}>请先保存策略草稿，再运行单条测试。</p><button class="btn" type="submit" ${draft?'disabled':''}>运行单条测试</button></form>${ui.flowTest?`<div class="query-result"><strong>实际执行分支</strong>${ui.flowTest.map(r=>`<p>${pill(r.kind)} ${e(r.knowledge?.title||r.order?.id||r.reason||'')}</p>`).join('')}</div>`:''}</section></div><section class="panel">${testReport(s.flow.validation)}</section><section class="panel"><div class="panel-heading"><h2>发布记录</h2><span class="muted">原会话继续使用启动时的版本</span></div><p>当前：v${s.flow.live.version} · 人工触发词：${e(s.flow.live.humanWords.join('、'))} · 售后受理${s.flow.live.intakeEnabled?'开启':'关闭'}</p>${s.flow.versions.map(v=>`<p class="muted">v${v.version} · ${e(v.humanWords.join('、'))} · 售后受理${v.intakeEnabled?'开启':'关闭'}</p>`).join('')}</section>`;};
+  V.quality=function(s,ui,role){const list=s.gaps;return `${heading(role==='manager'?'质量复核':'服务改进队列',role==='manager'?'先复核线索，再验证整改是否解决了原始问题。':'把服务问题转成知识修订；未经复核，不直接当成错误结论。',pill('知识与答复问题'))}<div class="quality-list">${list.map(g=>{const conv=s.conversations.find(c=>c.id===g.conversationId),reply=conv?.messages.find(m=>m.role==='bot'&&m.body!=='');return `<section class="panel quality-card"><div class="row between"><div class="row">${pill(g.category)}${pill(g.status,g.status==='closed'?'good':g.status==='new'?'warn':'')}</div><small class="muted">${e(g.id)} · ${date(g.createdAt,true)}</small></div><h2>${e(g.query)}</h2><p class="muted small-text">来自会话 ${e(g.conversationId)}。原始问题在验收时原样重放，不改写成更容易通过的问法。</p>${g.review?`<div class="review-note"><strong>复核依据</strong><p>${e(g.review)}</p>${g.cause?`<small>根因：${e(g.cause)}</small>`:''}</div>`:''}${g.knowledgeId?`<p class="small-text">关联整改知识：${e(g.knowledgeId)} · ${e(s.knowledge.find(k=>k.id===g.knowledgeId)?.live?.title||'待发布草稿')}</p>`:''}<div class="row">${role==='manager'&&!['closed','dismissed'].includes(g.status)?b('复核线索','review-gap',g.id,'small'):''}${role==='operator'&&['confirmed','fixing'].includes(g.status)?`${b('新增整改知识','new-gap-knowledge',g.id,'small')}${b('关联整改知识','link-gap',g.id,'small')}`:''}${role==='manager'&&g.status==='fixing'?b('验证原问题并验收','accept-gap',g.id,'primary small'):''}${g.status==='closed'?pill('已通过原问题验证与全量回归','good'):''}</div>${g.acceptance?`<p class="small-text">验收说明：${e(g.acceptance)}</p>`:''}${role==='manager'?`<details><summary>查看服务证据</summary><div class="evidence-messages">${conv?.messages.filter(m=>m.role!=='system').map(m=>`<p><strong>${e(m.author||m.role)}</strong> ${e(m.body)}</p>`).join('')||'原会话不可用'}</div></details>`:''}</section>`;}).join('')||`<div class="panel">${empty('暂无质量待办','未命中知识或客服标记问题后，会形成待复核线索。')}</div>`}</div>`;};
+  V.serviceSettings=function(s,ui){const v={...s.settings,...ui.drafts['service-settings:new']};return `${heading('接待规则','管理接待容量与处理目标；历史受理时间不会随配置改变。')}<section class="panel narrow"><form data-form="service-settings" data-id="new"><label class="field"><span>服务组接待状态</span><select name="accepting">${options([['true','开放人工接待'],['false','暂停接待，保留待处理请求']],String(v.accepting))}</select></label>${field('每位客服同时接待上限','capacity',v.capacity,'number','min="1" max="20" required')}${field('人工首响目标（分钟）','responseMinutes',v.responseMinutes,'number','min="1" max="120" required')}${field('新工单处理目标（小时）','ticketHours',v.ticketHours,'number','min="1" max="168" required')}<p class="muted small-text">首响从进入人工队列起算，只有公开人工答复停止计时，内部备注不算首响。本版按自然时间计算，不提供节假日或营业日历 SLA。</p><button type="submit" class="btn primary">保存接待规则</button></form></section>`;};
+  V.integrations=function(){return `${heading('接入与运行边界','明确哪些链路已在本地运行，哪些外部能力尚未接入。')}<div class="integration-grid">${[['chat','Web 客户服务','本地页面可用','客户咨询、历史记录、服务申请与客服工作台共享当前浏览器的数据。','good'],['book','知识与接待引擎','本地规则','使用关键词检索和确定性状态流转，不调用真实大模型或向量检索服务。',''],['plug','订单系统','外部未接入','订单信息来自内置本地适配器；没有访问商家真实订单系统。','warn'],['shield','支付与退款','未接入','记录办理结果不代表执行退款。没有资金操作、支付请求或退款回执。','warn'],['users','登录与组织','服务端未接入','角色切换用于验证岗位行为；浏览器内的校验不是身份认证或安全隔离。','warn'],['inbox','邮件、短信与其他渠道','未接入','消息只保存在当前工作空间，没有发送短信、邮件或外部通知。','warn']].map(([glyph,title,status,body,color])=>`<section class="panel integration-card"><div class="integration-icon">${icon(glyph,25)}</div><h2>${title}</h2>${pill(status,color)}<p>${body}</p></section>`).join('')}</div>`;};
+  V.permissions=function(){return `${heading('角色与职责','角色行为在业务命令入口校验；正式上线仍须由服务端校验身份与数据归属。')}<section class="panel"><div class="table-scroll"><table><thead><tr><th>角色</th><th>工作范围</th><th>明确禁止</th></tr></thead><tbody>${[['客户','本人的咨询、订单、服务申请和公开处理进度','其他客户资料、内部备注、核对依据、运行日志'],['一线客服','本人接待、本人工单、授权公共池、服务问题标记','未经接管回复、修改他人任务、知识发布与系统配置'],['服务经理','授权团队的分配、质量复核、整改验收、接待规则','冒充客服发送回复、编辑或发布知识'],['知识运营','知识和策略草稿、回归、发布、关联整改','工单办理、正式质检裁决、客户全量资料'],['系统管理员','接入状态、权限说明、审计记录与数据导出','直接参与客户接待、替运营发布知识']].map(row=>`<tr>${row.map(x=>`<td>${e(x)}</td>`).join('')}</tr>`).join('')}</tbody></table></div></section>`;};
+  V.logs=function(s){return `${heading('操作审计','当前工作空间的实际操作记录；无成功回执的写入不会显示为成功。')}<section class="panel"><div class="table-scroll"><table><thead><tr><th>时间</th><th>操作者</th><th>动作</th><th>对象</th></tr></thead><tbody>${s.events.slice().reverse().slice(0,100).map(ev=>`<tr><td>${date(ev.at,true)}</td><td>${e(ev.actor)}</td><td>${e(ev.type)}</td><td>${e(ev.target||'—')}</td></tr>`).join('')}</tbody></table></div><p class="muted small-text">展示最近 100 条，完整记录包含在工作空间导出文件中。浏览器存储不是防篡改审计服务。</p></section>`;};
+  V.data=function(){return `${heading('数据维护','导出当前工作空间，或保存旧版本的原始数据。')}<section class="panel narrow"><h2>当前工作空间</h2><p class="muted">数据仅保存在当前浏览器。换设备、清理站点数据或隐私模式都可能影响保留。本版不提供多人并发保证。</p>${b('导出工作空间 JSON','export-data','','primary')}<hr><h2>旧版本数据</h2><p class="muted">新版本使用独立存储，不覆盖旧版的会话、工单和草稿。旧数据不自动导入新状态模型，可先导出留存。</p>${b('导出旧版本原始数据','export-legacy')}<hr><h2>使用范围</h2><p class="muted">不要在此工作空间录入真实客户资料、支付信息或密钥。外部接入与服务端权限尚未完成。</p></section>`;};
+})(window);
+
+</script>
+<script>
+(function(){
+  'use strict';
+  const D=window.SupportDomain,V=window.SupportViews,{e,b,icon,field,options,pill,date,empty}=V;
+  let storage;try{storage=localStorage;}catch(err){storage={getItem(){throw err;},setItem(){throw err;}};}
+  const store=window.SupportStore.open(storage,()=>window.SupportSeed.create());
+  const customerOnly=new URLSearchParams(location.search).get('view')==='customer';
+  let cached={};try{cached=JSON.parse(sessionStorage.getItem('qinghe-support-view')||'{}');}catch{}
+  const ui={workspace:'customer',deskPage:'inbox',opsPage:'overview',opsRole:'manager',agentId:'lin',customerConversation:'',deskConversation:'',deskFilter:'queue',ticketFilter:'all',knowledgeId:'',composeMode:'reply',search:{},drafts:{},...cached,flowTest:null};
+  if(!['manager','operator','admin'].includes(ui.opsRole))ui.opsRole='manager';
+  if(!['lin','zhou'].includes(ui.agentId))ui.agentId='lin';
+  ui.search||={};ui.draftScopes||={[draftScope()]:ui.drafts||{}};ui.drafts={};let activeDraftScope='';
+  const opsMenus={manager:[['overview','服务概览','chart'],['team','团队协同','users'],['quality','质量复核','shield'],['service','接待规则','settings']],operator:[['knowledge','知识与答复','book'],['flow','接待策略与测试','flow'],['quality','服务改进队列','shield']],admin:[['integrations','接入与运行','plug'],['permissions','角色与职责','users'],['logs','操作审计','shield'],['data','数据维护','settings']]};
+  const $=s=>document.querySelector(s);let toastTimer,focusBeforeDialog;
+  function toast(message,error=false){const t=$('#toast');t.textContent=message;t.className='toast visible'+(error?' error':'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.className='toast',5000);}
+  function cache(){try{const {flowTest,drafts,pendingTicket,...persist}=ui;sessionStorage.setItem('qinghe-support-view',JSON.stringify(persist));}catch{/* Formal writes are handled by the transactional store, not this draft cache. */}}
+  function identity(){return ui.workspace==='customer'?{id:'C001',role:'customer'}:ui.workspace==='desk'?{id:ui.agentId,role:'agent'}:{id:ui.opsRole,role:ui.opsRole};}
+  function draftScope(){const a=identity();return a.role+':'+a.id;}
+  function syncDrafts(){const scope=draftScope();if(scope!==activeDraftScope){ui.drafts=ui.draftScopes[scope]||={};ui.pendingTicket=null;ui.flowTest=null;activeDraftScope=scope;}}
+  function clearFlowTest(){ui.flowTest=null;$('.query-result')?.remove();}
+  function fail(err){const message=err?.message||'操作没有完成，请重试';if($('#dialog').open){$('#dialog-error').textContent=message;$('#dialog-error').hidden=false;}else toast(message,true);}
+  function apply(type,data,success){const value=store.dispatch(identity(),type,data);if(success)toast(success);return value;}
+  function navigate(workspace,page){ui.workspace=workspace;if(workspace==='desk')ui.deskPage=page||ui.deskPage;if(workspace==='ops')ui.opsPage=page||ui.opsPage;history.pushState(null,'','#'+workspace+(workspace==='desk'?'/'+ui.deskPage:workspace==='ops'?'/'+ui.opsPage:''));cache();}
+  function route(){
+    if(customerOnly){ui.workspace='customer';return;}
+    const hash=location.hash.slice(1);if(!hash)return;
+    const legacy={playground:'customer',sessions:'desk/inbox',tickets:'desk/tickets',knowledge:'ops/knowledge',workflow:'ops/flow',quality:'ops/quality',architecture:'ops/data',integrations:'ops/integrations',overview:'ops/overview',robot:'ops/flow'};
+    const [workspace,page]=(legacy[hash]||hash).split('/');
+    if(['customer','desk','ops'].includes(workspace)){ui.workspace=workspace;if(workspace==='desk')ui.deskPage=['inbox','tickets'].includes(page)?page:'inbox';if(workspace==='ops')ui.opsPage=page||'overview';}
+    if(ui.workspace==='ops'&&!opsMenus[ui.opsRole].some(x=>x[0]===ui.opsPage)){ui.opsPage=opsMenus[ui.opsRole][0][0];history.replaceState(null,'','#ops/'+ui.opsPage);}
+  }
+  function top(s){const role=ui.workspace==='desk'?`<label class="role-picker"><span>当前客服</span><select aria-label="当前客服" data-select="agent">${options(s.staff.filter(a=>a.role==='agent').map(a=>[a.id,a.name]),ui.agentId)}</select></label>`:ui.workspace==='ops'?`<label class="role-picker"><span>工作角色</span><select aria-label="工作角色" data-select="ops-role">${options([['manager','服务经理'],['operator','知识运营'],['admin','系统管理员']],ui.opsRole)}</select></label>`:`<span class="customer-identity">${icon('users',16)} 林小夏</span><a class="icon-button" href="?view=customer#customer" target="_blank" rel="noopener" title="打开独立客户页" aria-label="打开独立客户页">${icon('external',16)}</a>`;
+    return `<header class="app-top"><a class="product-brand" href="#customer"><span class="brand-logo">知</span><span>知序<span class="brand-sub">智能客服</span></span></a>${customerOnly?'<div class="standalone-heading">青禾生活 · 服务中心</div>':`<nav class="workspace-tabs" aria-label="工作区">${[['customer','客户服务','chat'],['desk','客服工作台','inbox'],['ops','运营后台','chart']].map(([key,label,glyph])=>`<button type="button" data-action="workspace" data-id="${key}" class="${ui.workspace===key?'active':''}" ${ui.workspace===key?'aria-current="page"':''}>${icon(glyph)}${label}</button>`).join('')}</nav>`}<div class="top-right">${customerOnly?'<span class="customer-identity">林小夏</span>':role}</div></header>`;
+  }
+  function side(s){const menu=ui.workspace==='desk'?[['inbox','会话接待','inbox'],['tickets','工单处理','ticket']]:opsMenus[ui.opsRole];const active=ui.workspace==='desk'?ui.deskPage:ui.opsPage;const actor=identity();return `<aside class="workspace-sidebar"><div class="workspace-label">${ui.workspace==='desk'?'客户支持':'运营与管理'}</div>${menu.map(([key,label,glyph])=>`<button class="side-link ${active===key?'active':''}" type="button" data-action="${ui.workspace==='desk'?'desk-page':'ops-page'}" data-id="${key}">${icon(glyph)}<span>${label}</span></button>`).join('')}<div class="sidebar-bottom"><span class="workspace-dot"></span><strong>青禾生活</strong><small>${ui.workspace==='desk'?'服务组 · 本人任务与公共池':{manager:'团队服务与质量',operator:'知识、策略与改进',admin:'系统接入与维护'}[ui.opsRole]}</small><span class="muted small-text">当前工作空间</span></div></aside>`;}
+  function render(){
+    if(store.blocked){$('#app').innerHTML=`<main class="fatal"><h1>工作空间暂时无法读取</h1><p>${e(store.blocked)}</p><p>不会用空白数据覆盖原记录。请先导出原始保存值，再排查数据格式。</p>${b('导出原始保存值','export-broken','','primary')}</main>`;return;}
+    route();syncDrafts();const s=store.state;let content='';
+    const focused=document.activeElement,focusKey=focused?.dataset.focus,selection=focused?.selectionStart;
+    if(ui.workspace==='customer')content=V.customer(D.customerView(s,'C001'),ui);
+    else if(ui.workspace==='desk'){const data=D.deskView(s,identity());content=ui.deskPage==='tickets'?V.tickets(s,data.tickets,ui):V.inbox(s,data,ui,D.actor(s,identity()));}
+    else {
+      switch(ui.opsPage){
+        case'overview':content=V.overview(s);break;
+        case'team':content=V.tickets(s,s.tickets.filter(t=>D.actor(s,identity()).teams.includes(t.teamId)),ui,true)+`<section class="panel"><div class="panel-heading"><h2>当前人工接待</h2></div>${s.conversations.filter(c=>['queued','human'].includes(c.state)&&D.actor(s,identity()).teams.includes(c.teamId)).map(c=>`<div class="attention-row"><div><strong>${e(s.customers.find(x=>x.id===c.customerId)?.name||c.customerId)}</strong><small>${e(c.id)} · ${e(c.handoffReason)}</small></div><div class="row">${pill(c.state)}${b('分配客服','assign-conversation',c.id,'small')}</div></div>`).join('')||empty('暂无待分配会话')}</section>`;break;
+        case'knowledge':content=V.knowledge(s,ui);break;
+        case'flow':content=V.flow(s,ui);break;
+        case'quality':content=V.quality(s,ui,ui.opsRole);break;
+        case'service':content=V.serviceSettings(s,ui);break;
+        case'integrations':content=V.integrations();break;
+        case'permissions':content=V.permissions();break;
+        case'logs':content=V.logs(s);break;
+        case'data':content=V.data();break;
+      }
+    }
+    $('#app').innerHTML=top(s)+(ui.workspace==='customer'?`<main class="customer-main">${content}</main>`:`<div class="workspace-body">${side(s)}<main class="workspace-content ${ui.workspace==='desk'&&ui.deskPage==='inbox'?'inbox-page':''}">${content}</main></div>`);
+    if(focusKey&&!$('#dialog').open){const target=document.querySelector(`[data-focus="${CSS.escape(focusKey)}"]`);target?.focus();try{target?.setSelectionRange(selection,selection);}catch{}}
+    cache();
+  }
+  function scrollMessages(){requestAnimationFrame(()=>document.querySelectorAll('.messages').forEach(x=>x.scrollTop=x.scrollHeight));}
+  function modal(title,body){focusBeforeDialog=document.activeElement;$('#dialog-title').textContent=title;$('#dialog-body').innerHTML=body;$('#dialog-body').querySelectorAll('form[data-form]').forEach(form=>{const draft=ui.drafts[form.dataset.form+':'+(form.dataset.id||'new')];if(draft)Object.entries(draft).forEach(([name,value])=>{const input=form.elements.namedItem(name);if(input)input.value=value;});});$('#dialog-error').hidden=true;$('#dialog-error').textContent='';if(!$('#dialog').open)$('#dialog').showModal();$('#dialog-body').querySelector('input:not([type=hidden]),textarea,select,button')?.focus();}
+  function closeModal(){if($('#dialog').open)$('#dialog').close();if(focusBeforeDialog?.isConnected)focusBeforeDialog.focus();}
+  function customerConversation(){const list=D.customerView(store.state,'C001').conversations;let c=list.find(c=>c.id===ui.customerConversation)||list[0];if(!c){ui.customerConversation=apply('newConversation',{});c=D.get(store.state,'conversations',ui.customerConversation);}return c;}
+  function quick(body){const c=customerConversation();apply('say',{id:c.id,body});ui.customerConversation=c.id;render();scrollMessages();}
+  function formDraft(key,defaults){return {...defaults,...ui.drafts[key]};}
+  function ticketForUI(id){const s=store.state;if(ui.workspace==='customer'){const t=D.customerView(s,'C001').tickets.find(t=>t.id===id);if(!t)throw Error('无权查看此工单');return t;}if(ui.workspace==='desk'){const t=[...D.deskView(s,identity()).tickets,...D.deskView(s,identity()).relatedTickets].find(t=>t.id===id);if(!t)throw Error('此工单不在本人任务或公共池中');return t;}if(ui.opsRole==='manager'){const t=D.get(s,'tickets',id);if(!D.actor(s,identity()).teams.includes(t.teamId))throw Error('无权查看此工单');return t;}throw Error('当前角色无权查看工单详情');}
+  function ticketDetail(id){const s=store.state,t=ticketForUI(id),customer=ui.workspace==='customer',canEdit=ui.workspace==='desk'&&t.ownerId===ui.agentId&&t.status!=='done';const c=customer?D.customerView(s,'C001').cases.find(c=>c.id===t.caseId):D.get(s,'cases',t.caseId);const draft=formDraft('ticket-update:'+id,{status:t.status,publicText:'',evidence:'',internalText:''});
+    modal('工单详情',`<div class="row between"><h2>${e(t.title)}</h2>${pill(t.status)}</div><p class="muted">${e(t.id)} · ${date(t.createdAt,true)} · ${e(t.orderId||'未关联订单')}</p><div class="result-note">${e(t.description)}</div><div class="timeline">${t.history.map(h=>`<div class="timeline-entry"><small>${date(h.at,true)} · ${e(h.actor||'客服')}</small><p>${e(h.publicText)}</p>${!customer&&h.internalText?`<div class="internal-evidence">内部备注：${e(h.internalText)}</div>`:''}${!customer&&h.evidence?`<div class="internal-evidence">核对依据：${e(h.evidence)}</div>`:''}</div>`).join('')}</div>${customer?t.status!=='done'?`<form data-form="supplement" data-id="${e(id)}">${field('补充信息','body',ui.drafts['supplement:'+id]?.body||'','textarea','required maxlength="2000"')}<button class="btn primary" type="submit">提交补充</button></form>`:`<div class="row">${c.feedback==='confirmed'?pill('客户已确认','good')+b('仍需帮助','dispute-case',c.id):`${b('确认已解决','confirm-case',c.id,'primary')}${b('仍需帮助','dispute-case',c.id)}`}</div>`:canEdit?`<form data-form="ticket-update" data-id="${e(id)}"><label class="field"><span>处理动作</span><select name="status">${options([['working','继续处理'],['waiting_customer','请客户补充'],['done','记录办理结果']],draft.status)}</select></label>${field('客户可见说明','publicText',draft.publicText,'textarea','required maxlength="2000"')}${field('核对依据（记录结果时必填，仅内部可见）','evidence',draft.evidence,'textarea','maxlength="2000"')}${field('内部协同备注','internalText',draft.internalText,'textarea','maxlength="2000"')}<p class="muted small-text">此操作记录处理结果，不会调用退款、支付或发货接口。</p><button class="btn primary" type="submit">提交处理记录</button></form>`:ui.workspace==='desk'&&!t.ownerId?b('领取工单','claim-ticket',id,'primary'):pill('只读记录')}`);
+  }
+  function intake(caseId,conversationId='',standalone=false){
+    const s=store.state,c=caseId?D.get(s,'cases',caseId):null;
+    if(ui.workspace==='customer'&&c.customerId!=='C001')throw Error('无权访问这项服务');
+    if(ui.workspace==='desk'&&!standalone&&!D.deskView(s,identity()).conversations.some(v=>v.id===conversationId&&v.ownerId===ui.agentId))throw Error('请先取得接待权');
+    const id=caseId||'standalone',defaults={title:c?.kind==='aftersales'?'售后申请':c?.title||'',description:'',customerId:'C001'};const values=formDraft('ticket-request:'+id,defaults);
+    ui.pendingTicket={caseId:caseId||'',conversationId,standalone,requestKey:crypto.randomUUID?.()||String(Date.now())};
+    modal(standalone?'独立登记工单':'填写服务申请',`<p class="muted">${c?.orderId?`订单：${e(c.orderId)}`:'需要后续办理的问题，明确交给工单跟进。'}</p><form data-form="ticket-request" data-id="${e(id)}">${standalone?`<label class="field"><span>关联客户</span><select name="customerId">${options(s.customers.map(c=>[c.id,c.name]),values.customerId)}</select></label>`:''}${field('标题','title',values.title,'text','required maxlength="100"')}${field('问题描述 / 申请原因','description',values.description,'textarea','required maxlength="2000"')}<p class="muted small-text">下一步先核对信息；确认前不创建工单。</p><div class="form-footer">${b('取消','close-modal')}<button class="btn primary" type="submit">核对申请</button></div></form>`);
+  }
+  function confirmation(title,body,action,id){modal(title,`<p>${e(body)}</p><div class="form-footer">${b('取消','close-modal')}${b('确认','confirm-action',id,'primary',`data-command="${e(action)}"`)}</div>`);}
+  function download(name,value){const blob=new Blob([typeof value==='string'?value:JSON.stringify(value,null,2)],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+  const actions={
+    workspace(el){closeModal();navigate(el.dataset.id);render();scrollMessages();},
+    'desk-page'(el){navigate('desk',el.dataset.id);render();},
+    'ops-page'(el){if(!opsMenus[ui.opsRole].some(x=>x[0]===el.dataset.id))throw Error('当前角色无权打开这个页面');navigate('ops',el.dataset.id);render();},
+    'new-conversation'(){ui.customerConversation=apply('newConversation',{},'已开始新咨询，原服务记录仍保留');render();scrollMessages();},
+    'quick-policy'(){quick('七天无理由退货有什么条件？');},
+    'order-query'(el){quick('查物流 '+el.dataset.id);},
+    'order-return'(el){quick('申请退货 '+el.dataset.id);},
+    'request-human'(el){const c=el.dataset.id||customerConversation().id;apply('requestHuman',{id:c},'已提交人工请求');render();scrollMessages();},
+    'cancel-queue'(el){apply('cancelQueue',{id:el.dataset.id},'已取消当前排队');render();},
+    'customer-history'(){const data=D.customerView(store.state,'C001');modal('历史咨询',data.conversations.map(c=>`<button type="button" class="history-row" data-action="open-history" data-id="${e(c.id)}"><strong>${e(c.messages.find(m=>m.role==='customer')?.body||'新的咨询')}</strong><small>${e(c.id)} · ${date(c.createdAt,true)}</small>${pill(c.state)}</button>`).join('')||empty('暂无历史咨询'));},
+    'open-history'(el){ui.customerConversation=el.dataset.id;closeModal();render();scrollMessages();},
+    citation(el){const s=store.state,convs=ui.workspace==='customer'?D.customerView(s,'C001').conversations:ui.workspace==='desk'?D.deskView(s,identity()).conversations:[];const m=convs.flatMap(c=>c.messages).find(m=>m.id===el.dataset.id&&m.citation);if(!m)throw Error('引用不存在或无权查看');modal('答复来源',`<h2>${e(m.citation.title)}</h2><p class="muted">${e(m.citation.source)} · 回答时版本 v${m.citation.version}</p><p>${e(m.citation.answer)}</p><p class="muted small-text">这里保留当时使用的原文，不随之后的发布修改。</p>`);},
+    intake(el){intake(el.dataset.id);},
+    'staff-intake'(el){intake(el.dataset.id,el.dataset.conversation);},
+    'standalone-ticket'(){intake('','',true);},
+    'ticket-detail'(el){ticketDetail(el.dataset.id);},
+    'claim-ticket'(el){apply('claimTicket',{id:el.dataset.id},'工单已领取');closeModal();render();},
+    'inbox-filter'(el){ui.deskFilter=el.dataset.id;render();},
+    'select-conversation'(el){ui.deskConversation=el.dataset.id;render();scrollMessages();},
+    'claim-conversation'(el){apply('claimConversation',{id:el.dataset.id},'已接管，可以开始回复');ui.deskConversation=el.dataset.id;ui.deskFilter='mine';render();scrollMessages();},
+    'compose-mode'(el){ui.composeMode=el.dataset.id;render();scrollMessages();},
+    presence(){const a=D.actor(store.state,identity());apply('presence',{available:!a.available},a.available?'已设为暂离':'已恢复接待');render();},
+    'insert-suggestion'(el){const k=D.get(store.state,'knowledge',el.dataset.id);const c=D.get(store.state,'conversations',ui.visibleConversation);if(c.ownerId!==ui.agentId||c.state!=='human')throw Error('请先接管会话');ui.composeMode='reply';ui.drafts['reply:'+c.id]={body:k.live.answer};render();$('#agent-input')?.focus();toast('已插入草稿，请核对后发送');},
+    flag(el){apply('flag',{id:el.dataset.id},'已提交复核，不直接判定为服务错误');render();},
+    'complete-case'(el){const c=D.get(store.state,'cases',el.dataset.id);const v=formDraft('complete-case:'+c.id,{conclusion:'',evidence:''});modal('记录当场处理结果',`<p class="muted">${e(c.title)}。无需为了结束一次咨询而创建工单。</p><form data-form="complete-case" data-id="${e(c.id)}" data-conversation="${e(el.dataset.conversation)}">${field('客户可见处理结论','conclusion',v.conclusion,'textarea','required maxlength="2000"')}${field('核对依据（仅内部可见）','evidence',v.evidence,'textarea','required maxlength="2000"')}<p class="muted small-text">记录后计为处理完成；客户是否确认单独统计。</p><button class="btn primary" type="submit">提交处理结果</button></form>`);},
+    'close-conversation'(el){confirmation('结束本次沟通','结束沟通不代表所有问题已解决。未完成问题必须已经安排工单跟进。','closeConversation',el.dataset.id);},
+    'confirm-case'(el){apply('feedback',{id:el.dataset.id,confirmed:true},'感谢确认');closeModal();render();},
+    'dispute-case'(el){const v=formDraft('dispute:'+el.dataset.id,{reason:''});modal('继续处理这个问题',`<form data-form="dispute" data-id="${e(el.dataset.id)}">${field('还有什么没有解决？','reason',v.reason,'textarea','required maxlength="2000"')}<p class="muted small-text">我们会继续原问题和原工单，保留首次受理时间，不重新建一张重复工单。</p><button class="btn primary" type="submit">提交并继续跟进</button></form>`);},
+    'assign-ticket'(el){assign('assignTicket',el.dataset.id);},
+    'assign-conversation'(el){assign('assignConversation',el.dataset.id);},
+    'new-knowledge'(){ui.knowledgeId='new';ui.prefillQuery='';render();},
+    'select-knowledge'(el){ui.knowledgeId=el.dataset.id;render();},
+    'test-knowledge'(el){apply('testKnowledge',{id:el.dataset.id},'回归已运行，请查看逐项结果');render();},
+    'publish-knowledge'(el){confirmation('发布知识','确认发布已通过回归的草稿？新提问将使用新版本，历史答复保留原引用。','publishKnowledge',el.dataset.id);},
+    'disable-knowledge'(el){modal('停用知识',`<form data-form="disable-knowledge" data-id="${e(el.dataset.id)}">${field('停用原因','reason','','textarea','required maxlength="300"')}<button class="btn primary" type="submit">确认停用</button></form>`);},
+    'test-flow'(){apply('testFlow',{},'回归已运行，请查看逐项结果');render();},
+    'publish-flow'(){confirmation('发布接待策略','新咨询将使用新策略；正在进行的咨询继续使用开始时的版本。','publishFlow','');},
+    'review-gap'(el){const g=D.get(store.state,'gaps',el.dataset.id);const v=formDraft('review-gap:'+g.id,{status:'confirmed',review:g.review,cause:g.cause});modal('复核服务问题',`<p class="result-note">${e(g.query)}</p><form data-form="review-gap" data-id="${e(g.id)}"><label class="field"><span>复核结论</span><select name="status">${options([['confirmed','确认问题，交给运营整改'],['dismissed','排除线索，不形成整改']],v.status)}</select></label>${field('复核依据','review',v.review,'textarea','required')}${field('根因说明（确认问题时必填）','cause',v.cause,'textarea')}<button class="btn primary" type="submit">保存复核结论</button></form>`);},
+    'new-gap-knowledge'(el){const g=D.get(store.state,'gaps',el.dataset.id);if(ui.opsRole!=='operator'||!['confirmed','fixing'].includes(g.status))throw Error('请先完成问题复核');ui.knowledgeId='new';ui.prefillQuery=g.query;navigate('ops','knowledge');render();},
+    'link-gap'(el){const g=D.get(store.state,'gaps',el.dataset.id);modal('关联整改知识',`<p>${e(g.query)}</p><form data-form="link-gap" data-id="${e(g.id)}"><label class="field"><span>选择用于修复的知识</span><select name="knowledgeId" required>${options(store.state.knowledge.map(k=>[k.id,(k.draft||k.live).title+' · '+k.id]),g.knowledgeId)}</select></label><p class="muted small-text">关联后仍需发布修订，并由经理用原始问题验收。</p><button class="btn primary" type="submit">保存关联</button></form>`);},
+    'accept-gap'(el){modal('验证原问题并验收',`<form data-form="accept-gap" data-id="${e(el.dataset.id)}">${field('验收说明','acceptance','','textarea','required')}<p class="muted small-text">提交时重放原问题并运行全量回归，不能用手动勾选替代验证。</p><button class="btn primary" type="submit">执行验证并验收</button></form>`);},
+    'confirm-action'(el){apply(el.dataset.command,{id:el.dataset.id},'操作已完成');closeModal();ui.flowTest=null;render();},
+    'close-modal'(){closeModal();},
+    'export-data'(){const data=apply('export',{});download('青禾客服-工作空间.json',data);toast('已生成工作空间导出文件');},
+    'export-legacy'(){if(identity().role!=='admin')throw Error('需要系统管理员角色');const raw=localStorage.getItem('zhixu-customer-demo-v3.1');if(raw===null)throw Error('当前浏览器未读取到旧版本保存值');download('青禾客服-旧版本原始保存值.json',raw);toast('已导出旧版本原始保存值，未做转换');},
+    'export-broken'(){if(store.original===null)throw Error('无法读取原始保存值，可能是浏览器禁用了存储');download('青禾客服-异常原始保存值.json',store.original);}
+  };
+  function assign(type,id){modal('分配负责人',`<form data-form="assign" data-id="${e(id)}" data-command="${type}"><label class="field"><span>接收客服</span><select name="ownerId">${options(store.state.staff.filter(a=>a.role==='agent').map(a=>[a.id,a.name]),'lin')}</select></label><p class="muted small-text">转派保留原受理时间和处理记录，原负责人不能继续修改任务。</p><button class="btn primary" type="submit">确认分配</button></form>`);}
+  document.addEventListener('click',ev=>{const el=ev.target.closest('[data-action]');if(!el||el.disabled)return;try{const handler=actions[el.dataset.action];if(!handler)throw Error('此操作不可用');handler(el);cache();}catch(err){fail(err);}});
+  document.addEventListener('input',ev=>{
+    const el=ev.target;
+    if(el.dataset.search){ui.search[el.dataset.search]=el.value;render();return;}
+    const form=el.closest('form[data-form]');if(!form)return;
+    ui.drafts[form.dataset.form+':'+(form.dataset.id||'new')]=Object.fromEntries(new FormData(form));cache();
+    if(form.dataset.form==='knowledge'){document.querySelectorAll('[data-action="test-knowledge"],[data-action="publish-knowledge"]').forEach(b=>b.disabled=true);clearFlowTest();}
+    if(['flow','flow-query'].includes(form.dataset.form))clearFlowTest();
+    if(form.dataset.form==='flow'){document.querySelectorAll('[data-action="test-flow"],[data-action="publish-flow"],[data-form="flow-query"] [type="submit"]').forEach(b=>b.disabled=true);$('[data-flow-unsaved]').hidden=false;}
+  });
+  document.addEventListener('change',ev=>{const el=ev.target;try{
+    if(el.dataset.select==='agent'){ui.agentId=el.value;closeModal();ui.deskConversation='';render();}
+    if(el.dataset.select==='ops-role'){ui.opsRole=el.value;closeModal();navigate('ops',opsMenus[ui.opsRole][0][0]);render();}
+    if(el.dataset.select==='ticket-filter'){ui.ticketFilter=el.value;render();}
+    cache();
+  }catch(err){fail(err);}});
+  document.addEventListener('submit',ev=>{
+    const form=ev.target.closest('form[data-form]');if(!form)return;ev.preventDefault();
+    const f=form.dataset.form,id=form.dataset.id,data=Object.fromEntries(new FormData(form)),key=f+':'+(id||'new');
+    try{
+      if(f==='ticket-request'){
+        ui.pendingTicket={...ui.pendingTicket,...data,draftKey:key};
+        modal('核对服务申请',`<div class="preview-block"><h2>${e(data.title)}</h2><p>${e(data.description)}</p>${ui.pendingTicket.caseId?`<small>关联问题：${e(ui.pendingTicket.caseId)}</small>`:`<small>客户：${e(store.state.customers.find(c=>c.id===data.customerId)?.name)}</small>`}</div><p class="muted">确认后创建或继续原工单。取消不会产生受理记录，也不会执行退款。</p><form data-form="ticket-confirm" data-id="new"><div class="form-footer">${b('取消','close-modal')}<button class="btn primary" type="submit">确认提交申请</button></div></form>`);return;
+      }
+      if(f==='ticket-confirm'){const request=ui.pendingTicket;if(!request)throw Error('申请已失效，请重新核对');const r=apply('createTicket',{...request,confirmed:true});delete ui.drafts[request.draftKey];ui.pendingTicket=null;toast(r.created?`已受理 ${r.id}`:`已有工单 ${r.id}，继续原记录`);closeModal();render();return;}
+      if(f==='customer-say'){apply('say',{id,body:data.body});ui.customerConversation=id;}
+      else if(f==='reply'||f==='note')apply(f,{id,body:data.body},f==='note'?'内部备注已保存':'回复已发送');
+      else if(f==='complete-case'){apply('completeCase',{id,conversationId:form.dataset.conversation,...data},'处理结果已记录，客户确认单独统计');closeModal();}
+      else if(f==='ticket-update'){apply('updateTicket',{id,...data},'处理记录已提交');closeModal();}
+      else if(f==='supplement'){apply('supplement',{id,body:data.body},'补充信息已提交');closeModal();}
+      else if(f==='dispute'){const conv=apply('feedback',{id,confirmed:false,reason:data.reason},'已继续原问题，原受理记录保留');if(conv)ui.customerConversation=conv;closeModal();}
+      else if(f==='assign'){apply(form.dataset.command,{id,ownerId:data.ownerId},'负责人已调整');closeModal();}
+      else if(f==='knowledge'){ui.knowledgeId=apply('saveKnowledge',{...data,id:id==='new'?'':id,effectiveAt:new Date(data.effectiveAt+'T00:00:00Z').toISOString(),expiresAt:data.expiresAt?new Date(data.expiresAt+'T00:00:00Z').toISOString():''},'草稿已保存，尚未发布');ui.flowTest=null;}
+      else if(f==='disable-knowledge'){apply('disableKnowledge',{id,reason:data.reason},'知识已停用，历史引用保留');closeModal();}
+      else if(f==='flow'){apply('saveFlow',{...data,intakeEnabled:data.intakeEnabled==='true'},'策略草稿已保存，尚未发布');ui.flowTest=null;}
+      else if(f==='flow-query'){clearFlowTest();if(ui.drafts['flow:new'])throw Error('请先保存策略草稿，再运行单条测试');ui.flowTest=D.classify(store.state,data.query,'C001',Date.now(),store.state.flow.draft||store.state.flow.live,{orderFailure:data.orderFailure==='true'});toast('隔离测试完成，没有创建业务记录');}
+      else if(f==='service-settings')apply('serviceSettings',{...data,accepting:data.accepting==='true'},'接待规则已更新');
+      else if(f==='review-gap'){apply('reviewGap',{id,...data},'复核结论已保存');closeModal();}
+      else if(f==='link-gap'){apply('linkGap',{id,knowledgeId:data.knowledgeId},'已关联整改知识');closeModal();}
+      else if(f==='accept-gap'){apply('acceptGap',{id,acceptance:data.acceptance},'原问题验证及全量回归通过，已验收');closeModal();}
+      else throw Error('未知表单');
+      if(f!=='flow-query')delete ui.drafts[key];cache();render();if(['customer-say','reply','note'].includes(f))scrollMessages();
+    }catch(err){fail(err);}
+  });
+  document.addEventListener('keydown',ev=>{if((ev.ctrlKey||ev.metaKey)&&ev.key==='Enter'&&ev.target.closest('.composer')){ev.preventDefault();ev.target.closest('form').requestSubmit();}});
+  window.addEventListener('hashchange',()=>{closeModal();render();scrollMessages();});
+  window.addEventListener('popstate',()=>{closeModal();render();});
+  window.addEventListener('storage',ev=>{if(ev.key===window.SupportStore.KEY)toast('其他页面更新了工作空间。请刷新后继续，当前输入保留。',true);});
+  window.addEventListener('error',ev=>{console.error(ev.error);toast('页面出现异常；未提交的操作不会被视为成功。',true);});
+  render();scrollMessages();
+})();
+
+</script>
+</body>
+</html>

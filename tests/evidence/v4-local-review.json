@@ -1,0 +1,156 @@
+{
+  "producer": "Codex",
+  "date": "2026-10-02",
+  "baseline": "c265e14",
+  "scope": "V4 local integration; no remote push or deployment",
+  "node": {
+    "v4_domain": 70,
+    "v4_ui": 7,
+    "v4_total": 77,
+    "legacy": 138,
+    "all": 215,
+    "failed": 0,
+    "commands": [
+      "node --test tests/domain.test.cjs tests/v4-ui.test.cjs",
+      "node --test tests/*.test.cjs"
+    ]
+  },
+  "browser": {
+    "surface": "Codex In-app Browser",
+    "url": "http://127.0.0.1:8768/",
+    "storage": "native browser storage; no Storage replacement",
+    "checks": [
+      {
+        "id": "three-workspaces",
+        "passed": true,
+        "observation": "三工作区真实HTTP打开并共享会话/工单状态"
+      },
+      {
+        "id": "knowledge",
+        "passed": true,
+        "observation": "客户服务规则答复、引用与明确确认"
+      },
+      {
+        "id": "human-handoff",
+        "passed": true,
+        "observation": "客户转人工，客服接管，公开回复与内部备注入口分开"
+      },
+      {
+        "id": "customer-projection",
+        "passed": true,
+        "observation": "内部备注ZX-1002及核对依据未出现在客户DOM"
+      },
+      {
+        "id": "agent-result",
+        "passed": true,
+        "observation": "人工可记录当场结论，无需工单，客户另行确认"
+      },
+      {
+        "id": "return-contact",
+        "passed": true,
+        "observation": "结束沟通后客户再发问题，客服侧新增待处理事项"
+      },
+      {
+        "id": "intake-cancel",
+        "passed": true,
+        "observation": "售后填写并核对后取消，未出现新工单"
+      },
+      {
+        "id": "native-refresh",
+        "passed": true,
+        "observation": "确认受理TK00163后原生刷新，编号和申请保留"
+      },
+      {
+        "id": "ticket-result",
+        "passed": true,
+        "observation": "客服领取TK00163，提交结果，客户仅看到公开说明"
+      },
+      {
+        "id": "confirmed-dispute",
+        "passed": true,
+        "observation": "客户确认后仍可提出异议；重开TK00163，首次受理22:15保留"
+      },
+      {
+        "id": "operations",
+        "passed": true,
+        "observation": "经理概览显示当前实际问题/完成/确认与角色导航"
+      },
+      {
+        "id": "settings-draft",
+        "passed": true,
+        "observation": "未保存容量19，切页返回及刷新仍为19，业务配置未提交"
+      },
+      {
+        "id": "flow-test",
+        "passed": true,
+        "observation": "关闭售后未保存时单条测试禁用；保存后输出handoff"
+      },
+      {
+        "id": "flow-publish",
+        "passed": true,
+        "observation": "恢复售后开启、回归后发布v2；未回归发布按钮禁用"
+      },
+      {
+        "id": "customer-only",
+        "passed": true,
+        "observation": "独立客户入口没有工作区导航"
+      },
+      {
+        "id": "mobile",
+        "passed": true,
+        "observation": "375×812下document宽375，无横向溢出，实际DOM无重复ID"
+      },
+      {
+        "id": "console",
+        "passed": true,
+        "observation": "主工作区与独立客户页error/warn均为空"
+      },
+      {
+        "id": "bundle-http",
+        "passed": true,
+        "observation": "dist单文件真实HTTP打开三Tab，无error/warn"
+      }
+    ]
+  },
+  "review": {
+    "mode": "two independent read-only reviews followed by fixes and independent rechecks",
+    "roles": [
+      "correctness, invariants, boundaries",
+      "scope, complexity, evidence"
+    ],
+    "p0": 0,
+    "p1": 3,
+    "p2": 5,
+    "unique_findings": 8,
+    "open_findings": 0,
+    "cost_vs_rework": "low"
+  },
+  "static": {
+    "inline_scripts": 8,
+    "actual_static_ids": 6,
+    "duplicate_ids": 0,
+    "note": "Generic artifact checker reports false duplicates because its raw id regex also scans data-id and JS templates. HTMLParser and actual browser DOM find no duplicate IDs; all 8 inline scripts parse."
+  },
+  "not_verified": [
+    "Browser export download file contents",
+    "Native file:// persistence",
+    "Cross-device or simultaneous multi-user behavior",
+    "Real identity, backend, external business APIs and model quality",
+    "Historical Python browser suites (not applicable to V4)"
+  ],
+  "runtime_sha256": {
+    "index.html": "b5c8868d290590fb3d2790d33de9c3da952c8e65b6e026d08f29513620cdd793",
+    "run.py": "d5f42b4d6455372c4e8cf610c936213e2b07b0f3f571fc2d5a0f7f2a9acecb26",
+    "build_single.py": "3eb35d74aa7debc0ce14076b55ad0d05503f9497154323e6a44dcea43d03fdcc",
+    "dist/知序客服.html": "af42dfc7455d02507f5207b3080294564ca66060a322eefbbea5f53fcf768510",
+    "src/app.js": "eed6597c7949fd187c5678ee930679427fa1d9cb6adfd1c34b293970dc353af4",
+    "src/domain.js": "628cdcb83bebbedc95f2410dd0e0f2e31b0773d4ead7d4bbc6069fe9df72f617",
+    "src/seed.js": "69bed50d12fadbe79e9a413de2d5017ee688488c8c42640d8e2e4cdcaa2b02c2",
+    "src/store.js": "32183242d0543bb89ae9d80e6cde1b238ef0b450d024b5c1f41135f1f16965eb",
+    "src/views/customer.js": "800a84142712346aa61de0d758c6402b523a444dccfe084b2cd1659bec398462",
+    "src/views/desk.js": "643263b77a4e78b643734522d670665fbd5404c119b14d4e2a05d28a1d18185a",
+    "src/views/operations.js": "083d560276f0d91716778130815706834b430c17b9ebd23c7bdbf5c1822202d9",
+    "src/views/shared.js": "6ae13ed85ab78efd8b81ec512329c4eff4a7b33d4b98e83d6a22a1d943d0db2d",
+    "src/styles.css": "10d4bbbe5877db77552f654b1a72a81337c9fcbe4754753b05356bc39c8248e1"
+  }
+}

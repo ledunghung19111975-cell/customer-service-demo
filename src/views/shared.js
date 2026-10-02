@@ -1,0 +1,23 @@
+(function(root){
+  'use strict';
+  const e=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const icons={chat:'M4 4h16v12H9l-5 4V4Z',inbox:'M4 4h16v16H4V4Zm0 10h5l2 3h2l2-3h5',ticket:'M3 6h18v4a2 2 0 0 0 0 4v4H3v-4a2 2 0 0 0 0-4V6Zm12 0v12',book:'M12 5v15M12 5C8 2 4 3 2 4v15c4-2 7-1 10 1 3-2 6-3 10-1V4c-4-2-7-1-10 1Z',chart:'M4 20V4m0 16h17M8 16v-5m5 5V7m5 9V3',shield:'M12 2 3 6v6c0 5 9 10 9 10s9-5 9-10V6L12 2Zm-5 9 3 3 7-7',flow:'M4 3h6v6H4V3Zm10 12h6v6h-6v-6ZM7 9v9h7m3-9V6h-7',settings:'M3 6h18M3 12h18M3 18h18M8 3v6m8 0v6M7 15v6',plug:'M8 2v6m8-6v6M5 8h14v4a7 7 0 0 1-14 0V8Zm7 11v3',arrow:'m9 5 7 7-7 7',check:'m4 12 5 5L20 6',plus:'M12 4v16M4 12h16',search:'M21 21l-6-6M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z',users:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m20 0v-2a4 4 0 0 0-3-3.8M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm8 0a4 4 0 0 1 0 8',clock:'M12 8v5l3 2M22 12A10 10 0 1 1 2 12a10 10 0 0 1 20 0Z',send:'m3 3 19 9-19 9 4-9-4-9Zm4 9h15',close:'m6 6 12 12M6 18 18 6',bolt:'m13 2-9 12h7l-1 8 10-13h-7l1-7Z',external:'M14 3h7v7m0-7-11 11M10 3H3v18h18v-7'};
+  const icon=(name,size=18)=>`<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${icons[name]||icons.chat}"/></svg>`;
+  const b=(label,action,id='',cls='',extra='')=>`<button type="button" class="btn ${cls}" data-action="${action}" data-id="${e(id)}" ${extra}>${label}</button>`;
+  const labels={bot:'智能接待',queued:'待人工接待',human:'人工接待中',closed:'沟通已结束',new:'待领取',working:'处理中',waiting_customer:'待客户补充',done:'结果已记录',open:'待处理',completed:'处理完成',confirmed:'已确认',fixing:'整改中',dismissed:'已排除',pending:'待客户反馈',disputed:'客户有异议'};
+  const pill=(label,kind='')=>`<span class="pill ${e(kind)}">${e(labels[label]||label)}</span>`;
+  const date=(n,full=false)=>new Date(n).toLocaleString('zh-CN',full?{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}:{hour:'2-digit',minute:'2-digit',hour12:false});
+  const empty=(title,body='')=>`<div class="empty"><div class="empty-icon">${icon('inbox',28)}</div><h3>${e(title)}</h3><p>${e(body)}</p></div>`;
+  const field=(label,name,value='',type='text',extra='')=>`<label class="field"><span>${e(label)}</span>${type==='textarea'?`<textarea name="${e(name)}" rows="4" ${extra}>${e(value)}</textarea>`:`<input name="${e(name)}" type="${type}" value="${e(value)}" ${extra}>`}</label>`;
+  const heading=(title,sub,actions='')=>`<div class="page-heading"><div><div class="eyebrow">青禾客服 / 工作空间</div><h1>${e(title)}</h1><p>${e(sub)}</p></div><div class="row">${actions}</div></div>`;
+  const options=(arr,selected)=>arr.map(([id,label])=>`<option value="${e(id)}" ${id===selected?'selected':''}>${e(label)}</option>`).join('');
+  const search=(name,value,placeholder)=>`<label class="search">${icon('search')}<input data-search="${name}" data-focus="search-${name}" value="${e(value||'')}" placeholder="${e(placeholder)}" aria-label="${e(placeholder)}"></label>`;
+  function messages(conv,customer=false){return conv.messages.map(m=>{
+    if(customer&&m.visibility!=='public')return '';
+    if(m.role==='system')return `<div class="system-message">${e(m.body)}</div>`;
+    const isCustomer=m.role==='customer';
+    return `<article class="message ${isCustomer?'incoming':'outgoing'} ${m.visibility==='internal'?'internal':''}"><div class="message-meta">${e(isCustomer?'客户':m.author||'青禾小助')}${m.visibility==='internal'?' · 仅内部可见':''}<time>${date(m.at)}</time></div><div class="bubble">${e(m.body).replace(/\n/g,'<br>')}</div>${m.citation?`<button type="button" class="citation" data-action="citation" data-id="${e(m.id)}">${icon('book',13)} ${e(m.citation.title)} · v${m.citation.version}</button>`:''}${customer&&m.intake?b('填写售后申请','intake',m.caseId,'small'):''}</article>`;
+    }).join('');}
+  function testReport(report){return report?`<div class="test-report"><div class="row between"><strong>回归结果</strong>${pill(report.passed?'全部通过':'存在失败',report.passed?'good':'warn')}</div><p class="muted small-text">${date(report.at,true)} · 校验路由和知识命中，不代表语义质量评分</p>${report.rows.map(r=>`<div class="test-row"><span class="${r.pass?'success-text':'danger-text'}">${r.pass?'✓':'×'}</span><div><strong>${e(r.name)}</strong><small>${e(r.query)} → ${e(r.actual)}</small></div></div>`).join('')}</div>`:empty('还没有测试结果','保存草稿后运行回归，全部通过才能发布。');}
+  root.SupportViews={e,icon,b,pill,date,empty,field,heading,options,search,messages,testReport,labels};
+})(window);

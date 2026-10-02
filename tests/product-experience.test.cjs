@@ -38,7 +38,7 @@ test('数据兼容不改写人工消息或自定义知识',()=>{
   assert.equal(upgraded.knowledge.at(-1).answer,state.knowledge.at(-1).answer);
 });
 test('产品页面移除演讲入口，售后表单使用已定义的访客变量',()=>{
-  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+  const html=fs.readFileSync(path.join(root,'legacy.html'),'utf8');
   const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
   assert.doesNotMatch(html,/演示|模拟|data-action="reset"|data-action="demo-guide"/);
   assert.doesNotMatch(app,/\$\{customerSubmitted\?/);
