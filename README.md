@@ -68,6 +68,8 @@ node --test tests/*.test.cjs
 
 `tests/domain.test.cjs` 与 `tests/workflow.test.cjs` 验证业务域、SOP、授权、受理、关闭、回访与保存逻辑；三份界面测试加载当前入口并用 VM 驱动事件和可控计时器，`tests/copy.test.cjs` 验证默认文案更新、原始值备份及用户内容保留。全量命令还会运行旧根模块测试，不能把总通过数写成 V4 覆盖数。旧 `tests/browser_smoke.py`、`tests/product_browser_smoke.py` 及旧 evidence 不适用于 V4。真实浏览器验收状态与证据范围见 [验收矩阵](docs/验收矩阵.md) 与 [SOP/手机端验收证据](tests/evidence/sop-mobile-review.json)。真实 iOS 键盘、设备网络与通知未验证；JSON 导出下载落盘和再次读取未作为已通过结论。
 
+电商改造的目标能力与开发顺序见[电商改造开发方案](docs/当前方案与角色分工修改计划.md)。该方案为待实施设计；本页所述运行能力和已有证据仍对应当前原型。
+
 ## 文件导航
 
 | 文件 | 用途 |
@@ -79,7 +81,7 @@ node --test tests/*.test.cjs
 | `run.py`、`build_single.py` | 本地 HTTP 服务、单文件构建 |
 | `legacy.html`、根目录旧 `app.js` / `engine.js` / `flow-*.js` 等 | 旧版入口与历史模块，不被 V4 `index.html` 加载 |
 | [方案文档](方案文档.md) | 产品目标、状态与职责 |
-| [SOP 与手机端设计](docs/当前方案与角色分工修改计划.md) | 节点、字段、授权与关闭回访规则 |
+| [电商改造开发方案](docs/当前方案与角色分工修改计划.md) | 待实施的商品/包裹/售后/退款、人工协作、迁移、开发分期与验收 |
 | [交付与应用说明](docs/交付与应用说明.md) | 使用条件、构建和数据处理 |
 | [演示脚本](docs/演示脚本.md) | 可复现的业务演示路线 |
 | [产品体验说明](docs/产品体验调整.md) | 页面、表单与反馈行为 |
