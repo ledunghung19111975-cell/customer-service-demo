@@ -9,7 +9,7 @@
   ];
   const STEP_TITLES = ['确认类型与原因', '核对规则及缺失信息', '核对申请', '登记受理'];
   const STATUS_LABELS = {idle: '未触发', todo: '待处理', doing: '处理中', waiting: '待客户补充', done: '已完成', na: '不适用', error: '异常'};
-  const RUN_LABELS = {answer: '检索知识并答复', order: '核对订单', intake: '采集售后申请', gap: '未命中知识', handoff: '转人工', askOrder: '等待订单号', orderDenied: '订单核对未通过'};
+  const RUN_LABELS = {social: '礼貌回应', answer: '检索知识并答复', order: '核对订单', intake: '采集售后申请', gap: '未命中知识', handoff: '转人工', askOrder: '等待订单号', orderDenied: '订单核对未通过'};
   const CALLBACK_LABELS = {pending: '待回访', contacted: '已联系', cancelled: '已取消'};
 
   function due(conv, s) {

@@ -141,8 +141,9 @@
       else if(f==='callback-result'){apply('callbackResult',{ticketId:id,result:data.result,summary:data.summary,nextAt:at(data.nextAt)},'回访结果已记录');closeModal();}
       else if(f==='reply'){
         const ref=ui.suggestionRefs?.[identity().id+':'+id],orderRef=ui.orderReplyRefs?.[identity().id+':'+id];
+        const selected=$('.sop-case-tab.active'),caseId=ref?.caseId||orderRef?.caseId||(selected?.dataset.conversation===id?selected.dataset.id:undefined);
         if(ref){const fresh=D.suggestion(store.state,id,ref.caseId);if(fresh.token!==ref.token||fresh.status!=='ready'){modal('答复依据已变化',`<p>当前草稿已保留，发送前请重新核对。</p><div class="result-note">${e(fresh.body||fresh.reason)}</div>${fresh.knowledge?`<p>${e(fresh.knowledge.title)} · v${e(fresh.knowledge.version)} · ${e(fresh.knowledge.source)}</p>`:''}<div class="form-footer">${b('返回修改','close-modal')}${b('放弃建议','discard-draft-suggestion',id)}${fresh.status==='ready'?b('已核对，保留草稿','recheck-suggestion',id,'primary',`data-token="${e(fresh.token)}"`):''}</div>`);return true;}}
-        apply('reply',{id,body:data.body,...(orderRef?{orderCaseId:orderRef.caseId,orderSnapshot:orderRef.order}:{}),...(ref?{suggestionToken:ref.token,suggestionCaseId:ref.caseId}:{})},'回复已发送');
+        apply('reply',{id,body:data.body,caseId,...(orderRef?{orderCaseId:orderRef.caseId,orderSnapshot:orderRef.order}:{}),...(ref?{suggestionToken:ref.token,suggestionCaseId:ref.caseId}:{})},'回复已发送');
         if(ref)delete ui.suggestionRefs[identity().id+':'+id];if(orderRef)delete ui.orderReplyRefs[identity().id+':'+id];
       }else return false;
       delete ui.drafts[key];render();cache();if(f==='reply')ctx.scrollMessages();return true;

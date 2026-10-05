@@ -777,9 +777,19 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     const lookup = !/(不查|不要查)/.test(query) && (/(查|看|查询|到哪|在哪|进度).{0,8}(订单|物流|快递)/.test(query) || /(订单|物流|快递).{0,8}(到哪|在哪|进度|状态)/.test(query) || /^(订单|物流|快递)$/.test(query.trim()));
     return {human, id, onlyId, policy, intake, lookup};
   }
+  function socialReply(query) {
+    const q = query.toLowerCase().replace(/[\s，,。.!！?？、；;~～…]/g, '');
+    const tokens = q.match(/你好|您好|在吗|在不在|早上好|早安|晚上好|hello|hi|谢谢(?:你|您)?|多谢|谢了|感谢(?:你|您)?|辛苦了|好(?:的|吧)?|嗯|哦|收到|明白了?|了解了?|知道了|ok|呀|啊|啦|呢/g);
+    if (!q || tokens?.join('') !== q) return '';
+    if (/(谢|辛苦)/.test(q)) return '不客气，有其他问题可以继续告诉我。';
+    if (/(你好|您好|在吗|在不在|早|晚上好|hello|hi)/.test(q)) return '您好，我在。请告诉我需要什么帮助。';
+    return '好的，有需要可以继续告诉我。';
+  }
   function classify(s, query, customerId, now = Date.now(), config = s.flow.live, options = {}) {
     const p = intentions(query, config);
     if (p.human) return [{kind: 'handoff', reason: '客户要求人工协助'}];
+    const social = socialReply(query);
+    if (social) return [{kind: 'social', body: social}];
     const orderIds = new Set((query.match(/\bSO[A-Z0-9]+\b/gi) || []).map(id => id.toUpperCase()));
     if (orderIds.size > 1) return [{kind: 'handoff', reason: '同时涉及多个订单，需要逐项核实对应诉求'}];
     const results = [];
@@ -868,7 +878,9 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     const results = classify(s, query, conv.customerId, now, conv.flow, options);
     conv.runs.push({at: now, flowVersion: conv.flow.version, query, steps: results.map(r => r.kind)});
     for (const r of results) {
-      if (r.kind === 'answer') {
+      if (r.kind === 'social') {
+        if (!conv.aiOptOut) message(s, conv, 'bot', r.body, now);
+      } else if (r.kind === 'answer') {
         const c = makeCase(s, conv, 'knowledge', query, '', now);
         const citation = {id: r.knowledge.id, version: r.knowledge.version, title: r.knowledge.title, source: r.knowledge.source, answer: r.knowledge.answer};
         complete(s, c, r.knowledge.answer, {kind: 'knowledge', citation}, 'bot', now);
@@ -1009,7 +1021,8 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     const f = c?.workflow || {}, order = currentOrder(s, c), t = c && (activeTicket(s, c) || s.tickets.find(x => x.caseId === c.id));
     const accepted = c && acceptedTicket(s, c);
     const bound = Boolean(order), isOrder = c?.kind === 'order', sale = c?.kind === 'aftersales', done = c?.status === 'completed';
-    const states = !c ? {} : {intent: c.kind === 'support' && !f.intentConfirmedAt ? 'todo' : 'done', order: isOrder || sale ? (bound ? 'done' : 'todo') : 'idle', logistics: isOrder ? (f.logistics || c.result?.evidence?.kind === 'local-order' ? 'done' : 'todo') : 'idle', aftersales: sale ? (accepted ? 'done' : bound ? 'doing' : 'todo') : 'idle', information: t?.status === 'waiting_customer' ? 'waiting' : sale && !accepted ? 'todo' : 'idle', result: done ? 'done' : t ? (t.status==='waiting_customer'?'waiting':'doing') : 'todo', callback: t?.callback ? 'done' : 'idle'};
+    const answered = c && conv.messages.some(m => m.caseId === c.id && m.visibility === 'public' && !m.aiAssist && m.at >= c.createdAt && ['agent','bot'].includes(m.role));
+    const states = !c ? {} : {intent: c.kind === 'support' && !f.intentConfirmedAt && !done && !c.result && !answered ? 'todo' : 'done', order: isOrder || sale ? (bound ? 'done' : 'todo') : 'idle', logistics: isOrder ? (f.logistics || c.result?.evidence?.kind === 'local-order' ? 'done' : 'todo') : 'idle', aftersales: sale ? (accepted ? 'done' : bound ? 'doing' : 'todo') : 'idle', information: t?.status === 'waiting_customer' ? 'waiting' : sale && !accepted ? 'todo' : 'idle', result: done ? 'done' : t ? (t.status==='waiting_customer'?'waiting':'doing') : 'todo', callback: t?.callback ? 'done' : 'idle'};
     const nodes = SOP.map(([key, title]) => {
       const override = f.overrides?.[key];
       let status = key === 'close' ? (conv.state === 'closed' ? 'done' : customerConnection(s, conv.customerId) === 'online' ? 'idle' : 'todo') : (states[key] || 'idle');
@@ -1027,7 +1040,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
   }
   function closePreview(s, conversationId, now = Date.now()) {
     const conv = get(s, 'conversations', conversationId), cases = conv.caseIds.map(id => get(s, 'cases', id)), tickets = s.tickets.filter(t => conv.caseIds.includes(t.caseId));
-    const items = cases.flatMap(c => sopView(s, conv.id, c.id, now).nodes.filter(n => n.key !== 'close' && !['idle','done','na'].includes(n.status)).map(n => {
+    const items = cases.filter(c => c.status !== 'completed').flatMap(c => sopView(s, conv.id, c.id, now).nodes.filter(n => n.key !== 'close' && !['idle','done','na'].includes(n.status)).map(n => {
       const t = tickets.find(t => t.id === n.ticketId);
       return {caseId:c.id,caseTitle:c.title,nodeKey:n.key,title:n.title,status:n.status,reason:n.reason,...(t?{ticketId:t.id,ownerId:t.ownerId,dueAt:t.dueAt}:{})};
     }));
@@ -1041,7 +1054,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     const c = m.caseId && conv.caseIds.includes(m.caseId) ? get(s,'cases',m.caseId) : conv.caseIds.length ? get(s,'cases',conv.caseIds.at(-1)) : null;
     if (c?.status==='completed' || c?.workflow?.withdrawn) return null;
     const sg = suggestion(s,conv.id,c?.id,now), p = intentions(m.body,conv.flow);
-    if (p.human || new Set((m.body.match(/\bSO[A-Z0-9]+\b/gi)||[]).map(x=>x.toUpperCase())).size>1 || sg.status==='conflict') return null;
+    if (p.human || socialReply(m.body) || new Set((m.body.match(/\bSO[A-Z0-9]+\b/gi)||[]).map(x=>x.toUpperCase())).size>1 || sg.status==='conflict') return null;
     let body = sg.status==='ready' ? sg.body : '', citation = sg.knowledge;
     if (p.lookup || p.onlyId) {
       const order = s.orders.find(o=>o.id===(p.id || c?.orderId) && o.customerId===conv.customerId);
@@ -1162,6 +1175,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
           assert(['existing','new','callback','na','withdrawn'].includes(item.action),'遗留事项安排无效');
           const why=text(item.reason,'跟进安排说明',500), c=get(s,'cases',item.caseId); let t;
           if (['na','withdrawn'].includes(item.action)) {
+            assert(c.status !== 'completed','已完成问题不能标为不适用或客户撤回');
             assert(!(c.kind==='aftersales' && acceptedTicket(s,c)),'已受理售后不能通过关闭取消');
             assert(!s.tickets.some(t=>t.caseId===c.id && t.status!=='done'),'已有办理任务，请保留跟进安排');
             wf(c).overrides ||= {}; wf(c).overrides[item.nodeKey]={status:'na',reason:why,at:now,actorId:a.id};
@@ -1201,6 +1215,12 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
       }
       case 'say': {
         const c = get(s, 'conversations', data.id); owns(a, c); assert(customerConnection(s,a.id)==='online','当前连接不可用，请恢复在线后发送'); const body = text(data.body, '问题');
+        const social = !intentions(body,c.flow).human && socialReply(body);
+        if (c.state !== 'bot' && social) {
+          message(s,c,'customer',body,now);
+          if (!c.aiOptOut) message(s,c,'bot',social,now);
+          value=c.id; break;
+        }
         if (c.state === 'closed') { c.state = c.ownerHistory.length || c.caseIds.some(id => activeTicket(s, get(s, 'cases', id))) ? 'queued' : 'bot'; if (c.state === 'queued') {c.waitingSince = now; c.firstHumanAt = null;} }
         message(s, c, 'customer', body, now);
         if (c.state === 'bot') run(s, c, body, now);
@@ -1223,15 +1243,24 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
       }
       case 'reply': case 'note': {
         const c = get(s, 'conversations', data.id); agentOwns(a, c); assert(c.state === 'human', '会话不在人工接待状态');
-        let citation, orderId;
+        let citation, orderId, caseId;
         if (type === 'reply' && data.suggestionToken) { const sg = suggestion(s,c.id,data.suggestionCaseId,now); assert(sg.status==='ready' && sg.token===data.suggestionToken,'推荐依据已变化，请重新核对后发送'); citation=copy(sg.knowledge); }
         if (type === 'reply' && (data.orderCaseId !== undefined || data.orderSnapshot !== undefined)) {
           const issue=get(s,'cases',data.orderCaseId), order=currentOrder(s,issue);
           assert(c.caseIds.includes(issue.id) && issue.customerId===c.customerId && order,'订单不属于当前接待问题');
           assert(JSON.stringify(order)===JSON.stringify(data.orderSnapshot),'订单事实已变化，请重新查询并核对后发送'); orderId=order.id;
         }
+        if (type === 'reply') {
+          caseId = data.caseId || data.suggestionCaseId || data.orderCaseId || (c.caseIds.length === 1 ? c.caseIds[0] : '');
+          if (caseId) {
+            const issue = get(s,'cases',caseId);
+            assert(c.caseIds.includes(caseId) && issue.customerId === c.customerId,'问题不属于当前接待');
+            assert((!data.suggestionCaseId || data.suggestionCaseId === caseId) && (!data.orderCaseId || data.orderCaseId === caseId),'回复依据与问题不一致');
+            wf(issue).intentConfirmedAt ||= now;
+          }
+        }
         pauseAi(c,'人工已接手回复',now);
-        message(s, c, 'agent', text(data.body, type === 'note' ? '内部备注' : '回复'), now, {author: a.name, visibility: type === 'note' ? 'internal' : 'public', ...(citation?{citation}:{}), ...(orderId?{orderId}:{})});
+        message(s, c, 'agent', text(data.body, type === 'note' ? '内部备注' : '回复'), now, {author: a.name, visibility: type === 'note' ? 'internal' : 'public', ...(caseId?{caseId}:{}), ...(citation?{citation}:{}), ...(orderId?{orderId}:{})});
         if (type === 'reply') c.firstHumanAt ||= now; break;
       }
       case 'completeCase': {
@@ -1624,7 +1653,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
   ];
   const STEP_TITLES = ['确认类型与原因', '核对规则及缺失信息', '核对申请', '登记受理'];
   const STATUS_LABELS = {idle: '未触发', todo: '待处理', doing: '处理中', waiting: '待客户补充', done: '已完成', na: '不适用', error: '异常'};
-  const RUN_LABELS = {answer: '检索知识并答复', order: '核对订单', intake: '采集售后申请', gap: '未命中知识', handoff: '转人工', askOrder: '等待订单号', orderDenied: '订单核对未通过'};
+  const RUN_LABELS = {social: '礼貌回应', answer: '检索知识并答复', order: '核对订单', intake: '采集售后申请', gap: '未命中知识', handoff: '转人工', askOrder: '等待订单号', orderDenied: '订单核对未通过'};
   const CALLBACK_LABELS = {pending: '待回访', contacted: '已联系', cancelled: '已取消'};
 
   function due(conv, s) {
@@ -1944,8 +1973,9 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
       else if(f==='callback-result'){apply('callbackResult',{ticketId:id,result:data.result,summary:data.summary,nextAt:at(data.nextAt)},'回访结果已记录');closeModal();}
       else if(f==='reply'){
         const ref=ui.suggestionRefs?.[identity().id+':'+id],orderRef=ui.orderReplyRefs?.[identity().id+':'+id];
+        const selected=$('.sop-case-tab.active'),caseId=ref?.caseId||orderRef?.caseId||(selected?.dataset.conversation===id?selected.dataset.id:undefined);
         if(ref){const fresh=D.suggestion(store.state,id,ref.caseId);if(fresh.token!==ref.token||fresh.status!=='ready'){modal('答复依据已变化',`<p>当前草稿已保留，发送前请重新核对。</p><div class="result-note">${e(fresh.body||fresh.reason)}</div>${fresh.knowledge?`<p>${e(fresh.knowledge.title)} · v${e(fresh.knowledge.version)} · ${e(fresh.knowledge.source)}</p>`:''}<div class="form-footer">${b('返回修改','close-modal')}${b('放弃建议','discard-draft-suggestion',id)}${fresh.status==='ready'?b('已核对，保留草稿','recheck-suggestion',id,'primary',`data-token="${e(fresh.token)}"`):''}</div>`);return true;}}
-        apply('reply',{id,body:data.body,...(orderRef?{orderCaseId:orderRef.caseId,orderSnapshot:orderRef.order}:{}),...(ref?{suggestionToken:ref.token,suggestionCaseId:ref.caseId}:{})},'回复已发送');
+        apply('reply',{id,body:data.body,caseId,...(orderRef?{orderCaseId:orderRef.caseId,orderSnapshot:orderRef.order}:{}),...(ref?{suggestionToken:ref.token,suggestionCaseId:ref.caseId}:{})},'回复已发送');
         if(ref)delete ui.suggestionRefs[identity().id+':'+id];if(orderRef)delete ui.orderReplyRefs[identity().id+':'+id];
       }else return false;
       delete ui.drafts[key];render();cache();if(f==='reply')ctx.scrollMessages();return true;
