@@ -2,9 +2,11 @@
   'use strict';
   const D=window.SupportDomain,V=window.SupportViews,{e,b,icon,field,options,pill,date,empty}=V;
   let storage;try{storage=localStorage;}catch(err){storage={getItem(){throw err;},setItem(){throw err;}};}
-  const store=window.SupportStore.open(storage,()=>window.SupportSeed.create());
+  const commerceMode=new URLSearchParams(location.search).get('data')==='ecommerce';
+  const store=commerceMode?window.SupportStore.openCommerce(storage,()=>window.SupportSeed.createCommerce()):window.SupportStore.open(storage,()=>window.SupportSeed.create());
+  const viewKey=commerceMode?'qinghe-support-ecommerce-view-v1':'qinghe-support-view';
   const customerOnly=new URLSearchParams(location.search).get('view')==='customer';
-  let cached={};try{cached=JSON.parse(sessionStorage.getItem('qinghe-support-view')||'{}');}catch{}
+  let cached={};try{cached=JSON.parse(sessionStorage.getItem(viewKey)||'{}');}catch{}
   const ui={workspace:'customer',deskPage:'inbox',opsPage:'overview',opsRole:'manager',agentId:'lin',customerConversation:'',deskConversation:'',deskFilter:'queue',ticketFilter:'all',knowledgeId:'',composeMode:'reply',search:{},drafts:{},...cached,flowTest:null};
   if(!['manager','operator','admin'].includes(ui.opsRole))ui.opsRole='manager';
   if(!['lin','zhou'].includes(ui.agentId))ui.agentId='lin';
@@ -12,13 +14,13 @@
   const opsMenus={manager:[['overview','服务概览','chart'],['team','团队协同','users'],['quality','质量复核','shield'],['service','接待规则','settings']],operator:[['knowledge','知识与答复','book'],['flow','接待策略与测试','flow'],['quality','服务改进队列','shield']],admin:[['integrations','接入与运行','plug'],['permissions','角色与职责','users'],['logs','操作审计','shield'],['data','数据维护','settings']]};
   const $=s=>document.querySelector(s);let toastTimer,focusBeforeDialog;
   function toast(message,error=false){const t=$('#toast');t.textContent=message;t.className='toast visible'+(error?' error':'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.className='toast',5000);}
-  function cache(){try{const {flowTest,drafts,pendingTicket,...persist}=ui;sessionStorage.setItem('qinghe-support-view',JSON.stringify(persist));}catch{/* Formal writes are handled by the transactional store, not this draft cache. */}}
+  function cache(){try{const {flowTest,drafts,pendingTicket,...persist}=ui;sessionStorage.setItem(viewKey,JSON.stringify(persist));}catch{/* Formal writes are handled by the transactional store, not this draft cache. */}}
   function identity(){return ui.workspace==='customer'?{id:'C001',role:'customer'}:ui.workspace==='desk'?{id:ui.agentId,role:'agent'}:{id:ui.opsRole,role:ui.opsRole};}
   function draftScope(){const a=identity();return a.role+':'+a.id;}
   function syncDrafts(){const scope=draftScope();if(scope!==activeDraftScope){ui.drafts=ui.draftScopes[scope]||={};ui.pendingTicket=null;ui.flowTest=null;activeDraftScope=scope;}}
   function clearFlowTest(){ui.flowTest=null;$('.query-result')?.remove();}
   function fail(err){const message=err?.message||'操作没有完成，请重试';if($('#dialog').open){$('#dialog-error').textContent=message;$('#dialog-error').hidden=false;}else toast(message,true);}
-  function apply(type,data,success){const value=store.dispatch(identity(),type,data);if(success)toast(success);return value;}
+  function apply(type,data,success){let value;try{value=store.dispatch(identity(),type,data);}catch(err){if(store.blocked)render();throw err;}if(success)toast(success);return value;}
   function navigate(workspace,page){ui.customerMode=workspace==='mobile'?'mobile':'desktop';ui.workspace=workspace==='mobile'?'customer':workspace;if(workspace==='desk')ui.deskPage=page||ui.deskPage;if(workspace==='ops')ui.opsPage=page||ui.opsPage;history.pushState(null,'','#'+workspace+(workspace==='desk'?'/'+ui.deskPage:workspace==='ops'?'/'+ui.opsPage:''));cache();}
   function route(){
     if(customerOnly){ui.workspace='customer';ui.customerMode='desktop';return;}
@@ -30,8 +32,8 @@
     if(['customer','desk','ops'].includes(workspace)){ui.workspace=workspace;if(workspace==='desk')ui.deskPage=['inbox','tickets'].includes(page)?page:'inbox';if(workspace==='ops')ui.opsPage=page||'overview';}
     if(ui.workspace==='ops'&&!opsMenus[ui.opsRole].some(x=>x[0]===ui.opsPage)){ui.opsPage=opsMenus[ui.opsRole][0][0];history.replaceState(null,'','#ops/'+ui.opsPage);}
   }
-  function top(s){const role=ui.workspace==='desk'?`<label class="role-picker"><span>当前客服</span><select aria-label="当前客服" data-select="agent">${options(s.staff.filter(a=>a.role==='agent').map(a=>[a.id,a.name]),ui.agentId)}</select></label>`:ui.workspace==='ops'?`<label class="role-picker"><span>工作角色</span><select aria-label="工作角色" data-select="ops-role">${options([['manager','服务经理'],['operator','知识运营'],['admin','系统管理员']],ui.opsRole)}</select></label>`:`<span class="customer-identity">${icon('users',16)} 我的账户</span><a class="icon-button" href="?view=customer#customer" target="_blank" rel="noopener" title="打开独立客户页" aria-label="打开独立客户页">${icon('external',16)}</a>`;
-    return `<header class="app-top"><a class="product-brand" href="#customer"><span class="brand-logo">${icon('chat',20)}</span><span>智能客服</span></a>${customerOnly?'<div class="standalone-heading">服务中心</div>':`<nav class="workspace-tabs" aria-label="工作区">${[['customer','客户服务','chat'],['mobile','手机端演示','chat'],['desk','客服工作台','inbox'],['ops','运营后台','chart']].map(([key,label,glyph])=>`<button type="button" data-action="workspace" data-id="${key}" class="${(ui.workspace==='customer'&&ui.customerMode==='mobile'?'mobile':ui.workspace)===key?'active':''}" ${(ui.workspace==='customer'&&ui.customerMode==='mobile'?'mobile':ui.workspace)===key?'aria-current="page"':''}>${icon(glyph)}${label}</button>`).join('')}</nav>`}<div class="top-right">${customerOnly?'<span class="customer-identity">我的账户</span>':role}</div></header>`;
+  function top(s){const role=ui.workspace==='desk'?`<label class="role-picker"><span>当前客服</span><select aria-label="当前客服" data-select="agent">${options(s.staff.filter(a=>a.role==='agent').map(a=>[a.id,a.name]),ui.agentId)}</select></label>`:ui.workspace==='ops'?`<label class="role-picker"><span>工作角色</span><select aria-label="工作角色" data-select="ops-role">${options([['manager','服务经理'],['operator','知识运营'],['admin','系统管理员']],ui.opsRole)}</select></label>`:`<span class="customer-identity">${icon('users',16)} 我的账户</span><a class="icon-button" href="?view=customer${commerceMode?'&data=ecommerce':''}#customer" target="_blank" rel="noopener" title="打开独立客户页" aria-label="打开独立客户页">${icon('external',16)}</a>`;
+    return `<header class="app-top"><a class="product-brand" href="#customer"><span class="brand-logo">${icon('chat',20)}</span><span>${commerceMode?'电商客服演示':'智能客服'}</span></a>${customerOnly?'<div class="standalone-heading">服务中心</div>':`<nav class="workspace-tabs" aria-label="工作区">${[['customer','客户服务','chat'],['mobile','手机端演示','chat'],['desk','客服工作台','inbox'],['ops','运营后台','chart']].map(([key,label,glyph])=>`<button type="button" data-action="workspace" data-id="${key}" class="${(ui.workspace==='customer'&&ui.customerMode==='mobile'?'mobile':ui.workspace)===key?'active':''}" ${(ui.workspace==='customer'&&ui.customerMode==='mobile'?'mobile':ui.workspace)===key?'aria-current="page"':''}>${icon(glyph)}${label}</button>`).join('')}</nav>`}<div class="top-right">${customerOnly?'<span class="customer-identity">我的账户</span>':role}</div></header>`;
   }
   function side(s){const menu=ui.workspace==='desk'?[['inbox','会话接待','inbox'],['tickets','工单处理','ticket']]:opsMenus[ui.opsRole];const active=ui.workspace==='desk'?ui.deskPage:ui.opsPage;const actor=identity();return `<aside class="workspace-sidebar"><div class="workspace-label">${ui.workspace==='desk'?'客户支持':'运营与管理'}</div>${menu.map(([key,label,glyph])=>`<button class="side-link ${active===key?'active':''}" type="button" data-action="${ui.workspace==='desk'?'desk-page':'ops-page'}" data-id="${key}">${icon(glyph)}<span>${label}</span></button>`).join('')}<div class="sidebar-bottom"><span class="workspace-dot"></span><strong>客户服务团队</strong><small>${ui.workspace==='desk'?'服务组 · 本人任务与公共池':{manager:'团队服务与质量',operator:'知识、策略与改进',admin:'系统接入与维护'}[ui.opsRole]}</small></div></aside>`;}
   function render(){
@@ -51,7 +53,7 @@
         case'integrations':content=V.integrations();break;
         case'permissions':content=V.permissions();break;
         case'logs':content=V.logs(s);break;
-        case'data':content=V.data();break;
+        case'data':content=V.data(commerceMode);break;
       }
     }
     const scrolls=[...document.querySelectorAll('.messages,.sop-workbench-scroll,.conversation-rows')].map(x=>[x.className,x.scrollTop,x.scrollHeight-x.clientHeight-x.scrollTop<40]);
@@ -90,6 +92,7 @@
     'new-conversation'(){closeModal();ui.customerConversation=apply('newConversation',{},'已开始新咨询，原服务记录仍保留');render();scrollMessages();},
     'quick-policy'(){quick('七天无理由退货有什么条件？');},
     'order-query'(el){quick('查物流 '+el.dataset.id);},
+    'commerce-query'(el){const value=apply('queryCommerce',{orderId:el.dataset.id});modal('订单、支付与包裹',V.commerceDetails(value));},
     'order-return'(el){quick('申请退货 '+el.dataset.id);},
     'request-human'(el){closeModal();const c=el.dataset.id||customerConversation().id;apply('requestHuman',{id:c},'已提交人工请求');render();scrollMessages();},
     'cancel-queue'(el){apply('cancelQueue',{id:el.dataset.id},'已取消当前排队');render();},
@@ -129,6 +132,7 @@
     'close-modal'(){closeModal();},
     'export-data'(){const data=apply('export',{});download('客服工作空间.json',data);toast('已生成工作空间导出文件');},
     'export-legacy'(){if(identity().role!=='admin')throw Error('需要系统管理员角色');const raw=localStorage.getItem('zhixu-customer-demo-v3.1');if(raw===null)throw Error('当前浏览器未读取到旧版本保存值');download('客服旧版本原始数据.json',raw);toast('已导出旧版本原始保存值，未做转换');},
+    'export-v4'(){if(identity().role!=='admin')throw Error('需要系统管理员角色');const raw=storage.getItem(window.SupportStore.KEY);if(raw===null)throw Error('当前浏览器未读取到 V4 保存值');download('客服V4原始数据.json',raw);toast('已导出 V4 原始保存值，未做转换');},
     'export-broken'(){if(store.original===null)throw Error('无法读取原始保存值，可能是浏览器禁用了存储');download('客服异常原始数据.json',store.original);},
     ...workbench.actions
   };
@@ -183,7 +187,7 @@
   document.addEventListener('keydown',ev=>{const dialog=$('#dialog');if(dialog.open&&dialog.parentElement?.classList.contains('phone-overlay-host')){if(ev.key==='Escape'){ev.preventDefault();closeModal();return;}if(ev.key==='Tab'){const fields=[...dialog.querySelectorAll('button,input,textarea,select,a[href]')].filter(x=>!x.disabled&&x.getClientRects().length);const first=fields[0],last=fields.at(-1);if(ev.shiftKey&&document.activeElement===first){ev.preventDefault();last?.focus();}else if(!ev.shiftKey&&document.activeElement===last){ev.preventDefault();first?.focus();}}}if((ev.ctrlKey||ev.metaKey)&&ev.key==='Enter'&&ev.target.closest('.composer')){ev.preventDefault();ev.target.closest('form').requestSubmit();}});
   window.addEventListener('hashchange',()=>{closeModal();render();scrollMessages();});
   window.addEventListener('popstate',()=>{closeModal();render();});
-  window.addEventListener('storage',ev=>{if(ev.key===window.SupportStore.KEY)toast('其他页面更新了工作空间。请刷新后继续，当前输入保留。',true);});
+  window.addEventListener('storage',ev=>{if(ev.key===store.key)toast('其他页面更新了工作空间。请刷新后继续，当前输入保留。',true);});
   window.addEventListener('error',ev=>{console.error(ev.error);toast('页面出现异常；未提交的操作不会被视为成功。',true);});
   render();scrollMessages();
   function tick(){workbench.tick();setTimeout(tick,1000);}setTimeout(tick,1000);

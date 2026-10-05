@@ -2,6 +2,7 @@
 (function (root) {
   'use strict';
   const Copy = typeof module !== 'undefined' && module.exports ? require('./copy.js') : root.SupportCopy;
+  const Commerce = typeof module !== 'undefined' && module.exports ? require('./commerce.js') : root.SupportCommerce;
   const copy = x => JSON.parse(JSON.stringify(x));
   const assert = (ok, message) => { if (!ok) throw new Error(message); };
   const text = (v, label, max = 2000) => {
@@ -13,8 +14,8 @@
   const normalize = s => String(s || '').toLowerCase().replace(/[\s，,。.!！?？]/g, '');
   const split = s => [...new Set(String(s).split(/[,，\n]/).map(x => x.trim()).filter(Boolean))];
   const roles = {
-    customer: ['newConversation', 'say', 'requestHuman', 'cancelQueue', 'feedback', 'createTicket', 'supplement', 'closeConversation', 'customerConnection'],
-    agent: ['claimConversation', 'reply', 'note', 'completeCase', 'closeConversation', 'createTicket', 'claimTicket', 'updateTicket', 'flag', 'presence', 'confirmIntent', 'bindOrder', 'queryOrder', 'markSop', 'setAiAssist', 'aiContinue', 'saveCallback', 'callbackResult', 'closeWithSummary'],
+    customer: ['newConversation', 'say', 'requestHuman', 'cancelQueue', 'feedback', 'createTicket', 'supplement', 'closeConversation', 'customerConnection', 'queryCommerce'],
+    agent: ['claimConversation', 'reply', 'note', 'completeCase', 'closeConversation', 'createTicket', 'claimTicket', 'updateTicket', 'flag', 'presence', 'confirmIntent', 'bindOrder', 'queryOrder', 'markSop', 'setAiAssist', 'aiContinue', 'saveCallback', 'callbackResult', 'closeWithSummary', 'queryCommerce'],
     manager: ['assignTicket', 'assignConversation', 'reviewGap', 'acceptGap', 'serviceSettings'],
     operator: ['saveKnowledge', 'testKnowledge', 'publishKnowledge', 'disableKnowledge', 'saveFlow', 'testFlow', 'publishFlow', 'linkGap'],
     admin: ['export']
@@ -45,16 +46,16 @@
     if (candidates.some(x => x !== first && x.exact === first.exact && x.hits === first.hits && x.k.live.answer !== first.k.live.answer)) return {conflict: true};
     return {id: first.k.id, ...copy(first.k.live)};
   }
-  function intentions(query, config) {
+  function intentions(query, config, commerce=false) {
     const lower = query.toLowerCase();
     const declined = lower.replace(/人工(?:智能|费|成本)/g, '').replace(/(?:不需要|不要|不用|不想|无需|别)(?:帮我|给我|再|先)?(?:转接|转|找|联系)?人工(?:客服)?/g, '').replace(/人工(?:客服)?(?:就|先)?(?:不用|不要|不需要)了?/g, '');
     const human = config.humanWords.some(w => declined.includes(w.toLowerCase()));
-    const id = query.match(/\bSO[A-Z0-9]+\b/i)?.[0].toUpperCase() || '';
-    const onlyId = /^(?:订单号[是为：:]?\s*)?SO[A-Z0-9]+[。！!]?$/i.test(query.trim());
+    const id = query.match(/\b(?:EC-)?SO[A-Z0-9]+\b/i)?.[0].toUpperCase() || '';
+    const onlyId = /^(?:订单号[是为：:]?\s*)?(?:EC-)?SO[A-Z0-9]+[。！!]?$/i.test(query.trim());
     const policy = /(规则|条件|政策|无理由|如何退|怎么退|退货运费|了解)/.test(query) && /(退|售后)/.test(query);
     const negatedReturn = /(不要|不想|不需要|暂不|先不).{0,6}(退货|退款|换货|申请)/.test(query);
     const intake = !negatedReturn && (/(申请|办理).{0,6}(退货|退款|换货|售后)/.test(query) || /(想|要|需要|帮我)(退货|退款|换货)/.test(query));
-    const lookup = !/(不查|不要查)/.test(query) && (/(查|看|查询|到哪|在哪|进度).{0,8}(订单|物流|快递)/.test(query) || /(订单|物流|快递).{0,8}(到哪|在哪|进度|状态)/.test(query) || /^(订单|物流|快递)$/.test(query.trim()));
+    const lookup = !/(不查|不要查)/.test(query) && (/(查|看|查询|到哪|在哪|进度).{0,8}(订单|物流|快递)/.test(query) || /(订单|物流|快递).{0,8}(到哪|在哪|进度|状态)/.test(query) || /^(订单|物流|快递)$/.test(query.trim()) || (commerce&&(/(查|看|查询|到哪|在哪|进度).{0,8}(包裹|支付)/.test(query)||/(包裹|支付).{0,8}(到哪|在哪|进度|状态)/.test(query)||/^(包裹|支付)$/.test(query.trim()))));
     return {human, id, onlyId, policy, intake, lookup};
   }
   function socialReply(query) {
@@ -66,16 +67,22 @@
     return '好的，有需要可以继续告诉我。';
   }
   function classify(s, query, customerId, now = Date.now(), config = s.flow.live, options = {}) {
-    const p = intentions(query, config);
+    const p = intentions(query, config, s.schema===5);
     if (p.human) return [{kind: 'handoff', reason: '客户要求人工协助'}];
     const social = socialReply(query);
     if (social) return [{kind: 'social', body: social}];
-    const orderIds = new Set((query.match(/\bSO[A-Z0-9]+\b/gi) || []).map(id => id.toUpperCase()));
+    const orderIds = new Set((query.match(/\b(?:EC-)?SO[A-Z0-9]+\b/gi) || []).map(id => id.toUpperCase()));
     if (orderIds.size > 1) return [{kind: 'handoff', reason: '同时涉及多个订单，需要逐项核实对应诉求'}];
+    if(s.schema===5&&(p.intake||/(没(?:有)?收到|未收到|没拿到|没到|破损|损坏|碎了|坏了|裂痕|漏水|丢了|丢失|少发|漏发|停滞|催发货)/.test(query)))return [{kind:'handoff',reason:'商品售后或物流异常需要人工逐项核实'}];
+    if(s.schema===5&&p.lookup){
+      const request=normalize(query).toUpperCase().replace(p.id,'');
+      const simple=/^(?:(?:请|麻烦)(?:帮我)?|帮我|我想|我要)?(?:(?:查(?:询)?(?:一下)?|看(?:一下)?)(?:我的|这笔)?(?:订单|物流|快递|包裹|支付)(?:信息|详情|状态|进度)?|(?:我的)?(?:订单|物流|快递|包裹|支付)(?:到哪了?|在哪|状态|进度|信息|详情))$/;
+      if(!simple.test(request))return [{kind:'handoff',reason:'查询包含其他描述，需要人工核实具体诉求'}];
+    }
     const results = [];
     if (p.lookup || p.onlyId) {
       const order = p.id && s.orders.find(o => o.id === p.id && o.customerId === customerId);
-      results.push(!p.id ? {kind: 'askOrder'} : !order ? {kind: 'orderDenied'} : options.orderFailure ? {kind: 'orderFailure'} : {kind: 'order', order: copy(order)});
+      results.push(!p.id ? {kind: 'askOrder'} : !order ? {kind: 'orderDenied'} : options.orderFailure ? {kind: 'orderFailure'} : {kind: 'order', order: copy(order),...(s.schema===5?{commerce:Commerce.snapshot(s,order.id)}:{})});
     }
     if (p.intake) results.push({kind: config.intakeEnabled ? 'intake' : 'handoff', orderId: p.id, reason: '售后申请需要人工受理'});
     if (p.policy || !results.length) {
@@ -143,7 +150,7 @@
     return existing;
   }
   function run(s, conv, query, now, options = {}) {
-    const plan = intentions(query, conv.flow);
+    const plan = intentions(query, conv.flow, s.schema===5);
     const pending = conv.pendingCaseId && get(s, 'cases', conv.pendingCaseId);
     if (plan.onlyId && pending && pending.kind === 'aftersales') {
       const c = aftersalesCase(s, conv, pending, plan.id, now); conv.pendingCaseId = '';
@@ -169,9 +176,10 @@
         const c = pending?.kind === 'order' && plan.onlyId ? pending : makeCase(s, conv, 'order', '查询订单与物流', plan.id, now);
         if (r.kind === 'order') {
           c.orderId = r.order.id; conv.pendingCaseId = '';
-          const body = `${r.order.product}：${r.order.status}。${r.order.delivery}`;
-          complete(s, c, body, {kind: 'local-order', id: r.order.id, snapshot: copy(r.order)}, 'bot', now);
+          const body = r.commerce?Commerce.summary(r.commerce):`${r.order.product}：${r.order.status}。${r.order.delivery}`;
+          if(!r.commerce||r.commerce.queryStatus==='ok')complete(s, c, body, {kind: r.commerce?'simulated-commerce':'local-order', id: r.order.id, snapshot: copy(r.commerce||r.order)}, 'bot', now);
           message(s, conv, 'bot', body, now, {caseId: c.id, orderId: r.order.id});
+          if(r.commerce?.queryStatus!=='ok'&&r.commerce)handoff(s,conv,'订单事实查询未取得完整结果',now);
         } else if (r.kind === 'askOrder') { conv.pendingCaseId = c.id; message(s, conv, 'bot', '请提供订单号，也可以从“我的订单”选择要查询的订单。', now, {caseId: c.id}); }
         else { message(s, conv, 'bot', r.kind === 'orderDenied' ? '暂时无法核对此订单。请确认订单号及购买账户；我不会展示其他账户的订单信息。' : '订单查询暂时不可用，没有取得最新状态。我会将已有信息交给人工核实。', now, {caseId: c.id}); handoff(s, conv, r.kind === 'orderDenied' ? '订单归属未通过核对' : '订单查询失败', now); }
       } else if (r.kind === 'intake') {
@@ -213,13 +221,14 @@
     return x;
   }
   function regression(s, now, articleId) {
+    const ownOrder=s.orders.find(o=>o.customerId==='C001')?.id||'SO20260926001',foreignOrder=s.orders.find(o=>o.customerId!=='C001')?.id||'SO20260926009';
     const cases = [
       {name: '明确转人工', query: '我要转人工', expected: 'handoff'},
       {name: '拒绝转人工不应升级', query: '不要转人工，我只问退货规则', absent: 'handoff'},
-      {name: '本人订单查询', query: '查物流 SO20260926001', expected: 'order'},
-      {name: '其他客户订单不可读', query: '查物流 SO20260926009', expected: 'orderDenied'},
-      {name: '查询失败不能宣称成功', query: '查物流 SO20260926001', expected: 'orderFailure', fault: true},
-      {name: '多诉求分别处理', query: '查物流 SO20260926001，再申请退货', expected: s.flow.live.intakeEnabled ? 'intake' : 'handoff', also: 'order'}
+      {name: '本人订单查询', query: '查物流 '+ownOrder, expected: 'order'},
+      {name: '其他客户订单不可读', query: '查物流 '+foreignOrder, expected: 'orderDenied'},
+      {name: '查询失败不能宣称成功', query: '查物流 '+ownOrder, expected: 'orderFailure', fault: true},
+      {name: '多诉求分别处理', query: '查物流 '+ownOrder+'，再申请退货', expected: s.schema===5?'handoff':s.flow.live.intakeEnabled?'intake':'handoff', ...(s.schema===5?{}:{also:'order'})}
     ];
     const rows = cases.map(c => { const rs = classify(s, c.query, 'C001', now, s.flow.live, {orderFailure: c.fault}); const kinds = rs.map(r => r.kind); return {name: c.name, query: c.query, actual: kinds.join(' → '), pass: c.absent ? !kinds.includes(c.absent) : kinds.includes(c.expected) && (!c.also || kinds.includes(c.also))}; });
     for (const k of activeArticles(s, now)) {
@@ -265,7 +274,7 @@
     f.intentEvidence={messageId:latestCustomer(conv)?.id || '',text:body,at:now};
   }
   function recognise(s, conv, body, now) {
-    const p = intentions(body, conv.flow), ids = [...new Set((body.match(/\bSO[A-Z0-9]+\b/gi) || []).map(x => x.toUpperCase()))];
+    const p = intentions(body, conv.flow,s.schema===5), ids = [...new Set((body.match(/\bSO[A-Z0-9]+\b/gi) || []).map(x => x.toUpperCase()))];
     const open = conv.caseIds.map(id => get(s, 'cases', id)).filter(c => c.status !== 'completed' && !c.workflow?.withdrawn);
     let c;
     if (ids.length <= 1 && !p.human && (p.intake || (p.onlyId && conv.pendingCaseId && get(s, 'cases', conv.pendingCaseId).kind === 'aftersales'))) {
@@ -291,7 +300,7 @@
     const conv = get(s, 'conversations', conversationId), c = caseId ? get(s, 'cases', caseId) : conv.caseIds.length ? get(s, 'cases', conv.caseIds.at(-1)) : null;
     assert(!c || conv.caseIds.includes(c.id), '问题不属于当前会话');
     const m = latestCustomer(conv), query = m?.body || '', k = query ? retrieve(s, query, now) : null;
-    const token = JSON.stringify({conv: conv.id, owner: conv.ownerId, state: conv.state, message: m || null, case: c ? {id: c.id, kind: c.kind, orderId: c.orderId, status: c.status} : null, order: currentOrder(s, c) || null, referencedOrders: s.orders.filter(o=>o.customerId===conv.customerId && query.toUpperCase().includes(o.id)), knowledge: k, connection: customerConnection(s, conv.customerId)});
+    const token = JSON.stringify({conv: conv.id, owner: conv.ownerId, state: conv.state, message: m || null, case: c ? {id: c.id, kind: c.kind, orderId: c.orderId, status: c.status} : null, order: currentOrder(s, c) || null, referencedOrders: s.orders.filter(o=>o.customerId===conv.customerId && (query.toUpperCase().includes(o.id)||o.id===c?.orderId)).map(o=>({...o,...(s.schema===5?{commerce:Commerce.snapshot(s,o.id)}:{})})), knowledge: k, connection: customerConnection(s, conv.customerId)});
     if (!k || k.conflict) return {token, messageId: m?.id || '', query, body: '', status: k?.conflict ? 'conflict' : 'none', reason: k?.conflict ? '知识来源冲突，需要人工核实' : '尚无有效知识依据，请人工核实'};
     return {token, messageId: m.id, query, body: k.answer, status: 'ready', knowledge: {id: k.id, title: k.title, version: k.version, source: k.source, answer: k.answer}};
   }
@@ -302,7 +311,7 @@
     const accepted = c && acceptedTicket(s, c);
     const bound = Boolean(order), isOrder = c?.kind === 'order', sale = c?.kind === 'aftersales', done = c?.status === 'completed';
     const answered = c && conv.messages.some(m => m.caseId === c.id && m.visibility === 'public' && !m.aiAssist && m.at >= c.createdAt && ['agent','bot'].includes(m.role));
-    const states = !c ? {} : {intent: c.kind === 'support' && !f.intentConfirmedAt && !done && !c.result && !answered ? 'todo' : 'done', order: isOrder || sale ? (bound ? 'done' : 'todo') : 'idle', logistics: isOrder ? (f.logistics || c.result?.evidence?.kind === 'local-order' ? 'done' : 'todo') : 'idle', aftersales: sale ? (accepted ? 'done' : bound ? 'doing' : 'todo') : 'idle', information: t?.status === 'waiting_customer' ? 'waiting' : sale && !accepted ? 'todo' : 'idle', result: done ? 'done' : t ? (t.status==='waiting_customer'?'waiting':'doing') : 'todo', callback: t?.callback ? 'done' : 'idle'};
+    const states = !c ? {} : {intent: c.kind === 'support' && !f.intentConfirmedAt && !done && !c.result && !answered ? 'todo' : 'done', order: isOrder || sale ? (bound ? 'done' : 'todo') : 'idle', logistics: isOrder ? ((f.logistics && (!f.logistics.commerce || f.logistics.commerce.queryStatus==='ok')) || c.result?.evidence?.kind==='local-order' || (c.result?.evidence?.kind==='simulated-commerce' && c.result.evidence.snapshot.queryStatus==='ok') ? 'done' : 'todo') : 'idle', aftersales: sale ? (accepted ? 'done' : bound ? 'doing' : 'todo') : 'idle', information: t?.status === 'waiting_customer' ? 'waiting' : sale && !accepted ? 'todo' : 'idle', result: done ? 'done' : t ? (t.status==='waiting_customer'?'waiting':'doing') : 'todo', callback: t?.callback ? 'done' : 'idle'};
     const nodes = SOP.map(([key, title]) => {
       const override = f.overrides?.[key];
       let status = key === 'close' ? (conv.state === 'closed' ? 'done' : customerConnection(s, conv.customerId) === 'online' ? 'idle' : 'todo') : (states[key] || 'idle');
@@ -333,12 +342,14 @@
     if (conv.messages.slice(index+1).some(x=>x.role==='agent' && x.visibility==='public')) return null;
     const c = m.caseId && conv.caseIds.includes(m.caseId) ? get(s,'cases',m.caseId) : conv.caseIds.length ? get(s,'cases',conv.caseIds.at(-1)) : null;
     if (c?.status==='completed' || c?.workflow?.withdrawn) return null;
-    const sg = suggestion(s,conv.id,c?.id,now), p = intentions(m.body,conv.flow);
+    const sg = suggestion(s,conv.id,c?.id,now), p = intentions(m.body,conv.flow,s.schema===5);
+    if(s.schema===5&&classify(s,m.body,conv.customerId,now,conv.flow).some(r=>r.kind==='handoff'))return null;
     if (p.human || socialReply(m.body) || new Set((m.body.match(/\bSO[A-Z0-9]+\b/gi)||[]).map(x=>x.toUpperCase())).size>1 || sg.status==='conflict') return null;
     let body = sg.status==='ready' ? sg.body : '', citation = sg.knowledge;
     if (p.lookup || p.onlyId) {
       const order = s.orders.find(o=>o.id===(p.id || c?.orderId) && o.customerId===conv.customerId);
-      body = order ? `${order.product}：${order.status}。${order.delivery}` : !p.id && !c?.orderId ? '请提供订单号，我会继续核对订单信息。' : ''; citation = null;
+      const facts=order&&s.schema===5?Commerce.snapshot(s,order.id):null;
+      body = facts?(facts.queryStatus==='ok'?Commerce.summary(facts):''):order?`${order.product}：${order.status}。${order.delivery}`:!p.id&&!c?.orderId?'请提供订单号，我会继续核对订单信息。':''; citation = null;
     } else if (p.intake || c?.kind==='aftersales') { body = currentOrder(s,c) ? '请补充退换货原因及具体要求，客服核对申请后会继续受理。' : '请提供本人订单号，以便核对售后申请。'; citation = null; }
     if (!body) return null;
     return {id:conv.id,ownerId:conv.ownerId,messageId:m.id,token:JSON.stringify({suggestion:sg.token,generation:grant.generation,remaining:grant.remaining,connectionAt:get(s,'customers',conv.customerId).connectionChangedAt || 0,body}),dueAt:Math.max(m.at,grant.grantedAt)+30000,remaining:grant.remaining,body,...(citation?{citation}:{})};
@@ -398,7 +409,14 @@
       }
       case 'queryOrder': {
         const {c} = scopedCase(s,a,data.conversationId,data.caseId), order=currentOrder(s,c); assert(order,'请先核对本人订单');
-        wf(c).logistics={at:now,order:copy(order),actorId:a.id}; value={body:`${order.product}：${order.status}。${order.delivery}`,order:copy(order)}; break;
+        const facts=s.schema===5?Commerce.snapshot(s,order.id):null;
+        wf(c).logistics={at:now,order:copy(order),actorId:a.id,...(facts?{commerce:facts}:{})}; value={body:facts?Commerce.summary(facts):`${order.product}：${order.status}。${order.delivery}`,order:{...copy(order),...(facts?{commerce:facts}:{})}}; break;
+      }
+      case 'queryCommerce': {
+        const order=s.orders.find(o=>o.id===data.orderId);assert(order,'暂时无法核对此订单');
+        if(a.role==='customer')owns(a,order);
+        else{const conv=get(s,'conversations',data.conversationId);agentOwns(a,conv);assert(conv.state==='human'&&order.customerId===conv.customerId,'请核对已接管客户的本人订单');}
+        value=Commerce.snapshot(s,order.id,data);break;
       }
       case 'markSop': {
         const {c} = scopedCase(s,a,data.conversationId,data.caseId);
@@ -528,7 +546,8 @@
         if (type === 'reply' && (data.orderCaseId !== undefined || data.orderSnapshot !== undefined)) {
           const issue=get(s,'cases',data.orderCaseId), order=currentOrder(s,issue);
           assert(c.caseIds.includes(issue.id) && issue.customerId===c.customerId && order,'订单不属于当前接待问题');
-          assert(JSON.stringify(order)===JSON.stringify(data.orderSnapshot),'订单事实已变化，请重新查询并核对后发送'); orderId=order.id;
+          const snapshot={...copy(order),...(s.schema===5?{commerce:Commerce.snapshot(s,order.id)}:{})};
+          assert(JSON.stringify(snapshot)===JSON.stringify(data.orderSnapshot),'订单事实已变化，请重新查询并核对后发送'); orderId=order.id;
         }
         if (type === 'reply') {
           caseId = data.caseId || data.suggestionCaseId || data.orderCaseId || (c.caseIds.length === 1 ? c.caseIds[0] : '');
@@ -578,6 +597,7 @@
       case 'createTicket': {
         const title = text(data.title, '工单标题', 100), description = text(data.description, '问题描述');
         assert(data.confirmed === true, '请核对申请后再确认受理');
+        assert(s.schema!==5||(!data.structured&&(!data.caseId||get(s,'cases',data.caseId).kind!=='aftersales')),'当前入口仅提供售后咨询，请联系人工客服核实商品级申请');
         const inputFingerprint=data.structured?intakeFingerprint(data,title,description):'';
         const priorReceipt=data.structured && data.requestKey && s.tickets.find(t=>t.intakeReceipts?.some(r=>r.requestKey===data.requestKey));
         if (priorReceipt) {
@@ -703,7 +723,7 @@
     return {
       customer: copy(get(s, 'customers', customerId)),
       connection: customerConnection(s, customerId),
-      orders: copy(s.orders.filter(o => o.customerId === customerId)),
+      orders: s.orders.filter(o => o.customerId === customerId).map(o=>({...copy(o),...(s.schema===5?{commerce:Commerce.snapshot(s,o.id)}:{})})),
       conversations: s.conversations.filter(c => c.customerId === customerId).map(c => ({id: c.id, customerId: c.customerId, state: c.state, caseIds: [...c.caseIds], createdAt: c.createdAt, updatedAt: c.updatedAt, messages: c.messages.filter(m => m.visibility === 'public').map(m => Object.fromEntries(Object.entries(copy(m)).filter(([key]) => ['id','role','body','at','visibility','author','caseId','ticketId','orderId','intake','citation','aiAssist'].includes(key))))})),
       cases: s.cases.filter(c => c.customerId === customerId).map(c => ({id: c.id, kind: c.kind, title: c.title, orderId: c.orderId, status: c.status, feedback: c.feedback, conversationIds: [...c.conversationIds], createdAt: c.createdAt, result: c.result ? {publicText: c.result.publicText, at: c.result.at} : null})),
       tickets: s.tickets.filter(t => t.customerId === customerId).map(t => ({id: t.id, caseId: t.caseId, title: t.title, description: t.description, serviceType:t.serviceType || '',exchangeRequest:t.exchangeRequest || '',extraNote:t.extraNote || '',orderId: t.orderId, status: t.status, createdAt: t.createdAt, history: t.history.map(h => ({at: h.at, publicText: h.publicText, actor: h.actor}))}))

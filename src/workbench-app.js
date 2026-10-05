@@ -50,7 +50,8 @@
     }else insertSuggestion(value,'replace');}
     function insertOrder(value,mode){
       owned(value.id);const c=currentCase(value.caseId),order=store.state.orders.find(o=>o.id===c.orderId&&o.customerId===c.customerId);
-      if(!order||JSON.stringify(order)!==JSON.stringify(value.order))throw Error('订单信息已变化，请重新查询再采用');
+      const facts=order&&store.state.schema===5?window.SupportCommerce.snapshot(store.state,order.id):null,snapshot=order&&{...D.copy(order),...(facts?{commerce:facts}:{})};
+      if(!order||JSON.stringify(snapshot)!==JSON.stringify(value.order))throw Error('订单信息已变化，请重新查询再采用');
       pauseWhileTyping(value.id);const key='reply:'+value.id,body=ui.drafts[key]?.body||'';
       ui.composeMode='reply';ui.drafts[key]={body:mode==='append'&&body?body+'\n\n'+value.body:value.body};
       ui.orderReplyRefs||={};ui.orderReplyRefs[identity().id+':'+value.id]={caseId:value.caseId,order:D.copy(value.order),body:value.body};
@@ -61,7 +62,9 @@
       const id=el.dataset.conversation,c=currentCase(el.dataset.id);owned(id);
       const query=c.workflow?.logistics,order=store.state.orders.find(o=>o.id===c.orderId&&o.customerId===c.customerId);
       if(!query||!order||JSON.stringify(query.order)!==JSON.stringify(order))throw Error('请先重新查询当前订单');
-      const value={id,caseId:c.id,order:D.copy(order),body:`${order.product}：${order.status}。${order.delivery||'暂无物流说明'}`};
+      const facts=store.state.schema===5?window.SupportCommerce.snapshot(store.state,order.id):null;
+      if(facts&&(facts.queryStatus!=='ok'||JSON.stringify(facts)!==JSON.stringify(query.commerce)))throw Error('查询结果不完整或已经变化，请重新核实后回复');
+      const value={id,caseId:c.id,order:{...D.copy(order),...(facts?{commerce:facts}:{})},body:facts?window.SupportCommerce.summary(facts):`${order.product}：${order.status}。${order.delivery||'暂无物流说明'}`};
       if(ui.drafts['reply:'+id]?.body?.trim()){pendingOrder=value;modal('草稿已有内容',`<p>查询结果来自刚才核对的订单。</p><div class="result-note">${e(value.body)}</div><div class="form-footer">${b('取消','close-modal')}${b('追加到草稿','order-draft-append')}${b('替换草稿','order-draft-replace','','primary')}</div>`);}
       else insertOrder(value,'replace');
     }

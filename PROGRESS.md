@@ -2516,3 +2516,126 @@ tests/workflow.test.cjs: OK
 ```
 
 将本段验证输出写入后，重新计算 PROGRESS 对应哈希并再次执行同一校验；最终结果见命令输出。
+
+
+# T-151 第 2 棒执行记录（2026-10-05）
+
+产出 Agent：Codex；主写与最终收敛：Codex；独立审查：Codex（正确性、范围与证据两路）。
+
+## 范围与基线
+
+- 用户查看第1棒运行页面后明确授权“那你继续”；按5棒顺序推进第2棒数据底座与双包裹查询，第1棒Claude保留抽查尚未执行。
+- 基线提交 e0d5aff，工作区干净；原全量334通过、0跳过。默认V4和新增显式电商预览共用同一应用与四工作区，通过 `?data=ecommerce` 选择独立数据；源码主写仅Codex。
+- 实施目标：保温杯12900分、收纳袋4900分，同一订单、两个包裹、模拟支付17800分；来源、版本、时间和失败/未知状态可查。V4数据与草稿不读取、不迁移、不覆盖，可原值导出。
+- 依交接约定对齐开发方案：旧数据保留与AI续答默认关闭演示开关；第3棒商品级申请、金额占用、退款与通知仍待实施，未宣称完整D1契约已完成。
+
+## 实现
+
+- `src/commerce.js`：整数分、归属/数量分配、事实来源与状态校验；按订单、商品或包裹投影，支付/包裹独立查询；公开投影排除内部属性。
+- `seed.js/store.js`：schema5全新样例，新键 `qinghe-support-ecommerce-v1`；仅键严格不存在时初始化，保存与回读校验；损坏值保留、陈旧页拒绝、写后读取异常进入恢复。V4原字节与文案备份不由电商入口读取或写入。
+- `domain.js/workbench-app.js`：客户本人/接管客服范围校验；商品与包裹快照贯穿查询、草稿和发送；依赖变更后拒绝旧草稿/授权。仅纯查询形成查询结果，混合异常与无ID两轮请求保持未决。失败查询不办结、不触发AI续答；SOP只认成功查询证据。
+- `app.js/views`：客户/手机共用订单卡及支付双包裹详情；独立面客链接保留电商模式；新草稿键 `qinghe-support-ecommerce-view-v1`；管理员导出V4原始字符串。仅扩展组件CSS，theme.css未改。
+- 电商模式的旧整单正式售后受理被阻断，本棒提供查询及人工核实，避免将旧工单冒充商品退款。
+
+## 红→绿证据
+
+新增测试为 `tests/commerce.test.cjs`、`commerce-storage.test.cjs`、`commerce-ui.test.cjs`，旧测试和helper未改。
+
+原实现命令（退出码1）：
+
+```bash
+node --test --test-reporter=tap tests/commerce*.test.cjs
+```
+
+初始38项全部红；首项错误原文 `Store.openCommerce is not a function`，其他数据与真实入口用例同样未满足。
+
+```text
+  ...
+1..38
+# tests 38
+# suites 0
+# pass 0
+# fail 38
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 95.185208
+```
+
+审查反例修前（退出码1）及修后（退出码0）；追加其他异常、两轮输入和真实客服插入/发送验证后共56项：
+
+```text
+not ok 20 - post-write read exception enters recovery and retains the bytes already saved
+not ok 40 - business exception cannot be completed by a generic tracking reply: 显示签收但没有收到
+not ok 41 - business exception cannot be completed by a generic tracking reply: 杯子碎了
+not ok 42 - business exception cannot be completed by a generic tracking reply: 快递丢了
+not ok 43 - AI continuation refuses incomplete commerce facts rather than replying from an order summary
+not ok 44 - SOP logistics recognizes a successful commerce query and keeps failed queries unfinished
+not ok 45 - commerce built-in regression uses actual sample IDs and the current intake boundary
+not ok 46 - default V4 cannot pretend to answer a payment question with a logistics summary
+not ok 47 - commerce order reply snapshots include package facts and reject a stale copied reply
+# tests 47
+# pass 38
+# fail 9
+
+  ...
+1..56
+# tests 56
+# suites 0
+# pass 56
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 144.870833
+```
+
+## 全量与固定复现
+
+```bash
+node --test --test-reporter=tap tests/*.test.cjs
+```
+
+```text
+  ...
+1..390
+# tests 390
+# suites 0
+# pass 390
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 395.783625
+```
+
+数量334+56=390，失败/取消/跳过/todo均0。当前全量含历史模块，56项为本棒新增覆盖。
+
+在项目目录运行固定T146脚本，输出摘录：
+
+```text
+S2-1   符合   寒暄、致谢、确认词
+S2-1b  符合   机器人答对后客户说“谢谢”
+S5-1   符合   演示脚本第 3 节：联系人工→接管→记录结果→结束沟通
+S5-1c  符合   对已完成的问题选“不适用”关闭
+S8-1a  符合   多位客户都说“你好”
+缺陷检查 49 项：不符合 43，符合 6；对照检查 17 项：符合 17，不符合 0；样本 7 条
+```
+
+脚本SHA256：`261d589425b13b4eabcf2235fe2d2b94fef280922c8eb3dede7809137d414ed7`。其余5项旧寒暄前提失效的限制沿用第1棒BLOCKED记录；本棒不据此宣称这些场景已验收。
+
+## 真实页面与构建
+
+- `python3 run.py --port 8769 --no-open`，仅操作8769电商新数据；未对8768或V4保存键做写入测试。
+- 源码客户页：同订单1笔、两商品129/49、支付178、已签收/在途正确；详情含来源版本时间，无其他客户。
+- 手机页：共用同样订单和事实；弹层父容器 `phone-overlay-host`，1280视口下弹层与手机宽均260.765625px；右侧留白。手机/桌面切换和刷新后记录连续，旧草稿不影响新表单。
+- 源码实际输入“查物流 EC-SO20261005001，显示签收但没有收到”，保持人工队列，无自动完成反馈卡。
+- `python3 build_single.py` 生成单文件；实际打开 `/dist/智能客服.html?data=ecommerce#customer` 查询支付与两包裹，结果一致，主色 `#2e5bff`，源码/单文件错误日志均空。
+- 截图：`/tmp/T151-stage2-final-desktop.png`、`/tmp/T151-stage2-mobile.png`、`/tmp/T151-stage2-final-single.png`。日志：`/tmp/T151-stage2-final-tests.tap`、`/tmp/T151-stage2-repro.txt`。
+- MANIFEST按原清单追加commerce模块和3份新测试，重算83项；交付前 `shasum -a 256 -c MANIFEST.sha256` 验证。
+
+## 独立审查与交付界限
+
+触发：数据/领域/存储/视图存在实质耦合。两位只读审查Agent并行：正确性与边界、复杂度与证据；无降级。去重7项（P0×0、P1×3、P2×4）已修复：混合异常误办结、AI使用旧摘要、V4路由回归、SOP证据状态、内置回归旧ID、写后读取异常恢复、保存失败文档口径。异常项追加无ID两轮反证后关闭；最终未解决P0/P1/P2均0。审查成本相对预期返工收益：低。独立末轮56项通过，主Agent全量390项通过；客服真实入口事件采用两包裹快照并发送通过。
+
+第2棒代码与内部验证完成，待用户分棒验收。第3至5棒未开始。完整退货退款、任意分摊、真机、真实接口、资金/通知和多标签原子并发不在本棒通过范围。

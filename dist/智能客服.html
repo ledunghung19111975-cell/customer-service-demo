@@ -283,6 +283,14 @@
 .phone-overlay-host .form-footer{flex-wrap:wrap}.phone-overlay-host .close-item{padding:10px}
 @media(max-width:760px){.app-top{padding-inline:12px;gap:10px}.workspace-tabs{overflow-x:auto;min-width:0}.workspace-tabs button{padding-inline:12px;white-space:nowrap}.app-top .top-right{display:none}.app-top .product-brand>span:last-child{display:none}}
 .field:has([required])>span:after{content:" *";color:var(--danger)}
+/* 商品级订单摘要与查询详情，共用于客户页和手机端。 */
+.commerce-order-card{display:block;min-width:0;overflow-wrap:anywhere}
+.commerce-order-heading{display:grid;gap:6px}
+.commerce-order-heading small,.commerce-item small{color:var(--muted)}
+.commerce-item-list{display:grid;gap:10px;margin:12px 0}
+.commerce-item{display:grid;gap:5px;padding-top:10px;border-top:1px solid var(--line);font-size:12px}
+.commerce-order-card .order-actions{display:flex;flex-wrap:wrap;gap:6px}
+.commerce-facts{background:var(--surface-2);border-color:var(--line)}
 
 </style>
   <style>
@@ -718,10 +726,77 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
 
 </script>
 <script>
+/* Fictional commerce facts. Pure data validation and query projections; no network or storage. */
+(function(root){
+  'use strict';
+  const copy=x=>JSON.parse(JSON.stringify(x));
+  const assert=(ok,message)=>{if(!ok)throw Error(message);};
+  const cents=n=>Number.isSafeInteger(n)&&n>=0;
+  const positive=n=>Number.isSafeInteger(n)&&n>0;
+  const facts=x=>x&&typeof x.source==='string'&&x.source.trim().length>0&&positive(x.version)&&Number.isFinite(x.queriedAt)&&x.simulated===true;
+  const table=a=>Array.isArray(a)&&a.every(x=>x&&typeof x.id==='string'&&x.id.length>0)&&new Set(a.map(x=>x.id)).size===a.length;
+  const queryStatuses=['ok','failed','unknown'];
+  function valid(s){
+    if(s?.schema!==5||!s.commerce||!table(s.orders))return false;
+    const {items,payments,packages}=s.commerce;
+    if(![items,payments,packages].every(table))return false;
+    const order=id=>s.orders.find(x=>x.id===id),item=id=>items.find(x=>x.id===id);
+    if(!items.every(x=>order(x.orderId)&&typeof x.skuId==='string'&&x.skuId&&typeof x.name==='string'&&x.name&&typeof x.variant==='string'&&positive(x.quantity)&&cents(x.paidCents)&&x.currency==='CNY'&&facts(x)))return false;
+    if(!payments.every(x=>order(x.orderId)&&['paid','unpaid','pending','unknown'].includes(x.status)&&queryStatuses.includes(x.queryStatus)&&cents(x.amountCents)&&x.currency==='CNY'&&facts(x)))return false;
+    if(!packages.every(x=>order(x.orderId)&&['awaiting_dispatch','in_transit','signed'].includes(x.status)&&queryStatuses.includes(x.queryStatus)&&typeof x.carrier==='string'&&typeof x.trackingNumber==='string'&&Array.isArray(x.track)&&x.track.every(t=>t&&Number.isFinite(t.at)&&typeof t.text==='string')&&facts(x)&&Array.isArray(x.allocations)&&x.allocations.length>0&&new Set(x.allocations.map(a=>a.itemId)).size===x.allocations.length&&x.allocations.every(a=>item(a.itemId)?.orderId===x.orderId&&positive(a.quantity))))return false;
+    return s.orders.every(o=>{
+      const lines=items.filter(x=>x.orderId===o.id),p=payments.filter(x=>x.orderId===o.id),total=lines.reduce((n,x)=>n+x.paidCents,0);
+      return facts(o)&&lines.length>0&&p.length===1&&cents(total)&&o.price===total/100&&
+        (p[0].status!=='paid'||p[0].amountCents===total)&&
+        lines.every(x=>packages.flatMap(p=>p.allocations).filter(a=>a.itemId===x.id).reduce((n,a)=>n+a.quantity,0)===x.quantity);
+    });
+  }
+  const select=(x,keys)=>Object.fromEntries(keys.map(k=>[k,copy(x[k]??null)]));
+  const origin=['source','version','queriedAt','simulated'];
+  function snapshot(s,orderId,{scope='all',itemId='',packageId=''}={}){
+    assert(s.schema===5&&s.commerce,'当前记录没有商品与包裹明细');
+    assert(['all','payment','packages'].includes(scope),'查询范围无效');
+    const order=s.orders.find(x=>x.id===orderId);assert(order,'暂时无法核对此订单');
+    let items=s.commerce.items.filter(x=>x.orderId===orderId),packages=s.commerce.packages.filter(x=>x.orderId===orderId);
+    if(itemId){assert(items.some(x=>x.id===itemId),'请核对本订单商品');items=items.filter(x=>x.id===itemId);packages=packages.filter(x=>x.allocations.some(a=>a.itemId===itemId));}
+    if(packageId){assert(packages.some(x=>x.id===packageId),'请核对商品对应的包裹');packages=packages.filter(x=>x.id===packageId);items=items.filter(x=>packages.some(p=>p.allocations.some(a=>a.itemId===x.id)));}
+    const raw=s.commerce.payments.find(x=>x.orderId===orderId);
+    const payment=scope==='packages'?null:select(raw,['id','orderId','status','queryStatus','amountCents','currency',...origin]);
+    if(payment&&payment.queryStatus!=='ok'){payment.status=null;payment.amountCents=null;}
+    packages=scope==='payment'?[]:packages.map(x=>{
+      const p=select(x,['id','orderId','status','queryStatus','carrier','trackingNumber','allocations','track',...origin]);
+      p.allocations=p.allocations.map(a=>select(a,['itemId','quantity']));p.track=p.track.map(t=>select(t,['at','text']));
+      if(p.queryStatus!=='ok'){p.status=null;p.track=[];}return p;
+    });
+    return {orderId,queryStatus:(!payment||(payment.queryStatus==='ok'&&payment.status!=='unknown'))&&packages.every(p=>p.queryStatus==='ok')?'ok':'incomplete',
+      currency:'CNY',totalPaidCents:payment?.queryStatus==='ok'&&payment.status==='paid'?payment.amountCents:null,
+      items:scope==='payment'?[]:items.map(x=>select(x,['id','orderId','skuId','name','variant','quantity','paidCents','currency',...origin])),payment,packages,
+      source:order.source,version:order.version,queriedAt:order.queriedAt,simulated:true};
+  }
+  const money=value=>'¥'+(value/100).toFixed(2);
+  const paymentLabel=p=>p.queryStatus==='failed'?'支付查询失败':p.queryStatus==='unknown'?'支付结果未知':({paid:'已支付',unpaid:'未支付',pending:'支付处理中',unknown:'支付结果未知'}[p.status]);
+  const packageLabel=p=>p.queryStatus==='failed'?'物流查询失败':p.queryStatus==='unknown'?'物流结果未知':({awaiting_dispatch:'待发货',in_transit:'运输中',signed:'已签收'}[p.status]);
+  function summary(value){
+    const lines=[`订单 ${value.orderId}（模拟业务数据）`];
+    if(value.payment)lines.push(`${paymentLabel(value.payment)}${value.payment.queryStatus==='ok'&&value.payment.status==='paid'?'，实付 '+money(value.payment.amountCents):''}。`);
+    value.packages.forEach((p,i)=>{
+      const names=p.allocations.map(a=>value.items.find(x=>x.id===a.itemId)?.name||'商品').join('、');
+      lines.push(`包裹 ${i+1} · ${names}：${packageLabel(p)}。${p.queryStatus==='ok'?(p.track.at(-1)?.text||'暂无轨迹'):''}`);
+    });
+    lines.push('轨迹记录与实际收到、商品是否完好分别核实；如有异常请联系人工。');
+    return lines.join('\n');
+  }
+  const api={valid,snapshot,summary,money,paymentLabel,packageLabel};
+  if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SupportCommerce=api;
+})(typeof window!=='undefined'?window:globalThis);
+
+</script>
+<script>
 /* Pure domain commands. Local role checks model behavior; they are NOT server authorization. */
 (function (root) {
   'use strict';
   const Copy = typeof module !== 'undefined' && module.exports ? require('./copy.js') : root.SupportCopy;
+  const Commerce = typeof module !== 'undefined' && module.exports ? require('./commerce.js') : root.SupportCommerce;
   const copy = x => JSON.parse(JSON.stringify(x));
   const assert = (ok, message) => { if (!ok) throw new Error(message); };
   const text = (v, label, max = 2000) => {
@@ -733,8 +808,8 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
   const normalize = s => String(s || '').toLowerCase().replace(/[\s，,。.!！?？]/g, '');
   const split = s => [...new Set(String(s).split(/[,，\n]/).map(x => x.trim()).filter(Boolean))];
   const roles = {
-    customer: ['newConversation', 'say', 'requestHuman', 'cancelQueue', 'feedback', 'createTicket', 'supplement', 'closeConversation', 'customerConnection'],
-    agent: ['claimConversation', 'reply', 'note', 'completeCase', 'closeConversation', 'createTicket', 'claimTicket', 'updateTicket', 'flag', 'presence', 'confirmIntent', 'bindOrder', 'queryOrder', 'markSop', 'setAiAssist', 'aiContinue', 'saveCallback', 'callbackResult', 'closeWithSummary'],
+    customer: ['newConversation', 'say', 'requestHuman', 'cancelQueue', 'feedback', 'createTicket', 'supplement', 'closeConversation', 'customerConnection', 'queryCommerce'],
+    agent: ['claimConversation', 'reply', 'note', 'completeCase', 'closeConversation', 'createTicket', 'claimTicket', 'updateTicket', 'flag', 'presence', 'confirmIntent', 'bindOrder', 'queryOrder', 'markSop', 'setAiAssist', 'aiContinue', 'saveCallback', 'callbackResult', 'closeWithSummary', 'queryCommerce'],
     manager: ['assignTicket', 'assignConversation', 'reviewGap', 'acceptGap', 'serviceSettings'],
     operator: ['saveKnowledge', 'testKnowledge', 'publishKnowledge', 'disableKnowledge', 'saveFlow', 'testFlow', 'publishFlow', 'linkGap'],
     admin: ['export']
@@ -765,16 +840,16 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     if (candidates.some(x => x !== first && x.exact === first.exact && x.hits === first.hits && x.k.live.answer !== first.k.live.answer)) return {conflict: true};
     return {id: first.k.id, ...copy(first.k.live)};
   }
-  function intentions(query, config) {
+  function intentions(query, config, commerce=false) {
     const lower = query.toLowerCase();
     const declined = lower.replace(/人工(?:智能|费|成本)/g, '').replace(/(?:不需要|不要|不用|不想|无需|别)(?:帮我|给我|再|先)?(?:转接|转|找|联系)?人工(?:客服)?/g, '').replace(/人工(?:客服)?(?:就|先)?(?:不用|不要|不需要)了?/g, '');
     const human = config.humanWords.some(w => declined.includes(w.toLowerCase()));
-    const id = query.match(/\bSO[A-Z0-9]+\b/i)?.[0].toUpperCase() || '';
-    const onlyId = /^(?:订单号[是为：:]?\s*)?SO[A-Z0-9]+[。！!]?$/i.test(query.trim());
+    const id = query.match(/\b(?:EC-)?SO[A-Z0-9]+\b/i)?.[0].toUpperCase() || '';
+    const onlyId = /^(?:订单号[是为：:]?\s*)?(?:EC-)?SO[A-Z0-9]+[。！!]?$/i.test(query.trim());
     const policy = /(规则|条件|政策|无理由|如何退|怎么退|退货运费|了解)/.test(query) && /(退|售后)/.test(query);
     const negatedReturn = /(不要|不想|不需要|暂不|先不).{0,6}(退货|退款|换货|申请)/.test(query);
     const intake = !negatedReturn && (/(申请|办理).{0,6}(退货|退款|换货|售后)/.test(query) || /(想|要|需要|帮我)(退货|退款|换货)/.test(query));
-    const lookup = !/(不查|不要查)/.test(query) && (/(查|看|查询|到哪|在哪|进度).{0,8}(订单|物流|快递)/.test(query) || /(订单|物流|快递).{0,8}(到哪|在哪|进度|状态)/.test(query) || /^(订单|物流|快递)$/.test(query.trim()));
+    const lookup = !/(不查|不要查)/.test(query) && (/(查|看|查询|到哪|在哪|进度).{0,8}(订单|物流|快递)/.test(query) || /(订单|物流|快递).{0,8}(到哪|在哪|进度|状态)/.test(query) || /^(订单|物流|快递)$/.test(query.trim()) || (commerce&&(/(查|看|查询|到哪|在哪|进度).{0,8}(包裹|支付)/.test(query)||/(包裹|支付).{0,8}(到哪|在哪|进度|状态)/.test(query)||/^(包裹|支付)$/.test(query.trim()))));
     return {human, id, onlyId, policy, intake, lookup};
   }
   function socialReply(query) {
@@ -786,16 +861,22 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     return '好的，有需要可以继续告诉我。';
   }
   function classify(s, query, customerId, now = Date.now(), config = s.flow.live, options = {}) {
-    const p = intentions(query, config);
+    const p = intentions(query, config, s.schema===5);
     if (p.human) return [{kind: 'handoff', reason: '客户要求人工协助'}];
     const social = socialReply(query);
     if (social) return [{kind: 'social', body: social}];
-    const orderIds = new Set((query.match(/\bSO[A-Z0-9]+\b/gi) || []).map(id => id.toUpperCase()));
+    const orderIds = new Set((query.match(/\b(?:EC-)?SO[A-Z0-9]+\b/gi) || []).map(id => id.toUpperCase()));
     if (orderIds.size > 1) return [{kind: 'handoff', reason: '同时涉及多个订单，需要逐项核实对应诉求'}];
+    if(s.schema===5&&(p.intake||/(没(?:有)?收到|未收到|没拿到|没到|破损|损坏|碎了|坏了|裂痕|漏水|丢了|丢失|少发|漏发|停滞|催发货)/.test(query)))return [{kind:'handoff',reason:'商品售后或物流异常需要人工逐项核实'}];
+    if(s.schema===5&&p.lookup){
+      const request=normalize(query).toUpperCase().replace(p.id,'');
+      const simple=/^(?:(?:请|麻烦)(?:帮我)?|帮我|我想|我要)?(?:(?:查(?:询)?(?:一下)?|看(?:一下)?)(?:我的|这笔)?(?:订单|物流|快递|包裹|支付)(?:信息|详情|状态|进度)?|(?:我的)?(?:订单|物流|快递|包裹|支付)(?:到哪了?|在哪|状态|进度|信息|详情))$/;
+      if(!simple.test(request))return [{kind:'handoff',reason:'查询包含其他描述，需要人工核实具体诉求'}];
+    }
     const results = [];
     if (p.lookup || p.onlyId) {
       const order = p.id && s.orders.find(o => o.id === p.id && o.customerId === customerId);
-      results.push(!p.id ? {kind: 'askOrder'} : !order ? {kind: 'orderDenied'} : options.orderFailure ? {kind: 'orderFailure'} : {kind: 'order', order: copy(order)});
+      results.push(!p.id ? {kind: 'askOrder'} : !order ? {kind: 'orderDenied'} : options.orderFailure ? {kind: 'orderFailure'} : {kind: 'order', order: copy(order),...(s.schema===5?{commerce:Commerce.snapshot(s,order.id)}:{})});
     }
     if (p.intake) results.push({kind: config.intakeEnabled ? 'intake' : 'handoff', orderId: p.id, reason: '售后申请需要人工受理'});
     if (p.policy || !results.length) {
@@ -863,7 +944,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     return existing;
   }
   function run(s, conv, query, now, options = {}) {
-    const plan = intentions(query, conv.flow);
+    const plan = intentions(query, conv.flow, s.schema===5);
     const pending = conv.pendingCaseId && get(s, 'cases', conv.pendingCaseId);
     if (plan.onlyId && pending && pending.kind === 'aftersales') {
       const c = aftersalesCase(s, conv, pending, plan.id, now); conv.pendingCaseId = '';
@@ -889,9 +970,10 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
         const c = pending?.kind === 'order' && plan.onlyId ? pending : makeCase(s, conv, 'order', '查询订单与物流', plan.id, now);
         if (r.kind === 'order') {
           c.orderId = r.order.id; conv.pendingCaseId = '';
-          const body = `${r.order.product}：${r.order.status}。${r.order.delivery}`;
-          complete(s, c, body, {kind: 'local-order', id: r.order.id, snapshot: copy(r.order)}, 'bot', now);
+          const body = r.commerce?Commerce.summary(r.commerce):`${r.order.product}：${r.order.status}。${r.order.delivery}`;
+          if(!r.commerce||r.commerce.queryStatus==='ok')complete(s, c, body, {kind: r.commerce?'simulated-commerce':'local-order', id: r.order.id, snapshot: copy(r.commerce||r.order)}, 'bot', now);
           message(s, conv, 'bot', body, now, {caseId: c.id, orderId: r.order.id});
+          if(r.commerce?.queryStatus!=='ok'&&r.commerce)handoff(s,conv,'订单事实查询未取得完整结果',now);
         } else if (r.kind === 'askOrder') { conv.pendingCaseId = c.id; message(s, conv, 'bot', '请提供订单号，也可以从“我的订单”选择要查询的订单。', now, {caseId: c.id}); }
         else { message(s, conv, 'bot', r.kind === 'orderDenied' ? '暂时无法核对此订单。请确认订单号及购买账户；我不会展示其他账户的订单信息。' : '订单查询暂时不可用，没有取得最新状态。我会将已有信息交给人工核实。', now, {caseId: c.id}); handoff(s, conv, r.kind === 'orderDenied' ? '订单归属未通过核对' : '订单查询失败', now); }
       } else if (r.kind === 'intake') {
@@ -933,13 +1015,14 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     return x;
   }
   function regression(s, now, articleId) {
+    const ownOrder=s.orders.find(o=>o.customerId==='C001')?.id||'SO20260926001',foreignOrder=s.orders.find(o=>o.customerId!=='C001')?.id||'SO20260926009';
     const cases = [
       {name: '明确转人工', query: '我要转人工', expected: 'handoff'},
       {name: '拒绝转人工不应升级', query: '不要转人工，我只问退货规则', absent: 'handoff'},
-      {name: '本人订单查询', query: '查物流 SO20260926001', expected: 'order'},
-      {name: '其他客户订单不可读', query: '查物流 SO20260926009', expected: 'orderDenied'},
-      {name: '查询失败不能宣称成功', query: '查物流 SO20260926001', expected: 'orderFailure', fault: true},
-      {name: '多诉求分别处理', query: '查物流 SO20260926001，再申请退货', expected: s.flow.live.intakeEnabled ? 'intake' : 'handoff', also: 'order'}
+      {name: '本人订单查询', query: '查物流 '+ownOrder, expected: 'order'},
+      {name: '其他客户订单不可读', query: '查物流 '+foreignOrder, expected: 'orderDenied'},
+      {name: '查询失败不能宣称成功', query: '查物流 '+ownOrder, expected: 'orderFailure', fault: true},
+      {name: '多诉求分别处理', query: '查物流 '+ownOrder+'，再申请退货', expected: s.schema===5?'handoff':s.flow.live.intakeEnabled?'intake':'handoff', ...(s.schema===5?{}:{also:'order'})}
     ];
     const rows = cases.map(c => { const rs = classify(s, c.query, 'C001', now, s.flow.live, {orderFailure: c.fault}); const kinds = rs.map(r => r.kind); return {name: c.name, query: c.query, actual: kinds.join(' → '), pass: c.absent ? !kinds.includes(c.absent) : kinds.includes(c.expected) && (!c.also || kinds.includes(c.also))}; });
     for (const k of activeArticles(s, now)) {
@@ -985,7 +1068,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     f.intentEvidence={messageId:latestCustomer(conv)?.id || '',text:body,at:now};
   }
   function recognise(s, conv, body, now) {
-    const p = intentions(body, conv.flow), ids = [...new Set((body.match(/\bSO[A-Z0-9]+\b/gi) || []).map(x => x.toUpperCase()))];
+    const p = intentions(body, conv.flow,s.schema===5), ids = [...new Set((body.match(/\bSO[A-Z0-9]+\b/gi) || []).map(x => x.toUpperCase()))];
     const open = conv.caseIds.map(id => get(s, 'cases', id)).filter(c => c.status !== 'completed' && !c.workflow?.withdrawn);
     let c;
     if (ids.length <= 1 && !p.human && (p.intake || (p.onlyId && conv.pendingCaseId && get(s, 'cases', conv.pendingCaseId).kind === 'aftersales'))) {
@@ -1011,7 +1094,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     const conv = get(s, 'conversations', conversationId), c = caseId ? get(s, 'cases', caseId) : conv.caseIds.length ? get(s, 'cases', conv.caseIds.at(-1)) : null;
     assert(!c || conv.caseIds.includes(c.id), '问题不属于当前会话');
     const m = latestCustomer(conv), query = m?.body || '', k = query ? retrieve(s, query, now) : null;
-    const token = JSON.stringify({conv: conv.id, owner: conv.ownerId, state: conv.state, message: m || null, case: c ? {id: c.id, kind: c.kind, orderId: c.orderId, status: c.status} : null, order: currentOrder(s, c) || null, referencedOrders: s.orders.filter(o=>o.customerId===conv.customerId && query.toUpperCase().includes(o.id)), knowledge: k, connection: customerConnection(s, conv.customerId)});
+    const token = JSON.stringify({conv: conv.id, owner: conv.ownerId, state: conv.state, message: m || null, case: c ? {id: c.id, kind: c.kind, orderId: c.orderId, status: c.status} : null, order: currentOrder(s, c) || null, referencedOrders: s.orders.filter(o=>o.customerId===conv.customerId && (query.toUpperCase().includes(o.id)||o.id===c?.orderId)).map(o=>({...o,...(s.schema===5?{commerce:Commerce.snapshot(s,o.id)}:{})})), knowledge: k, connection: customerConnection(s, conv.customerId)});
     if (!k || k.conflict) return {token, messageId: m?.id || '', query, body: '', status: k?.conflict ? 'conflict' : 'none', reason: k?.conflict ? '知识来源冲突，需要人工核实' : '尚无有效知识依据，请人工核实'};
     return {token, messageId: m.id, query, body: k.answer, status: 'ready', knowledge: {id: k.id, title: k.title, version: k.version, source: k.source, answer: k.answer}};
   }
@@ -1022,7 +1105,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     const accepted = c && acceptedTicket(s, c);
     const bound = Boolean(order), isOrder = c?.kind === 'order', sale = c?.kind === 'aftersales', done = c?.status === 'completed';
     const answered = c && conv.messages.some(m => m.caseId === c.id && m.visibility === 'public' && !m.aiAssist && m.at >= c.createdAt && ['agent','bot'].includes(m.role));
-    const states = !c ? {} : {intent: c.kind === 'support' && !f.intentConfirmedAt && !done && !c.result && !answered ? 'todo' : 'done', order: isOrder || sale ? (bound ? 'done' : 'todo') : 'idle', logistics: isOrder ? (f.logistics || c.result?.evidence?.kind === 'local-order' ? 'done' : 'todo') : 'idle', aftersales: sale ? (accepted ? 'done' : bound ? 'doing' : 'todo') : 'idle', information: t?.status === 'waiting_customer' ? 'waiting' : sale && !accepted ? 'todo' : 'idle', result: done ? 'done' : t ? (t.status==='waiting_customer'?'waiting':'doing') : 'todo', callback: t?.callback ? 'done' : 'idle'};
+    const states = !c ? {} : {intent: c.kind === 'support' && !f.intentConfirmedAt && !done && !c.result && !answered ? 'todo' : 'done', order: isOrder || sale ? (bound ? 'done' : 'todo') : 'idle', logistics: isOrder ? ((f.logistics && (!f.logistics.commerce || f.logistics.commerce.queryStatus==='ok')) || c.result?.evidence?.kind==='local-order' || (c.result?.evidence?.kind==='simulated-commerce' && c.result.evidence.snapshot.queryStatus==='ok') ? 'done' : 'todo') : 'idle', aftersales: sale ? (accepted ? 'done' : bound ? 'doing' : 'todo') : 'idle', information: t?.status === 'waiting_customer' ? 'waiting' : sale && !accepted ? 'todo' : 'idle', result: done ? 'done' : t ? (t.status==='waiting_customer'?'waiting':'doing') : 'todo', callback: t?.callback ? 'done' : 'idle'};
     const nodes = SOP.map(([key, title]) => {
       const override = f.overrides?.[key];
       let status = key === 'close' ? (conv.state === 'closed' ? 'done' : customerConnection(s, conv.customerId) === 'online' ? 'idle' : 'todo') : (states[key] || 'idle');
@@ -1053,12 +1136,14 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     if (conv.messages.slice(index+1).some(x=>x.role==='agent' && x.visibility==='public')) return null;
     const c = m.caseId && conv.caseIds.includes(m.caseId) ? get(s,'cases',m.caseId) : conv.caseIds.length ? get(s,'cases',conv.caseIds.at(-1)) : null;
     if (c?.status==='completed' || c?.workflow?.withdrawn) return null;
-    const sg = suggestion(s,conv.id,c?.id,now), p = intentions(m.body,conv.flow);
+    const sg = suggestion(s,conv.id,c?.id,now), p = intentions(m.body,conv.flow,s.schema===5);
+    if(s.schema===5&&classify(s,m.body,conv.customerId,now,conv.flow).some(r=>r.kind==='handoff'))return null;
     if (p.human || socialReply(m.body) || new Set((m.body.match(/\bSO[A-Z0-9]+\b/gi)||[]).map(x=>x.toUpperCase())).size>1 || sg.status==='conflict') return null;
     let body = sg.status==='ready' ? sg.body : '', citation = sg.knowledge;
     if (p.lookup || p.onlyId) {
       const order = s.orders.find(o=>o.id===(p.id || c?.orderId) && o.customerId===conv.customerId);
-      body = order ? `${order.product}：${order.status}。${order.delivery}` : !p.id && !c?.orderId ? '请提供订单号，我会继续核对订单信息。' : ''; citation = null;
+      const facts=order&&s.schema===5?Commerce.snapshot(s,order.id):null;
+      body = facts?(facts.queryStatus==='ok'?Commerce.summary(facts):''):order?`${order.product}：${order.status}。${order.delivery}`:!p.id&&!c?.orderId?'请提供订单号，我会继续核对订单信息。':''; citation = null;
     } else if (p.intake || c?.kind==='aftersales') { body = currentOrder(s,c) ? '请补充退换货原因及具体要求，客服核对申请后会继续受理。' : '请提供本人订单号，以便核对售后申请。'; citation = null; }
     if (!body) return null;
     return {id:conv.id,ownerId:conv.ownerId,messageId:m.id,token:JSON.stringify({suggestion:sg.token,generation:grant.generation,remaining:grant.remaining,connectionAt:get(s,'customers',conv.customerId).connectionChangedAt || 0,body}),dueAt:Math.max(m.at,grant.grantedAt)+30000,remaining:grant.remaining,body,...(citation?{citation}:{})};
@@ -1118,7 +1203,14 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
       }
       case 'queryOrder': {
         const {c} = scopedCase(s,a,data.conversationId,data.caseId), order=currentOrder(s,c); assert(order,'请先核对本人订单');
-        wf(c).logistics={at:now,order:copy(order),actorId:a.id}; value={body:`${order.product}：${order.status}。${order.delivery}`,order:copy(order)}; break;
+        const facts=s.schema===5?Commerce.snapshot(s,order.id):null;
+        wf(c).logistics={at:now,order:copy(order),actorId:a.id,...(facts?{commerce:facts}:{})}; value={body:facts?Commerce.summary(facts):`${order.product}：${order.status}。${order.delivery}`,order:{...copy(order),...(facts?{commerce:facts}:{})}}; break;
+      }
+      case 'queryCommerce': {
+        const order=s.orders.find(o=>o.id===data.orderId);assert(order,'暂时无法核对此订单');
+        if(a.role==='customer')owns(a,order);
+        else{const conv=get(s,'conversations',data.conversationId);agentOwns(a,conv);assert(conv.state==='human'&&order.customerId===conv.customerId,'请核对已接管客户的本人订单');}
+        value=Commerce.snapshot(s,order.id,data);break;
       }
       case 'markSop': {
         const {c} = scopedCase(s,a,data.conversationId,data.caseId);
@@ -1248,7 +1340,8 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
         if (type === 'reply' && (data.orderCaseId !== undefined || data.orderSnapshot !== undefined)) {
           const issue=get(s,'cases',data.orderCaseId), order=currentOrder(s,issue);
           assert(c.caseIds.includes(issue.id) && issue.customerId===c.customerId && order,'订单不属于当前接待问题');
-          assert(JSON.stringify(order)===JSON.stringify(data.orderSnapshot),'订单事实已变化，请重新查询并核对后发送'); orderId=order.id;
+          const snapshot={...copy(order),...(s.schema===5?{commerce:Commerce.snapshot(s,order.id)}:{})};
+          assert(JSON.stringify(snapshot)===JSON.stringify(data.orderSnapshot),'订单事实已变化，请重新查询并核对后发送'); orderId=order.id;
         }
         if (type === 'reply') {
           caseId = data.caseId || data.suggestionCaseId || data.orderCaseId || (c.caseIds.length === 1 ? c.caseIds[0] : '');
@@ -1298,6 +1391,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
       case 'createTicket': {
         const title = text(data.title, '工单标题', 100), description = text(data.description, '问题描述');
         assert(data.confirmed === true, '请核对申请后再确认受理');
+        assert(s.schema!==5||(!data.structured&&(!data.caseId||get(s,'cases',data.caseId).kind!=='aftersales')),'当前入口仅提供售后咨询，请联系人工客服核实商品级申请');
         const inputFingerprint=data.structured?intakeFingerprint(data,title,description):'';
         const priorReceipt=data.structured && data.requestKey && s.tickets.find(t=>t.intakeReceipts?.some(r=>r.requestKey===data.requestKey));
         if (priorReceipt) {
@@ -1423,7 +1517,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     return {
       customer: copy(get(s, 'customers', customerId)),
       connection: customerConnection(s, customerId),
-      orders: copy(s.orders.filter(o => o.customerId === customerId)),
+      orders: s.orders.filter(o => o.customerId === customerId).map(o=>({...copy(o),...(s.schema===5?{commerce:Commerce.snapshot(s,o.id)}:{})})),
       conversations: s.conversations.filter(c => c.customerId === customerId).map(c => ({id: c.id, customerId: c.customerId, state: c.state, caseIds: [...c.caseIds], createdAt: c.createdAt, updatedAt: c.updatedAt, messages: c.messages.filter(m => m.visibility === 'public').map(m => Object.fromEntries(Object.entries(copy(m)).filter(([key]) => ['id','role','body','at','visibility','author','caseId','ticketId','orderId','intake','citation','aiAssist'].includes(key))))})),
       cases: s.cases.filter(c => c.customerId === customerId).map(c => ({id: c.id, kind: c.kind, title: c.title, orderId: c.orderId, status: c.status, feedback: c.feedback, conversationIds: [...c.conversationIds], createdAt: c.createdAt, result: c.result ? {publicText: c.result.publicText, at: c.result.at} : null})),
       tickets: s.tickets.filter(t => t.customerId === customerId).map(t => ({id: t.id, caseId: t.caseId, title: t.title, description: t.description, serviceType:t.serviceType || '',exchangeRequest:t.exchangeRequest || '',extraNote:t.extraNote || '',orderId: t.orderId, status: t.status, createdAt: t.createdAt, history: t.history.map(h => ({at: h.at, publicText: h.publicText, actor: h.actor}))}))
@@ -1496,7 +1590,35 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     // The newest customer conversation intentionally starts with a normal greeting.
     return s;
   }
-  if(typeof module!=='undefined'&&module.exports)module.exports={create};else root.SupportSeed={create};
+  function createCommerce(now=Date.now()){
+    let s=create(now,false);s.schema=5;
+    const origin=source=>({source,version:1,queriedAt:now,simulated:true});
+    s.orders=[
+      {id:'EC-SO20261005001',customerId:'C001',product:'保温杯与收纳袋',price:178,status:'部分签收',delivery:'本订单分两个包裹配送，商品状态请逐件核对。',symbol:'◒',...origin('模拟订单服务')},
+      {id:'EC-SO20261005009',customerId:'C002',product:'桌面收纳盒 · 木色',price:89,status:'已签收',delivery:'包裹已签收。',symbol:'▤',...origin('模拟订单服务')}
+    ];
+    s.commerce={
+      items:[
+        {id:'EC-ITEM-001',orderId:'EC-SO20261005001',skuId:'EC-SKU-CUP',name:'原木便携保温杯',variant:'雾白 · 500mL',quantity:1,paidCents:12900,currency:'CNY',...origin('模拟订单明细')},
+        {id:'EC-ITEM-002',orderId:'EC-SO20261005001',skuId:'EC-SKU-BAG',name:'棉麻收纳袋',variant:'自然色 · 中号',quantity:1,paidCents:4900,currency:'CNY',...origin('模拟订单明细')},
+        {id:'EC-ITEM-009',orderId:'EC-SO20261005009',skuId:'EC-SKU-BOX',name:'桌面收纳盒',variant:'木色',quantity:1,paidCents:8900,currency:'CNY',...origin('模拟订单明细')}
+      ],
+      payments:[
+        {id:'EC-PAY-001',orderId:'EC-SO20261005001',status:'paid',queryStatus:'ok',amountCents:17800,currency:'CNY',...origin('模拟支付服务')},
+        {id:'EC-PAY-009',orderId:'EC-SO20261005009',status:'paid',queryStatus:'ok',amountCents:8900,currency:'CNY',...origin('模拟支付服务')}
+      ],
+      packages:[
+        {id:'EC-PKG-001',orderId:'EC-SO20261005001',status:'signed',queryStatus:'ok',carrier:'演示承运方',trackingNumber:'DEMO-CUP-001',allocations:[{itemId:'EC-ITEM-001',quantity:1}],track:[{at:now-86400000,text:'包裹已签收，商品是否完好以客户反馈及后续核实为准。'}],...origin('模拟物流服务')},
+        {id:'EC-PKG-002',orderId:'EC-SO20261005001',status:'in_transit',queryStatus:'ok',carrier:'演示承运方',trackingNumber:'DEMO-BAG-002',allocations:[{itemId:'EC-ITEM-002',quantity:1}],track:[{at:now-3600000,text:'包裹运输中，尚未签收；到货时间以承运方更新为准。'}],...origin('模拟物流服务')},
+        {id:'EC-PKG-009',orderId:'EC-SO20261005009',status:'signed',queryStatus:'ok',carrier:'演示承运方',trackingNumber:'DEMO-BOX-009',allocations:[{itemId:'EC-ITEM-009',quantity:1}],track:[{at:now-86400000,text:'包裹已签收。'}],...origin('模拟物流服务')}
+      ]
+    };
+    s.knowledge.find(k=>k.id==='KB001').live.answer='当前电商演示样例中，保温杯签收破损可联系人工核实退货退款；收纳袋仍在运输中，需单独查询对应包裹。资格与金额以商品级业务核实为准，咨询不代表已受理或退款。';
+    s.knowledge.find(k=>k.id==='KB001').live.source='电商演示样例规则 v1';
+    s=D.execute(s,{id:'C001',role:'customer'},'newConversation',{},now).state;
+    return s;
+  }
+  if(typeof module!=='undefined'&&module.exports)module.exports={create,createCommerce};else root.SupportSeed={create,createCommerce};
 })(typeof window!=='undefined'?window:globalThis);
 
 </script>
@@ -1506,10 +1628,12 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
   'use strict';
   const D=typeof module!=='undefined'&&module.exports?require('./domain.js'):root.SupportDomain;
   const KEY='qinghe-support-v4'; // Keep this internal key to retain existing records.
+  const COMMERCE_KEY='qinghe-support-ecommerce-v1';
+  const Commerce=typeof module!=='undefined'&&module.exports?require('./commerce.js'):root.SupportCommerce;
   const Copy=typeof module!=='undefined'&&module.exports?require('./copy.js'):root.SupportCopy;
   const COPY_BACKUP_KEY=KEY+':before-copy-v1';
-  function valid(s){
-    if(!s||s.schema!==4||!Number.isInteger(s.revision)||!Number.isInteger(s.sequence))return false;
+  function valid(s,schema=4){
+    if(!s||s.schema!==schema||!Number.isInteger(s.revision)||!Number.isInteger(s.sequence))return false;
     const tables=['customers','staff','orders','knowledge','conversations','cases','tickets','gaps','events'];
     if(!tables.every(k=>Array.isArray(s[k])&&s[k].every(x=>x&&typeof x.id==='string')&&new Set(s[k].map(x=>x.id)).size===s[k].length))return false;
     if(!s.flow?.live||!Array.isArray(s.flow.live.humanWords)||!Array.isArray(s.flow.versions)||typeof s.flow.live.intakeEnabled!=='boolean'||!s.settings||!Number.isInteger(s.settings.capacity))return false;
@@ -1520,17 +1644,24 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
       s.conversations.every(c=>has('customers',c.customerId)&&a(c.messages)&&a(c.runs)&&a(c.ownerHistory)&&a(c.caseIds)&&c.caseIds.every(id=>has('cases',id))&&(!c.pendingCaseId||(c.caseIds.includes(c.pendingCaseId)&&s.cases.some(x=>x.id===c.pendingCaseId&&x.customerId===c.customerId&&x.conversationIds?.includes(c.id))))&&a(c.flow?.humanWords)&&['bot','queued','human','closed'].includes(c.state)&&c.messages.every(m=>typeof m.body==='string'))&&
       s.cases.every(c=>has('customers',c.customerId)&&a(c.resultHistory)&&a(c.conversationIds)&&c.conversationIds.every(id=>has('conversations',id))&&['open','waiting_customer','completed'].includes(c.status))&&
       s.tickets.every(t=>has('cases',t.caseId)&&has('customers',t.customerId)&&a(t.history)&&['new','working','waiting_customer','done'].includes(t.status))&&
-      s.gaps.every(g=>has('conversations',g.conversationId))&&D.validWorkflow(s);
+      s.gaps.every(g=>has('conversations',g.conversationId))&&D.validWorkflow(s)&&(schema!==5||Commerce.valid(s));
   }
-  function open(storage,seed){
+  function open(storage,seed,{key=KEY,schema=4}={}){
     let current, original=null, blocked='';
     try{
-      original=storage.getItem(KEY);current=original?JSON.parse(original):seed();
-      if(!valid(current))throw new Error('数据结构不兼容');
-      if(original){
+      original=storage.getItem(key);current=original!==null?JSON.parse(original):seed();
+      if(!valid(current,schema))throw new Error('数据结构不兼容');
+      if(schema===5&&original===null){
+        const before=storage.getItem(key);
+        if(before!==null){original=before;throw new Error('电商工作空间已在其他页面建立，请刷新后继续');}
+        const encoded=JSON.stringify(current);storage.setItem(key,encoded);original=encoded;
+        const persisted=storage.getItem(key);original=persisted;
+        if(persisted!==encoded)throw new Error('电商工作空间保存后回读未通过校验，请导出原始保存值排查');
+      }
+      if(schema===4&&original){
         const update=Copy.upgrade(current);
         if(update.changed){
-          if(!valid(update.state))throw new Error('文案更新后的数据校验未通过');
+          if(!valid(update.state,schema))throw new Error('文案更新后的数据校验未通过');
           if(storage.getItem(KEY)!==original)throw new Error('工作空间已在其他页面更新，请刷新后重试');
           // Backup must succeed before replacing any persisted defaults.
           let backupKey=COPY_BACKUP_KEY,suffix=0,backup=storage.getItem(backupKey);
@@ -1546,24 +1677,33 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     }
     catch(err){blocked=`无法读取工作空间：${err.message}。原始数据未被覆盖。`;current=null;}
     return {
-      get state(){return current;},get blocked(){return blocked;},get original(){return original;},
+      get key(){return key;},get state(){return current;},get blocked(){return blocked;},get original(){return original;},
       dispatch(identity,type,data){
         if(blocked)throw new Error(blocked);
-        const raw=storage.getItem(KEY);
+        const raw=storage.getItem(key);
         // Detect a changed tab before writing; not an atomic multi-user lock.
         if(raw!==original){throw new Error('工作空间已在其他页面更新。请刷新后重试，当前输入仍保留。');}
         const result=D.execute(current,identity,type,data);
         if(type!=='export'){
-          if(!valid(result.state))throw new Error('操作后的数据校验未通过，原始记录未改变');
+          if(!valid(result.state,schema))throw new Error('操作后的数据校验未通过，原始记录未改变');
           const encoded=JSON.stringify(result.state);
-          storage.setItem(KEY,encoded); // A quota/permission failure leaves memory unchanged.
+          storage.setItem(key,encoded); // A quota/permission failure leaves memory unchanged.
+          if(schema===5){
+            original=encoded;
+            try{
+              const persisted=storage.getItem(key);original=persisted;
+              if(persisted!==encoded)throw Error('保存值不一致');
+            }catch(err){blocked=`电商工作空间保存后回读未通过校验：${err.message}。请导出原始保存值排查`;current=null;throw Error(blocked);}
+          }
           current=result.state;original=encoded;
         }
         return result.value;
       }
     };
   }
-  const api={KEY,COPY_BACKUP_KEY,valid,open};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SupportStore=api;
+  const openCommerce=(storage,seed)=>open(storage,seed,{key:COMMERCE_KEY,schema:5});
+  const validCommerce=s=>valid(s,5);
+  const api={KEY,COMMERCE_KEY,COPY_BACKUP_KEY,valid,validCommerce,open,openCommerce};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SupportStore=api;
 })(typeof window!=='undefined'?window:globalThis);
 
 </script>
@@ -1589,7 +1729,16 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     return `<article class="message ${isCustomer?'incoming':'outgoing'} ${m.visibility==='internal'?'internal':''}"><div class="message-meta">${e(isCustomer?'客户':m.author||(m.role==='agent'?'人工客服':'智能客服'))}${m.role==='bot'&&m.aiAssist?'<span class="ai-assist-label">AI 协助</span>':''}${m.visibility==='internal'?' · 仅内部可见':''}<time>${date(m.at)}</time></div><div class="bubble">${e(m.body).replace(/\n/g,'<br>')}</div>${m.citation?`<button type="button" class="citation" data-action="citation" data-id="${e(m.id)}">${icon('book',13)} ${e(m.citation.title)} · v${m.citation.version}</button>`:''}${customer&&m.intake?b('填写售后申请','intake',m.caseId,'small',offline?'disabled':''):''}</article>`;
     }).join('');}
   function testReport(report){return report?`<div class="test-report"><div class="row between"><strong>回归结果</strong>${pill(report.passed?'全部通过':'存在失败',report.passed?'good':'warn')}</div><p class="muted small-text">${date(report.at,true)} · 校验路由和知识命中，不代表语义质量评分</p>${report.rows.map(r=>`<div class="test-row"><span class="${r.pass?'success-text':'danger-text'}">${r.pass?'✓':'×'}</span><div><strong>${e(r.name)}</strong><small>${e(r.query)} → ${e(r.actual)}</small></div></div>`).join('')}</div>`:empty('还没有测试结果','保存草稿后运行回归，全部通过才能发布。');}
-  root.SupportViews={e,icon,b,pill,date,empty,field,heading,options,search,messages,testReport,labels};
+  const Commerce=root.SupportCommerce;
+  function commerceOrderCard(order,mobile=false,offline=false){
+    const value=order.commerce,disabled=offline?'disabled':'';
+    return `<article class="commerce-order-card ${mobile?'phone-order-card':'order-card'}"><div class="commerce-order-heading"><strong>订单 ${e(order.id)}</strong><small>演示数据 · ${e(value.source)}</small><div class="row between">${pill(Commerce.paymentLabel(value.payment))}<span class="price">${value.totalPaidCents===null?'实付金额待核实':e(Commerce.money(value.totalPaidCents))}</span></div></div><div class="commerce-item-list">${value.items.map(item=>`<div class="commerce-item"><strong>${e(item.name)}</strong><small>${e(item.variant)} · ${item.quantity} 件</small><span>商品实付 ${e(Commerce.money(item.paidCents))}</span><small>${value.packages.filter(p=>p.allocations.some(a=>a.itemId===item.id)).map(p=>e(p.id)+' · '+e(Commerce.packageLabel(p))).join('<br>')}</small></div>`).join('')}</div><div class="${mobile?'phone-order-actions':'order-actions'}">${b('查看支付与包裹','commerce-query',order.id,'text',disabled)}${b('联系人工核实','request-human','','text',disabled)}</div></article>`;
+  }
+  function commerceDetails(value){
+    const origin=record=>`${e(record.source)} · 事实版本 v${record.version} · ${date(record.queriedAt,true)}`;
+    return `<p class="muted">订单 ${e(value.orderId)} · 虚构样例，业务结果来自本地模拟。</p>${value.payment?`<section class="result-note commerce-facts"><h3>支付记录</h3><p>${e(Commerce.paymentLabel(value.payment))}${value.totalPaidCents===null?'':` · 实付 ${e(Commerce.money(value.totalPaidCents))}`}</p><small>${origin(value.payment)}</small></section>`:''}<div class="commerce-item-list">${value.items.map(item=>`<div class="commerce-item"><strong>${e(item.name)}</strong><small>${e(item.variant)} · ${item.quantity} 件 · 商品实付 ${e(Commerce.money(item.paidCents))}</small></div>`).join('')}</div>${value.packages.map((p,i)=>`<section class="result-note commerce-facts"><h3>包裹 ${i+1} · ${e(Commerce.packageLabel(p))}</h3><p>${p.allocations.map(a=>e(value.items.find(x=>x.id===a.itemId)?.name||'商品')+' · '+a.quantity+' 件').join('、')}</p><small>${e(p.id)} · ${e(p.carrier)} · ${e(p.trackingNumber)}</small><div class="timeline">${p.track.map(t=>`<p>${date(t.at,true)} · ${e(t.text)}</p>`).join('')||'<p>尚未取得最新轨迹，请联系人工核实。</p>'}</div><small>${origin(p)}</small></section>`).join('')}<p class="muted">物流签收记录与实际收到、商品是否完好分别核实；售后咨询请联系人工客服。</p>`;
+  }
+  root.SupportViews={e,icon,b,pill,date,empty,field,heading,options,search,messages,testReport,labels,commerceOrderCard,commerceDetails};
 })(window);
 
 </script>
@@ -1600,7 +1749,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     const offline=data.connection&&data.connection!=='online';
     const conv=data.conversations.find(c=>c.id===ui.customerConversation)||data.conversations[0];
     const service=data.cases.filter(c=>c.kind==='aftersales'||c.feedback==='disputed');
-    return `<div class="customer-layout"><aside class="customer-home"><div class="store-brand"><span class="brand-mark">${icon('chat',18)}</span><div><strong>服务中心</strong><small>订单查询 · 售后服务</small></div></div><div class="welcome"><h1>有什么可以帮您？</h1><p>请描述问题，或选择下方服务。</p></div><div class="customer-shortcuts">${b(`${icon('book')}<span>服务规则</span>${icon('arrow')}`,'quick-policy','','shortcut')}${b(`${icon('users')}<span>联系人工</span>${icon('arrow')}`,'request-human',conv?.id||'','shortcut')}</div><div class="section-title"><h2>我的订单</h2><span>${data.orders.length} 笔</span></div>${data.orders.map(o=>`<div class="order-card"><div class="product-symbol">${e(o.symbol)}</div><div><strong>${e(o.product)}</strong><small>${e(o.id)}</small><div class="row">${pill(o.status)}<span class="price">¥${o.price.toFixed(2)}</span></div></div><div class="order-actions">${b('查物流','order-query',o.id,'text')}${b('申请售后','order-return',o.id,'text')}</div></div>`).join('')}<div class="section-title"><h2>服务进度</h2><span>${service.length} 项</span></div>${data.tickets.map(t=>`<button class="progress-card" type="button" data-action="ticket-detail" data-id="${e(t.id)}"><div class="row between"><strong>${e(t.title)}</strong>${icon('arrow',15)}</div><small>${e(t.id)} · ${date(t.createdAt,true)}</small>${pill(t.status,t.status==='waiting_customer'?'warn':'')}</button>`).join('')||'<p class="muted">暂无售后记录。</p>'}</aside><section class="messenger"><header class="messenger-head"><div class="assistant-avatar">${icon('bolt',22)}</div><div><strong>${conv?.state==='human'?'人工客服':'在线客服'}</strong><small><span class="status-dot"></span>${conv?e(V.labels[conv.state]):'在线咨询'}</small></div><div class="row push-right">${b('历史咨询','customer-history','','text')}${b(`${icon('plus')} 新咨询`,'new-conversation','','small')}</div></header>${conv?`<div class="messages customer-messages" id="customer-messages">${messages(conv,true)}${data.cases.filter(c=>conv.caseIds.includes(c.id)&&c.status==='completed').map(c=>`<div class="feedback-card"><strong>${e(c.kind==='knowledge'?'这个问题解决了吗？':'这个问题解决了吗？')}</strong>${c.feedback==='confirmed'?pill('已确认解决','good')+b('仍需帮助','dispute-case',c.id,'small text'):`<div class="row">${b('已解决','confirm-case',c.id,'small')}${b('仍需帮助','dispute-case',c.id,'small text')}</div>`}</div>`).join('')}</div><form class="composer customer-composer" data-form="customer-say" data-id="${e(conv.id)}"><label class="sr-only" for="customer-input">请输入问题</label><textarea id="customer-input" data-focus="customer-input" name="body" rows="2" maxlength="2000" required placeholder="请输入问题，或提供订单号…">${e(ui.drafts['customer-say:'+conv.id]?.body||'')}</textarea><div class="row between"><span class="muted small-text">${offline?'连接已断开，输入内容已保留，请到手机端演示恢复在线。':conv.state==='queued'?'已在排队，补充信息会一并交给客服。':conv.state==='closed'?'继续发送即可重新联系，原记录会保留。':'请勿发送密码或验证码。'}</span><button class="btn primary" type="submit" ${offline?'disabled':''}>发送 ${icon('send',15)}</button></div></form>${conv.state==='queued'?`<div class="queue-footer">${b('取消排队，继续咨询','cancel-queue',conv.id,'text')}</div>`:''}`:empty('暂无咨询记录','点击“新咨询”开始联系。')}</section></div>`;
+    return `<div class="customer-layout"><aside class="customer-home"><div class="store-brand"><span class="brand-mark">${icon('chat',18)}</span><div><strong>服务中心</strong><small>订单查询 · 售后服务</small></div></div><div class="welcome"><h1>有什么可以帮您？</h1><p>请描述问题，或选择下方服务。</p></div><div class="customer-shortcuts">${b(`${icon('book')}<span>服务规则</span>${icon('arrow')}`,'quick-policy','','shortcut')}${b(`${icon('users')}<span>联系人工</span>${icon('arrow')}`,'request-human',conv?.id||'','shortcut')}</div><div class="section-title"><h2>我的订单</h2><span>${data.orders.length} 笔</span></div>${data.orders.map(o=>o.commerce?V.commerceOrderCard(o,false,offline):`<div class="order-card"><div class="product-symbol">${e(o.symbol)}</div><div><strong>${e(o.product)}</strong><small>${e(o.id)}</small><div class="row">${pill(o.status)}<span class="price">¥${o.price.toFixed(2)}</span></div></div><div class="order-actions">${b('查物流','order-query',o.id,'text')}${b('申请售后','order-return',o.id,'text')}</div></div>`).join('')}<div class="section-title"><h2>服务进度</h2><span>${service.length} 项</span></div>${data.tickets.map(t=>`<button class="progress-card" type="button" data-action="ticket-detail" data-id="${e(t.id)}"><div class="row between"><strong>${e(t.title)}</strong>${icon('arrow',15)}</div><small>${e(t.id)} · ${date(t.createdAt,true)}</small>${pill(t.status,t.status==='waiting_customer'?'warn':'')}</button>`).join('')||'<p class="muted">暂无售后记录。</p>'}</aside><section class="messenger"><header class="messenger-head"><div class="assistant-avatar">${icon('bolt',22)}</div><div><strong>${conv?.state==='human'?'人工客服':'在线客服'}</strong><small><span class="status-dot"></span>${conv?e(V.labels[conv.state]):'在线咨询'}</small></div><div class="row push-right">${b('历史咨询','customer-history','','text')}${b(`${icon('plus')} 新咨询`,'new-conversation','','small')}</div></header>${conv?`<div class="messages customer-messages" id="customer-messages">${messages(conv,true)}${data.cases.filter(c=>conv.caseIds.includes(c.id)&&c.status==='completed').map(c=>`<div class="feedback-card"><strong>${e(c.kind==='knowledge'?'这个问题解决了吗？':'这个问题解决了吗？')}</strong>${c.feedback==='confirmed'?pill('已确认解决','good')+b('仍需帮助','dispute-case',c.id,'small text'):`<div class="row">${b('已解决','confirm-case',c.id,'small')}${b('仍需帮助','dispute-case',c.id,'small text')}</div>`}</div>`).join('')}</div><form class="composer customer-composer" data-form="customer-say" data-id="${e(conv.id)}"><label class="sr-only" for="customer-input">请输入问题</label><textarea id="customer-input" data-focus="customer-input" name="body" rows="2" maxlength="2000" required placeholder="请输入问题，或提供订单号…">${e(ui.drafts['customer-say:'+conv.id]?.body||'')}</textarea><div class="row between"><span class="muted small-text">${offline?'连接已断开，输入内容已保留，请到手机端演示恢复在线。':conv.state==='queued'?'已在排队，补充信息会一并交给客服。':conv.state==='closed'?'继续发送即可重新联系，原记录会保留。':'请勿发送密码或验证码。'}</span><button class="btn primary" type="submit" ${offline?'disabled':''}>发送 ${icon('send',15)}</button></div></form>${conv.state==='queued'?`<div class="queue-footer">${b('取消排队，继续咨询','cancel-queue',conv.id,'text')}</div>`:''}`:empty('暂无咨询记录','点击“新咨询”开始联系。')}</section></div>`;
   };
 })(window);
 
@@ -1624,7 +1773,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     return `<button type="button" class="phone-progress-card" data-action="ticket-detail" data-id="${e(ticket.id)}"><div class="row between"><strong>${e(ticket.title)}</strong>${icon('arrow',16)}</div><small>${e(ticket.id)} · ${date(ticket.createdAt,true)}</small>${pill(ticket.status,ticket.status==='waiting_customer'?'warn':ticket.status==='done'?'good':'')}</button>`;
   }
   V.mobileOrders=function(data){
-    return `<div class="phone-order-list">${data.orders.map(order=>`<article class="phone-order-card"><div class="phone-order-summary"><span class="phone-product-symbol" aria-hidden="true">${e(order.symbol||'▧')}</span><div><h3>${e(order.product)}</h3><small>${e(order.id)}</small><div class="row">${pill(order.status)}<span class="phone-price">¥${e(order.price.toFixed(2))}</span></div></div></div><div class="phone-order-actions">${b('查物流','order-query',order.id,'',disabled(data))}${b('申请退换货','order-return',order.id,'primary',disabled(data))}</div></article>`).join('')||empty('暂无订单','当前账户没有可查看的订单。')}${isOffline(data)?'<p class="phone-local-notice">连接已断开，恢复后可查询或提交申请。</p>':''}</div>`;
+    return `<div class="phone-order-list">${data.orders.map(order=>order.commerce?V.commerceOrderCard(order,true,isOffline(data)):`<article class="phone-order-card"><div class="phone-order-summary"><span class="phone-product-symbol" aria-hidden="true">${e(order.symbol||'▧')}</span><div><h3>${e(order.product)}</h3><small>${e(order.id)}</small><div class="row">${pill(order.status)}<span class="phone-price">¥${e(order.price.toFixed(2))}</span></div></div></div><div class="phone-order-actions">${b('查物流','order-query',order.id,'',disabled(data))}${b('申请退换货','order-return',order.id,'primary',disabled(data))}</div></article>`).join('')||empty('暂无订单','当前账户没有可查看的订单。')}${isOffline(data)?'<p class="phone-local-notice">连接已断开，恢复后可查询或提交申请。</p>':''}</div>`;
   };
   V.mobileProgress=function(data){
     return `<div class="phone-progress-list">${data.tickets.map(progressCard).join('')||empty('暂无办理记录','申请受理后，可在这里查看处理进度。')}${isOffline(data)?'<p class="phone-local-notice">当前可查看已保存的进度，恢复连接后再提交补充。</p>':''}</div>`;
@@ -1825,7 +1974,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
   V.integrations=function(){return `${heading('接入与运行边界','明确哪些链路已在本地运行，哪些外部能力尚未接入。')}<div class="integration-grid">${[['chat','Web 客户服务','本地页面可用','客户咨询、历史记录、服务申请与客服工作台共享当前浏览器的数据。','good'],['book','知识与接待引擎','本地规则','使用关键词检索和确定性状态流转，不调用真实大模型或向量检索服务。',''],['plug','订单系统','外部未接入','订单信息来自内置本地适配器；没有访问商家真实订单系统。','warn'],['shield','支付与退款','未接入','记录办理结果不代表执行退款。没有资金操作、支付请求或退款回执。','warn'],['users','登录与组织','服务端未接入','角色切换用于验证岗位行为；浏览器内的校验不是身份认证或安全隔离。','warn'],['inbox','邮件、短信与其他渠道','未接入','消息只保存在当前工作空间，没有发送短信、邮件或外部通知。','warn']].map(([glyph,title,status,body,color])=>`<section class="panel integration-card"><div class="integration-icon">${icon(glyph,25)}</div><h2>${title}</h2>${pill(status,color)}<p>${body}</p></section>`).join('')}</div>`;};
   V.permissions=function(){return `${heading('角色与职责','角色行为在业务命令入口校验；正式上线仍须由服务端校验身份与数据归属。')}<section class="panel"><div class="table-scroll"><table><thead><tr><th>角色</th><th>工作范围</th><th>明确禁止</th></tr></thead><tbody>${[['客户','本人的咨询、订单、服务申请和公开处理进度','其他客户资料、内部备注、核对依据、运行日志'],['一线客服','本人接待、本人工单、授权公共池、服务问题标记','未经接管回复、修改他人任务、知识发布与系统配置'],['服务经理','授权团队的分配、质量复核、整改验收、接待规则','冒充客服发送回复、编辑或发布知识'],['知识运营','知识和策略草稿、回归、发布、关联整改','工单办理、正式质检裁决、客户全量资料'],['系统管理员','接入状态、权限说明、审计记录与数据导出','直接参与客户接待、替运营发布知识']].map(row=>`<tr>${row.map(x=>`<td>${e(x)}</td>`).join('')}</tr>`).join('')}</tbody></table></div></section>`;};
   V.logs=function(s){return `${heading('操作审计','当前工作空间的实际操作记录；无成功回执的写入不会显示为成功。')}<section class="panel"><div class="table-scroll"><table><thead><tr><th>时间</th><th>操作者</th><th>动作</th><th>对象</th></tr></thead><tbody>${s.events.slice().reverse().slice(0,100).map(ev=>`<tr><td>${date(ev.at,true)}</td><td>${e(ev.actor)}</td><td>${e(ev.type)}</td><td>${e(ev.target||'—')}</td></tr>`).join('')}</tbody></table></div><p class="muted small-text">展示最近 100 条，完整记录包含在工作空间导出文件中。浏览器存储不是防篡改审计服务。</p></section>`;};
-  V.data=function(){return `${heading('数据维护','导出当前工作空间，或保存旧版本的原始数据。')}<section class="panel narrow"><h2>当前工作空间</h2><p class="muted">数据仅保存在当前浏览器。换设备、清理站点数据或隐私模式都可能影响保留。本版不提供多人并发保证。</p>${b('导出工作空间 JSON','export-data','','primary')}<hr><h2>旧版本数据</h2><p class="muted">新版本使用独立存储，不覆盖旧版的会话、工单和草稿。旧数据不自动导入新状态模型，可先导出留存。</p>${b('导出旧版本原始数据','export-legacy')}<hr><h2>使用范围</h2><p class="muted">不要在此工作空间录入真实客户资料、支付信息或密钥。外部接入与服务端权限尚未完成。</p></section>`;};
+  V.data=function(commerceMode=false){return `${heading('数据维护','导出当前工作空间，或保存旧版本的原始数据。')}<section class="panel narrow"><h2>当前工作空间</h2><p class="muted">数据仅保存在当前浏览器。换设备、清理站点数据或隐私模式都可能影响保留。本版不提供多人并发保证。</p>${b('导出工作空间 JSON','export-data','','primary')}<hr><h2>旧版本数据</h2><p class="muted">新版本使用独立存储，不覆盖旧版的会话、工单和草稿。旧数据不自动导入新状态模型，可先导出留存。</p>${b('导出 V4 原始数据','export-v4')} ${b('导出旧版本原始数据','export-legacy')}<p class="muted">${commerceMode?'本工作空间使用独立电商样例，旧 V4 数据与草稿原样保留。':'可进入独立电商样例查看商品、支付与双包裹。'}</p><a href="?data=ecommerce#customer">打开电商演示</a><hr><h2>使用范围</h2><p class="muted">不要在此工作空间录入真实客户资料、支付信息或密钥。外部接入与服务端权限尚未完成。</p></section>`;};
 })(window);
 
 </script>
@@ -1882,7 +2031,8 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     }else insertSuggestion(value,'replace');}
     function insertOrder(value,mode){
       owned(value.id);const c=currentCase(value.caseId),order=store.state.orders.find(o=>o.id===c.orderId&&o.customerId===c.customerId);
-      if(!order||JSON.stringify(order)!==JSON.stringify(value.order))throw Error('订单信息已变化，请重新查询再采用');
+      const facts=order&&store.state.schema===5?window.SupportCommerce.snapshot(store.state,order.id):null,snapshot=order&&{...D.copy(order),...(facts?{commerce:facts}:{})};
+      if(!order||JSON.stringify(snapshot)!==JSON.stringify(value.order))throw Error('订单信息已变化，请重新查询再采用');
       pauseWhileTyping(value.id);const key='reply:'+value.id,body=ui.drafts[key]?.body||'';
       ui.composeMode='reply';ui.drafts[key]={body:mode==='append'&&body?body+'\n\n'+value.body:value.body};
       ui.orderReplyRefs||={};ui.orderReplyRefs[identity().id+':'+value.id]={caseId:value.caseId,order:D.copy(value.order),body:value.body};
@@ -1893,7 +2043,9 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
       const id=el.dataset.conversation,c=currentCase(el.dataset.id);owned(id);
       const query=c.workflow?.logistics,order=store.state.orders.find(o=>o.id===c.orderId&&o.customerId===c.customerId);
       if(!query||!order||JSON.stringify(query.order)!==JSON.stringify(order))throw Error('请先重新查询当前订单');
-      const value={id,caseId:c.id,order:D.copy(order),body:`${order.product}：${order.status}。${order.delivery||'暂无物流说明'}`};
+      const facts=store.state.schema===5?window.SupportCommerce.snapshot(store.state,order.id):null;
+      if(facts&&(facts.queryStatus!=='ok'||JSON.stringify(facts)!==JSON.stringify(query.commerce)))throw Error('查询结果不完整或已经变化，请重新核实后回复');
+      const value={id,caseId:c.id,order:{...D.copy(order),...(facts?{commerce:facts}:{})},body:facts?window.SupportCommerce.summary(facts):`${order.product}：${order.status}。${order.delivery||'暂无物流说明'}`};
       if(ui.drafts['reply:'+id]?.body?.trim()){pendingOrder=value;modal('草稿已有内容',`<p>查询结果来自刚才核对的订单。</p><div class="result-note">${e(value.body)}</div><div class="form-footer">${b('取消','close-modal')}${b('追加到草稿','order-draft-append')}${b('替换草稿','order-draft-replace','','primary')}</div>`);}
       else insertOrder(value,'replace');
     }
@@ -2014,9 +2166,11 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
   'use strict';
   const D=window.SupportDomain,V=window.SupportViews,{e,b,icon,field,options,pill,date,empty}=V;
   let storage;try{storage=localStorage;}catch(err){storage={getItem(){throw err;},setItem(){throw err;}};}
-  const store=window.SupportStore.open(storage,()=>window.SupportSeed.create());
+  const commerceMode=new URLSearchParams(location.search).get('data')==='ecommerce';
+  const store=commerceMode?window.SupportStore.openCommerce(storage,()=>window.SupportSeed.createCommerce()):window.SupportStore.open(storage,()=>window.SupportSeed.create());
+  const viewKey=commerceMode?'qinghe-support-ecommerce-view-v1':'qinghe-support-view';
   const customerOnly=new URLSearchParams(location.search).get('view')==='customer';
-  let cached={};try{cached=JSON.parse(sessionStorage.getItem('qinghe-support-view')||'{}');}catch{}
+  let cached={};try{cached=JSON.parse(sessionStorage.getItem(viewKey)||'{}');}catch{}
   const ui={workspace:'customer',deskPage:'inbox',opsPage:'overview',opsRole:'manager',agentId:'lin',customerConversation:'',deskConversation:'',deskFilter:'queue',ticketFilter:'all',knowledgeId:'',composeMode:'reply',search:{},drafts:{},...cached,flowTest:null};
   if(!['manager','operator','admin'].includes(ui.opsRole))ui.opsRole='manager';
   if(!['lin','zhou'].includes(ui.agentId))ui.agentId='lin';
@@ -2024,13 +2178,13 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
   const opsMenus={manager:[['overview','服务概览','chart'],['team','团队协同','users'],['quality','质量复核','shield'],['service','接待规则','settings']],operator:[['knowledge','知识与答复','book'],['flow','接待策略与测试','flow'],['quality','服务改进队列','shield']],admin:[['integrations','接入与运行','plug'],['permissions','角色与职责','users'],['logs','操作审计','shield'],['data','数据维护','settings']]};
   const $=s=>document.querySelector(s);let toastTimer,focusBeforeDialog;
   function toast(message,error=false){const t=$('#toast');t.textContent=message;t.className='toast visible'+(error?' error':'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.className='toast',5000);}
-  function cache(){try{const {flowTest,drafts,pendingTicket,...persist}=ui;sessionStorage.setItem('qinghe-support-view',JSON.stringify(persist));}catch{/* Formal writes are handled by the transactional store, not this draft cache. */}}
+  function cache(){try{const {flowTest,drafts,pendingTicket,...persist}=ui;sessionStorage.setItem(viewKey,JSON.stringify(persist));}catch{/* Formal writes are handled by the transactional store, not this draft cache. */}}
   function identity(){return ui.workspace==='customer'?{id:'C001',role:'customer'}:ui.workspace==='desk'?{id:ui.agentId,role:'agent'}:{id:ui.opsRole,role:ui.opsRole};}
   function draftScope(){const a=identity();return a.role+':'+a.id;}
   function syncDrafts(){const scope=draftScope();if(scope!==activeDraftScope){ui.drafts=ui.draftScopes[scope]||={};ui.pendingTicket=null;ui.flowTest=null;activeDraftScope=scope;}}
   function clearFlowTest(){ui.flowTest=null;$('.query-result')?.remove();}
   function fail(err){const message=err?.message||'操作没有完成，请重试';if($('#dialog').open){$('#dialog-error').textContent=message;$('#dialog-error').hidden=false;}else toast(message,true);}
-  function apply(type,data,success){const value=store.dispatch(identity(),type,data);if(success)toast(success);return value;}
+  function apply(type,data,success){let value;try{value=store.dispatch(identity(),type,data);}catch(err){if(store.blocked)render();throw err;}if(success)toast(success);return value;}
   function navigate(workspace,page){ui.customerMode=workspace==='mobile'?'mobile':'desktop';ui.workspace=workspace==='mobile'?'customer':workspace;if(workspace==='desk')ui.deskPage=page||ui.deskPage;if(workspace==='ops')ui.opsPage=page||ui.opsPage;history.pushState(null,'','#'+workspace+(workspace==='desk'?'/'+ui.deskPage:workspace==='ops'?'/'+ui.opsPage:''));cache();}
   function route(){
     if(customerOnly){ui.workspace='customer';ui.customerMode='desktop';return;}
@@ -2042,8 +2196,8 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     if(['customer','desk','ops'].includes(workspace)){ui.workspace=workspace;if(workspace==='desk')ui.deskPage=['inbox','tickets'].includes(page)?page:'inbox';if(workspace==='ops')ui.opsPage=page||'overview';}
     if(ui.workspace==='ops'&&!opsMenus[ui.opsRole].some(x=>x[0]===ui.opsPage)){ui.opsPage=opsMenus[ui.opsRole][0][0];history.replaceState(null,'','#ops/'+ui.opsPage);}
   }
-  function top(s){const role=ui.workspace==='desk'?`<label class="role-picker"><span>当前客服</span><select aria-label="当前客服" data-select="agent">${options(s.staff.filter(a=>a.role==='agent').map(a=>[a.id,a.name]),ui.agentId)}</select></label>`:ui.workspace==='ops'?`<label class="role-picker"><span>工作角色</span><select aria-label="工作角色" data-select="ops-role">${options([['manager','服务经理'],['operator','知识运营'],['admin','系统管理员']],ui.opsRole)}</select></label>`:`<span class="customer-identity">${icon('users',16)} 我的账户</span><a class="icon-button" href="?view=customer#customer" target="_blank" rel="noopener" title="打开独立客户页" aria-label="打开独立客户页">${icon('external',16)}</a>`;
-    return `<header class="app-top"><a class="product-brand" href="#customer"><span class="brand-logo">${icon('chat',20)}</span><span>智能客服</span></a>${customerOnly?'<div class="standalone-heading">服务中心</div>':`<nav class="workspace-tabs" aria-label="工作区">${[['customer','客户服务','chat'],['mobile','手机端演示','chat'],['desk','客服工作台','inbox'],['ops','运营后台','chart']].map(([key,label,glyph])=>`<button type="button" data-action="workspace" data-id="${key}" class="${(ui.workspace==='customer'&&ui.customerMode==='mobile'?'mobile':ui.workspace)===key?'active':''}" ${(ui.workspace==='customer'&&ui.customerMode==='mobile'?'mobile':ui.workspace)===key?'aria-current="page"':''}>${icon(glyph)}${label}</button>`).join('')}</nav>`}<div class="top-right">${customerOnly?'<span class="customer-identity">我的账户</span>':role}</div></header>`;
+  function top(s){const role=ui.workspace==='desk'?`<label class="role-picker"><span>当前客服</span><select aria-label="当前客服" data-select="agent">${options(s.staff.filter(a=>a.role==='agent').map(a=>[a.id,a.name]),ui.agentId)}</select></label>`:ui.workspace==='ops'?`<label class="role-picker"><span>工作角色</span><select aria-label="工作角色" data-select="ops-role">${options([['manager','服务经理'],['operator','知识运营'],['admin','系统管理员']],ui.opsRole)}</select></label>`:`<span class="customer-identity">${icon('users',16)} 我的账户</span><a class="icon-button" href="?view=customer${commerceMode?'&data=ecommerce':''}#customer" target="_blank" rel="noopener" title="打开独立客户页" aria-label="打开独立客户页">${icon('external',16)}</a>`;
+    return `<header class="app-top"><a class="product-brand" href="#customer"><span class="brand-logo">${icon('chat',20)}</span><span>${commerceMode?'电商客服演示':'智能客服'}</span></a>${customerOnly?'<div class="standalone-heading">服务中心</div>':`<nav class="workspace-tabs" aria-label="工作区">${[['customer','客户服务','chat'],['mobile','手机端演示','chat'],['desk','客服工作台','inbox'],['ops','运营后台','chart']].map(([key,label,glyph])=>`<button type="button" data-action="workspace" data-id="${key}" class="${(ui.workspace==='customer'&&ui.customerMode==='mobile'?'mobile':ui.workspace)===key?'active':''}" ${(ui.workspace==='customer'&&ui.customerMode==='mobile'?'mobile':ui.workspace)===key?'aria-current="page"':''}>${icon(glyph)}${label}</button>`).join('')}</nav>`}<div class="top-right">${customerOnly?'<span class="customer-identity">我的账户</span>':role}</div></header>`;
   }
   function side(s){const menu=ui.workspace==='desk'?[['inbox','会话接待','inbox'],['tickets','工单处理','ticket']]:opsMenus[ui.opsRole];const active=ui.workspace==='desk'?ui.deskPage:ui.opsPage;const actor=identity();return `<aside class="workspace-sidebar"><div class="workspace-label">${ui.workspace==='desk'?'客户支持':'运营与管理'}</div>${menu.map(([key,label,glyph])=>`<button class="side-link ${active===key?'active':''}" type="button" data-action="${ui.workspace==='desk'?'desk-page':'ops-page'}" data-id="${key}">${icon(glyph)}<span>${label}</span></button>`).join('')}<div class="sidebar-bottom"><span class="workspace-dot"></span><strong>客户服务团队</strong><small>${ui.workspace==='desk'?'服务组 · 本人任务与公共池':{manager:'团队服务与质量',operator:'知识、策略与改进',admin:'系统接入与维护'}[ui.opsRole]}</small></div></aside>`;}
   function render(){
@@ -2063,7 +2217,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
         case'integrations':content=V.integrations();break;
         case'permissions':content=V.permissions();break;
         case'logs':content=V.logs(s);break;
-        case'data':content=V.data();break;
+        case'data':content=V.data(commerceMode);break;
       }
     }
     const scrolls=[...document.querySelectorAll('.messages,.sop-workbench-scroll,.conversation-rows')].map(x=>[x.className,x.scrollTop,x.scrollHeight-x.clientHeight-x.scrollTop<40]);
@@ -2102,6 +2256,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     'new-conversation'(){closeModal();ui.customerConversation=apply('newConversation',{},'已开始新咨询，原服务记录仍保留');render();scrollMessages();},
     'quick-policy'(){quick('七天无理由退货有什么条件？');},
     'order-query'(el){quick('查物流 '+el.dataset.id);},
+    'commerce-query'(el){const value=apply('queryCommerce',{orderId:el.dataset.id});modal('订单、支付与包裹',V.commerceDetails(value));},
     'order-return'(el){quick('申请退货 '+el.dataset.id);},
     'request-human'(el){closeModal();const c=el.dataset.id||customerConversation().id;apply('requestHuman',{id:c},'已提交人工请求');render();scrollMessages();},
     'cancel-queue'(el){apply('cancelQueue',{id:el.dataset.id},'已取消当前排队');render();},
@@ -2141,6 +2296,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     'close-modal'(){closeModal();},
     'export-data'(){const data=apply('export',{});download('客服工作空间.json',data);toast('已生成工作空间导出文件');},
     'export-legacy'(){if(identity().role!=='admin')throw Error('需要系统管理员角色');const raw=localStorage.getItem('zhixu-customer-demo-v3.1');if(raw===null)throw Error('当前浏览器未读取到旧版本保存值');download('客服旧版本原始数据.json',raw);toast('已导出旧版本原始保存值，未做转换');},
+    'export-v4'(){if(identity().role!=='admin')throw Error('需要系统管理员角色');const raw=storage.getItem(window.SupportStore.KEY);if(raw===null)throw Error('当前浏览器未读取到 V4 保存值');download('客服V4原始数据.json',raw);toast('已导出 V4 原始保存值，未做转换');},
     'export-broken'(){if(store.original===null)throw Error('无法读取原始保存值，可能是浏览器禁用了存储');download('客服异常原始数据.json',store.original);},
     ...workbench.actions
   };
@@ -2195,7 +2351,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
   document.addEventListener('keydown',ev=>{const dialog=$('#dialog');if(dialog.open&&dialog.parentElement?.classList.contains('phone-overlay-host')){if(ev.key==='Escape'){ev.preventDefault();closeModal();return;}if(ev.key==='Tab'){const fields=[...dialog.querySelectorAll('button,input,textarea,select,a[href]')].filter(x=>!x.disabled&&x.getClientRects().length);const first=fields[0],last=fields.at(-1);if(ev.shiftKey&&document.activeElement===first){ev.preventDefault();last?.focus();}else if(!ev.shiftKey&&document.activeElement===last){ev.preventDefault();first?.focus();}}}if((ev.ctrlKey||ev.metaKey)&&ev.key==='Enter'&&ev.target.closest('.composer')){ev.preventDefault();ev.target.closest('form').requestSubmit();}});
   window.addEventListener('hashchange',()=>{closeModal();render();scrollMessages();});
   window.addEventListener('popstate',()=>{closeModal();render();});
-  window.addEventListener('storage',ev=>{if(ev.key===window.SupportStore.KEY)toast('其他页面更新了工作空间。请刷新后继续，当前输入保留。',true);});
+  window.addEventListener('storage',ev=>{if(ev.key===store.key)toast('其他页面更新了工作空间。请刷新后继续，当前输入保留。',true);});
   window.addEventListener('error',ev=>{console.error(ev.error);toast('页面出现异常；未提交的操作不会被视为成功。',true);});
   render();scrollMessages();
   function tick(){workbench.tick();setTimeout(tick,1000);}setTimeout(tick,1000);

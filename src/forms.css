@@ -7,3 +7,11 @@
 .phone-overlay-host .form-footer{flex-wrap:wrap}.phone-overlay-host .close-item{padding:10px}
 @media(max-width:760px){.app-top{padding-inline:12px;gap:10px}.workspace-tabs{overflow-x:auto;min-width:0}.workspace-tabs button{padding-inline:12px;white-space:nowrap}.app-top .top-right{display:none}.app-top .product-brand>span:last-child{display:none}}
 .field:has([required])>span:after{content:" *";color:var(--danger)}
+/* 商品级订单摘要与查询详情，共用于客户页和手机端。 */
+.commerce-order-card{display:block;min-width:0;overflow-wrap:anywhere}
+.commerce-order-heading{display:grid;gap:6px}
+.commerce-order-heading small,.commerce-item small{color:var(--muted)}
+.commerce-item-list{display:grid;gap:10px;margin:12px 0}
+.commerce-item{display:grid;gap:5px;padding-top:10px;border-top:1px solid var(--line);font-size:12px}
+.commerce-order-card .order-actions{display:flex;flex-wrap:wrap;gap:6px}
+.commerce-facts{background:var(--surface-2);border-color:var(--line)}
