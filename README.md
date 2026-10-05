@@ -1,6 +1,6 @@
 # 智能客服工作空间 V4
 
-产出 Agent：Codex。集成、主写、参与与最终收敛 Agent：Codex。用户附件原始产出平台未标明。
+产出 Agent：Codex。集成、主写、参与与最终收敛 Agent：Codex。用户附件原始产出平台未标明。视觉主题层 `src/theme.css` 产出 Agent：Claude（2026-10-05）。
 
 智能客服是面向电商服务场景的本地交互原型。客户服务、客服工作台、运营后台共用一份会话、客户问题、工单与知识记录；“手机端演示”是同一客户角色的另一种展示模式。原型展示从咨询到办理、从服务问题到知识整改的完整操作链。面客页面使用“服务中心”和“在线客服”，样例身份使用客户编号与客服 01 / 02。
 
@@ -74,6 +74,7 @@ node --test tests/*.test.cjs
 | --- | --- |
 | `index.html`、`src/app.js`、`src/workbench-app.js`、`src/views/` | V4 默认入口、页面事件、SOP/受理/关闭表单与视图 |
 | `src/styles.css`、`src/workbench.css`、`src/mobile.css`、`src/forms.css` | 基础界面、SOP 看板、手机与表单样式 |
+| `src/theme.css` | 视觉主题层，最后加载，只覆盖配色、字体与质感；窄屏尺寸沿用原断点规则，删去 `index.html` 中的引用即回到原样式 |
 | `src/domain.js`、`src/seed.js`、`src/store.js`、`src/copy.js` | 业务命令、虚构样例、浏览器保存、内置文案精确更新 |
 | `run.py`、`build_single.py` | 本地 HTTP 服务、单文件构建 |
 | `legacy.html`、根目录旧 `app.js` / `engine.js` / `flow-*.js` 等 | 旧版入口与历史模块，不被 V4 `index.html` 加载 |
