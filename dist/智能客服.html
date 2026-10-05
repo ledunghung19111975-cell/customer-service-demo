@@ -291,6 +291,25 @@
 .commerce-item{display:grid;gap:5px;padding-top:10px;border-top:1px solid var(--line);font-size:12px}
 .commerce-order-card .order-actions{display:flex;flex-wrap:wrap;gap:6px}
 .commerce-facts{background:var(--surface-2);border-color:var(--line)}
+/* 产出 Agent：Codex。事项视图沿用工作空间与手机弹层布局。 */
+.commerce-item .btn{justify-self:start}
+.service-panel{border:1px solid var(--line);border-radius:10px;padding:14px;margin:14px 0;min-width:0;overflow-wrap:anywhere;background:var(--surface)}
+.service-panel h3{margin:0;font-size:14px}.service-panel p{line-height:1.65}
+.service-axes{display:grid;gap:7px;margin:12px 0}
+.service-axis{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px}
+.service-axis .pill{white-space:normal;text-align:right}
+.service-actions{display:flex;flex-wrap:wrap;align-items:start;gap:8px;margin:12px 0}
+.service-actions>.sop-form,.service-actions>details,.service-actions>p{width:100%}
+.service-handoff-summary,.service-history{margin-top:8px;font-size:12px;line-height:1.65}
+.service-progress-card>span{display:block;margin:5px 0;font-size:12px}
+.phone-overlay-host .service-panel{padding:10px;margin:0}
+.phone-overlay-host .service-axis{gap:8px}
+.phone-overlay-host .service-actions .btn{max-width:100%;white-space:normal}
+.phone-overlay-host .service-panel .sop-facts{grid-template-columns:90px minmax(0,1fr)}
+.service-incoming-panel{padding:12px;border-bottom:1px solid var(--line);background:var(--surface-2)}
+.service-incoming-panel h3{font-size:13px;margin:0 0 8px}
+.service-incoming-panel article{display:grid;gap:8px;margin:10px 0;font-size:12px;overflow-wrap:anywhere}
+.service-incoming-panel small{color:var(--muted)}
 
 </style>
   <style>
@@ -786,7 +805,244 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     lines.push('轨迹记录与实际收到、商品是否完好分别核实；如有异常请联系人工。');
     return lines.join('\n');
   }
-  const api={valid,snapshot,summary,money,paymentLabel,packageLabel};
+  const serviceTables=['rules','aftersales','returns','refunds','occupancies','handoffs','notifications','evaluations'];
+  const uid=(s,p)=>p+String(++s.sequence).padStart(5,'0');
+  const required=(v,label,max=2000)=>{assert(typeof v==='string'&&v.trim()&&v.trim().length<=max,`请填写${label}（1–${max}字）`);return v.trim();};
+  function ensure(s){
+    assert(s.schema===5&&s.commerce,'当前入口没有电商办理记录');
+    const needsRules=s.commerce.rules===undefined;
+    serviceTables.forEach(k=>s.commerce[k] ||= []);
+    if(needsRules)s.commerce.rules.push({id:'EC-RULE-CUP-DAMAGE',itemId:'EC-ITEM-001',version:1,source:'虚构签收破损退货规则',effectiveAt:'2026-10-01',expiresAt:'',serviceType:'return_refund',quantity:1,amountCents:12900,evidenceRef:'DEMO-DAMAGE-001',reviewer:'manager',requiresReturn:true});
+    return s.commerce;
+  }
+  const list=(s,k)=>s.commerce?.[k]||[];
+  const find=(s,k,id)=>{const x=list(s,k).find(x=>x.id===id);assert(x,'办理记录不存在，请核对原申请');return x;};
+  const issue=(s,id)=>{const c=s.cases.find(c=>c.id===id);assert(c,'服务事项不存在');return c;};
+  function access(s,a,c,{read=false}={}){
+    if(a.role==='customer'){assert(c.customerId===a.id,'无权查看其他客户事项');return;}
+    if(a.role==='manager'){assert(a.teams.includes(c.teamId),'不在授权管理范围内');return;}
+    const pending=list(s,'handoffs').some(h=>h.caseId===c.id&&h.targetId===a.id&&h.status==='pending');
+    assert(a.role==='agent'&&a.teams.includes(c.teamId)&&(c.ownerId===a.id||(read&&pending)),'请先接管或领取本人有权处理的事项');
+  }
+  function notify(s,c,body,now){
+    c.serviceHistory ||= [];c.serviceHistory.push({at:now,text:body});c.serviceVersion=(c.serviceVersion||0)+1;
+    c.conversationIds.forEach(id=>{const conv=s.conversations.find(x=>x.id===id);if(!conv)return;conv.messages.push({id:uid(s,'MSG'),role:'system',body,at:now,visibility:'public',caseId:c.id});conv.updatedAt=now;});
+  }
+  function ticket(s,c,now){
+    let t=s.tickets.find(t=>t.caseId===c.id);
+    if(!t){t={id:uid(s,'TK'),customerId:c.customerId,teamId:c.teamId,caseId:c.id,title:c.title,description:c.serviceReason||c.title,orderId:c.orderId,itemId:c.itemId,status:c.ownerId?'working':'new',priority:'normal',ownerId:c.ownerId||'',createdAt:now,dueAt:c.dueAt,history:[],service:true};s.tickets.unshift(t);}
+    return t;
+  }
+  function serviceCase(s,conv,item,kind,reason,now){
+    ensure(s);
+    let c=s.cases.find(c=>c.service&&c.customerId===conv.customerId&&c.itemId===item.id&&c.kind===kind&&c.status!=='completed');
+    if(c){if(!conv.caseIds.includes(c.id))conv.caseIds.push(c.id);if(!c.conversationIds.includes(conv.id))c.conversationIds.push(conv.id);return c;}
+    c={id:uid(s,'CS'),customerId:conv.customerId,teamId:'service',kind,title:(kind==='aftersales'?'退货退款核对：':'物流异常核实：')+item.name,orderId:item.orderId,itemId:item.id,service:true,status:'open',feedback:'pending',result:null,resultHistory:[],conversationIds:[conv.id],createdAt:now,completedAt:null,humanTouched:false,ownerId:conv.ownerId||'',groupOwnerId:'service',dueAt:now+s.settings.ticketHours*3600000,serviceStage:'clarifying',serviceReason:reason,serviceVersion:1,serviceHistory:[{at:now,text:'已记录商品诉求，尚未提交办理申请。'}]};
+    s.cases.unshift(c);conv.caseIds.push(c.id);ticket(s,c,now);return c;
+  }
+  function demands(s,query,customerId){
+    if(s.schema!==5||/(规则|政策|条件|怎么退|如何退|了解)/.test(query)&&!/(想|要|帮我|办理|申请).{0,6}(退货|退款|换货)/.test(query))return [];
+    const orderIds=[...new Set((query.match(/\b(?:EC-)?SO[A-Z0-9]+\b/gi)||[]).map(id=>id.toUpperCase()))];
+    if(orderIds.length>1||orderIds.some(id=>!s.orders.some(o=>o.id===id&&o.customerId===customerId)))return [];
+    const rows=[];
+    for(const clause of query.split(/[，,。；;\n]/)){
+      if(/(不要|不想|不用|无需|先不).{0,6}(退货|退款|换货|申请)/.test(clause))continue;
+      if(/(?:不|没有|没|并非)(?:是|有|出现)?(?:破损|损坏|坏|碎|裂|漏水)/.test(clause))continue;
+      const mentioned=s.commerce.items.filter(i=>s.orders.some(o=>o.id===i.orderId&&o.customerId===customerId)&&(!orderIds.length||orderIds.includes(i.orderId))&&((i.skuId==='EC-SKU-CUP'&&/杯/.test(clause))||(i.skuId==='EC-SKU-BAG'&&/袋/.test(clause))||clause.includes(i.id)||clause.includes(i.name)));
+      if(mentioned.length!==1)continue;
+      const kind=/(退|退款|破损|碎|坏|裂|漏水)/.test(clause)?'aftersales':/(没(?:有)?收到|没到|未收到|停滞|催发货|丢)/.test(clause)?'logistics':'';
+      if(kind&&!rows.some(r=>r.item.id===mentioned[0].id&&r.kind===kind))rows.push({item:copy(mentioned[0]),kind,reason:clause.trim()});
+    }return rows;
+  }
+  function collect(s,conv,query,now){
+    const rows=demands(s,query,conv.customerId);if(!rows.length)return false;
+    const m=[...conv.messages].reverse().find(m=>m.role==='customer'),caseIds=[];
+    rows.forEach(r=>{const c=serviceCase(s,conv,r.item,r.kind,r.reason,now);caseIds.push(c.id);if(m&&rows.length===1)m.caseId=c.id;notify(s,c,r.kind==='aftersales'?`${r.item.name}：请从商品申请入口核对原因、材料和金额后确认；当前仅记录诉求，未提交退货退款。`:`${r.item.name}：已记录物流异常，查询轨迹不能代替异常核实，人工将继续跟进。`,now);});if(m)m.caseIds=caseIds;
+    return true;
+  }
+  function input(s,a,data,now){
+    ensure(s);assert(a.role==='customer','申请须由客户本人核对确认');
+    const order=s.orders.find(o=>o.id===data.orderId&&o.customerId===a.id);assert(order,'请核对本人订单归属');
+    const item=s.commerce.items.find(i=>i.id===data.itemId&&i.orderId===order.id);assert(item,'商品不属于本订单');
+    const quantity=Number(data.quantity);assert(quantity===1&&item.quantity===1,'首版仅提供一件商品的退货退款');
+    assert(data.serviceType==='return_refund','请选择明确的退货退款服务类型');
+    const reason=required(data.reason,'申请原因'),evidenceRef=required(data.evidenceRef,'演示材料',100);
+    const rule=s.commerce.rules.find(r=>r.itemId===item.id&&r.serviceType==='return_refund');
+    assert(rule&&Date.parse(rule.effectiveAt)<=now&&(!rule.expiresAt||Date.parse(rule.expiresAt)>now),'该商品暂不在已核实规则范围，请联系人工');
+    assert(evidenceRef===rule.evidenceRef,'请补充指定的虚构破损凭证');
+    const pay=s.commerce.payments.find(p=>p.orderId===order.id),pkg=s.commerce.packages.find(p=>p.allocations.some(a=>a.itemId===item.id));
+    assert(pay?.queryStatus==='ok'&&pay.status==='paid','支付事实尚未核实，不能提交');
+    assert(pkg?.queryStatus==='ok'&&pkg.status==='signed','该商品尚未核实签收，请单独查询或联系人工');
+    assert(cents(rule.amountCents)&&rule.amountCents>0&&rule.amountCents<=item.paidCents,'退款核定金额超出商品实付');
+    if(data.conversationId){const conv=s.conversations.find(c=>c.id===data.conversationId&&c.customerId===a.id);assert(conv,'申请会话归属尚未核对');}
+    return {orderId:order.id,itemId:item.id,itemName:item.name,quantity,serviceType:data.serviceType,reason,evidenceRef,amountCents:rule.amountCents,rule:copy(rule),facts:copy({order,item,pay,pkg}),customerId:a.id};
+  }
+  const requestContent=data=>JSON.stringify({customerId:data.customerId,orderId:data.orderId,itemId:data.itemId,quantity:Number(data.quantity),serviceType:data.serviceType,reason:String(data.reason||'').trim(),evidenceRef:String(data.evidenceRef||'').trim(),conversationId:data.conversationId||''});
+  function available(s,p){
+    assert(!s.cases.some(c=>c.service&&c.customerId===p.customerId&&c.itemId===p.itemId&&c.feedback==='disputed'&&c.status!=='completed'),'原商品异议尚未复核，请继续原事项，不能另建申请');
+    const used=list(s,'occupancies').filter(x=>x.itemId===p.itemId&&x.state!=='released');
+    assert(!used.length,'该商品已有申请占用，请继续原办理记录');
+    const orderUsed=list(s,'occupancies').filter(x=>x.orderId===p.orderId&&x.state!=='released').reduce((n,x)=>n+x.amountCents,0);
+    assert(orderUsed+p.amountCents<=p.facts.pay.amountCents,'可用退款额度不足');
+  }
+  function preview(s,a,data,now){const p=input(s,a,data,now);available(s,p);return {...p,token:JSON.stringify({content:requestContent({...data,customerId:a.id}),facts:p.facts,rule:p.rule,occupied:list(s,'occupancies').filter(x=>x.orderId===p.orderId)})};}
+  function finish(s,c,body,evidence,now){
+    if(c.feedback==='disputed')return;
+    if(c.result)c.resultHistory.push(copy(c.result));c.result={publicText:body,evidence,by:'simulated-service',at:now};c.status='completed';c.completedAt=now;c.feedback='pending';c.serviceStage='completed';
+    s.tickets.filter(t=>t.caseId===c.id).forEach(t=>{t.status='done';t.history.push({at:now,publicText:body,actor:'模拟业务服务'});});
+    if(!list(s,'notifications').some(n=>n.caseId===c.id))s.commerce.notifications.push({id:uid(s,'NT'),caseId:c.id,aftersaleId:evidence.aftersaleId||'',status:'pending',createdAt:now,body,receipt:null,ownerId:c.ownerId||'manager',dueAt:c.dueAt,simulated:true});
+    notify(s,c,body,now);
+  }
+  function resultReady(s,c){
+    if(!c.service)return true;
+    if(c.feedback==='disputed')return false;
+    if(c.kind==='logistics')return c.result?.evidence?.kind==='logistics-verification'&&Boolean(c.result.evidence.reference);
+    const a=list(s,'aftersales').find(a=>a.caseId===c.id);if(!a)return false;
+    return (a.status==='rejected'&&a.reviews.at(-1)?.decision==='rejected')||(a.status==='withdrawn'&&a.withdrawalReceipt)||(list(s,'refunds').some(r=>r.aftersaleId===a.id&&r.status==='succeeded'&&r.receipt?.kind==='refund_succeeded'));
+  }
+  function stage(s,c){
+    if(c.feedback==='disputed')return 'dispute_review';if(c.status==='completed')return 'completed';
+    const a=list(s,'aftersales').find(a=>a.caseId===c.id);if(!a)return c.kind==='logistics'?'review_required':'clarifying';
+    if(a.status==='waiting_customer')return 'waiting_customer';if(a.status==='awaiting_review')return 'awaiting_review';if(a.status==='withdrawal_requested')return 'review_required';
+    const r=list(s,'refunds').find(r=>r.aftersaleId===a.id),ret=list(s,'returns').find(r=>r.aftersaleId===a.id);
+    if(r)return ({pending:'refund_pending',unknown:'refund_unknown',failed:'review_required',succeeded:'completed'})[r.status];
+    return ret?.status==='passed'?'awaiting_refund':ret?.status||'awaiting_return';
+  }
+  function project(s,c,{internal=false}={}){
+    const a=list(s,'aftersales').find(a=>a.caseId===c.id),ret=a&&list(s,'returns').find(r=>r.aftersaleId===a.id),refund=a&&list(s,'refunds').find(r=>r.aftersaleId===a.id),n=list(s,'notifications').find(n=>n.caseId===c.id),h=list(s,'handoffs').filter(h=>h.caseId===c.id).at(-1);
+    const item=s.commerce.items.find(i=>i.id===c.itemId),name=id=>s.staff.find(a=>a.id===id)?.name||'服务组 / 服务经理';
+    const out={id:c.id,caseId:c.id,kind:c.kind,title:c.title,orderId:c.orderId,itemId:c.itemId||'',itemName:item?.name||'服务咨询',status:c.status,serviceStage:stage(s,c),feedback:c.feedback,ownerId:c.ownerId||'',ownerName:name(c.ownerId),dueAt:c.dueAt||null,reason:c.serviceReason||c.title,request:a?select(a,['id','status','quantity','approvedCents','ruleSnapshot','createdAt','reason','evidenceRef','version','receiptVersion']):null,return:ret?select(ret,['id','status','trackingNumber','receivedAt','passedAt']):null,refund:refund?select(refund,['id','status','amountCents','requestId','receipt','queriedAt']):null,notification:n?select(n,['id','status','receipt','dueAt']):null,handoff:h?{...select(h,['id','version','targetId','status','dueAt','reason','sourceId']),targetName:name(h.targetId)}:null,history:copy(c.serviceHistory||[])};
+    if(internal){out.handoffSummary={identity:'演示客户身份，订单归属已按本地样例核对',customerName:s.customers.find(x=>x.id===c.customerId)?.name,orderId:c.orderId,itemName:out.itemName,intent:c.serviceReason||c.title,facts:c.orderId?snapshot(s,c.orderId,c.itemId?{itemId:c.itemId}:{}):null,attempted:copy(c.serviceHistory||[]),failures:[refund&&['unknown','failed'].includes(refund.status)?'退款结果'+refund.status:'',n?.status==='failed'?'通知失败':''].filter(Boolean),missing:a?.status==='waiting_customer'?a.reviews.at(-1)?.reason:'',next:out.serviceStage};out.reviews=copy(a?.reviews||[]);}
+    return out;
+  }
+  function metrics(s){
+    const cases=s.cases,ids={},add=(key,filter)=>{ids[key]=cases.filter(filter).map(c=>c.id);};
+    add('total',()=>true);add('queries',c=>c.kind==='order'&&c.result?.evidence?.kind==='simulated-commerce'&&c.result.evidence.snapshot?.queryStatus==='ok');
+    add('accepted',c=>list(s,'aftersales').some(a=>a.caseId===c.id));add('completed',c=>c.status==='completed'&&resultReady(s,c));
+    add('refundSucceeded',c=>list(s,'refunds').some(r=>r.caseId===c.id&&r.status==='succeeded'&&r.receipt));add('confirmed',c=>c.status==='completed'&&c.feedback==='confirmed'&&resultReady(s,c));
+    add('humanInvolved',c=>c.humanTouched===true);add('waiting',c=>c.status!=='completed');add('unknown',c=>list(s,'refunds').some(r=>r.caseId===c.id&&r.status==='unknown'));
+    add('aiIndependent',c=>c.status==='completed'&&resultReady(s,c)&&!c.humanTouched);
+    return {scope:'演示数据',...Object.fromEntries(Object.entries(ids).map(([k,v])=>[k,v.length])),metricCaseIds:ids,rows:cases.map(c=>{const p=project(s,c);return {caseId:c.id,itemName:p.itemName,title:c.title,status:c.status,serviceStage:p.serviceStage,ownerName:p.ownerName,dueAt:p.dueAt,requestStatus:p.request?.status||'',refundStatus:p.refund?.status||'',notificationStatus:p.notification?.status||'',feedback:c.feedback,humanInvolved:c.humanTouched===true};})};
+  }
+  function command(s,a,type,data,now){
+    ensure(s);let value;
+    if(type==='previewAftersale')return preview(s,a,data,now);
+    if(type==='confirmAftersale'){
+      const key=required(data.requestId,'申请提交标识',200),content=requestContent({...data,customerId:a.id}),old=list(s,'aftersales').find(x=>x.requestId===key);
+      if(old){assert(old.customerId===a.id&&old.requestFingerprint===content,'提交标识已用于不同客户或内容');assert(data.confirmed===true,'请明确确认申请');return old.id;}
+      const p=preview(s,a,data,now);assert(data.confirmed===true,'请核对预览后明确确认');assert(data.token===p.token,'订单、规则或额度已变化，请重新核对预览');
+      const conv=s.conversations.find(c=>c.id===data.conversationId&&c.customerId===a.id)||s.conversations.find(c=>c.customerId===a.id);assert(conv,'请先开始咨询');
+      const item=s.commerce.items.find(i=>i.id===p.itemId),c=serviceCase(s,conv,item,'aftersales',p.reason,now);
+      const app={id:uid(s,'AS'),caseId:c.id,customerId:a.id,orderId:p.orderId,itemId:p.itemId,quantity:p.quantity,serviceType:p.serviceType,reason:p.reason,evidenceRef:p.evidenceRef,status:'awaiting_review',version:1,receiptVersion:0,approvedCents:p.amountCents,ruleSnapshot:copy(p.rule),factsSnapshot:copy(p.facts),createdAt:now,requestId:key,requestFingerprint:content,reviews:[],supplements:[],receipts:[]};s.commerce.aftersales.push(app);
+      s.commerce.occupancies.push({id:uid(s,'OC'),aftersaleId:app.id,orderId:p.orderId,itemId:p.itemId,quantity:1,amountCents:p.amountCents,state:'reserved'});
+      c.serviceReason=p.reason;c.serviceStage='awaiting_review';c.workflow ||= {overrides:{}};c.workflow.intentConfirmedAt=now;c.workflow.orderCheckedAt=now;
+      ticket(s,c,now);notify(s,c,`${p.itemName}一件申请已受理，待服务经理审核；核定模拟金额 ${money(p.amountCents)}，尚未退款。`,now);
+      if(conv.state==='bot'||conv.state==='closed'){conv.state='queued';conv.waitingSince ||= now;conv.ownerId='';conv.messages.push({id:uid(s,'MSG'),role:'system',body:'已交服务组跟进，审核及办理进度会保留在此事项。',at:now,visibility:'public',caseId:c.id});}
+      return app.id;
+    }
+    if(type==='expireHandoffs'){
+      for(const h of list(s,'handoffs').filter(h=>h.status==='pending'&&h.dueAt<=now)){const c=issue(s,h.caseId);assert(a.role==='manager'&&a.teams.includes(c.teamId),'无权检查该团队交接');h.status='expired';h.version++;h.escalationOwnerId=a.id;notify(s,c,'交接超时，原负责人继续办理，已升级服务经理。',now);}return null;
+    }
+    if(['proposeHandoff','acceptHandoff','rejectHandoff'].includes(type)){
+      if(type==='proposeHandoff'){
+        const c=issue(s,data.caseId);access(s,a,c);assert(c.service&&c.status!=='completed','仅可交接未完服务事项');assert(c.ownerId,'初次接待请先领取服务组任务');
+        const next=s.staff.find(x=>x.id===data.targetId&&x.role==='agent'&&x.teams.includes(c.teamId)&&x.available);assert(next&&next.id!==c.ownerId,'请选择其他可接待的服务组客服');
+        assert(!list(s,'handoffs').some(h=>h.caseId===c.id&&h.status==='pending'),'已有待接收交接');const dueAt=Number(data.dueAt);assert(Number.isFinite(dueAt)&&dueAt>now,'请设置未来交接反馈时间');
+        const h={id:uid(s,'HO'),caseId:c.id,sourceId:c.ownerId,targetId:next.id,reason:required(data.reason,'转派理由',1000),dueAt,status:'pending',version:1,caseVersion:c.serviceVersion||0,ticketIds:s.tickets.filter(t=>t.caseId===c.id&&t.status!=='done').map(t=>t.id),at:now};s.commerce.handoffs.push(h);return h.id;
+      }
+      const h=find(s,'handoffs',data.handoffId),c=issue(s,h.caseId);assert(a.id===h.targetId&&a.role==='agent'&&a.teams.includes(c.teamId),'仅目标客服可接收或拒绝交接');
+      assert(h.status==='pending'&&Number(data.version)===h.version,'交接已处理或版本已变化');assert(h.dueAt>now,'交接已超时，请交经理核实');
+      if(type==='rejectHandoff'){h.status='rejected';h.version++;h.rejection=required(data.reason,'拒绝原因',1000);notify(s,c,'目标客服拒绝交接，原负责人继续办理，服务经理可调整安排。',now);return h.id;}
+      assert(a.available&&s.settings.accepting,'目标客服当前不可接待');assert(c.ownerId===h.sourceId&&c.status!=='completed'&&(c.serviceVersion||0)===h.caseVersion,'原事项或责任已变化，请重新核对交接');
+      assert(s.tickets.filter(t=>t.caseId===c.id&&t.status!=='done').every(t=>h.ticketIds.includes(t.id)&&t.ownerId===h.sourceId),'办理任务已变化，请重新核对');
+      c.ownerId=a.id;h.status='accepted';h.version++;h.acceptedAt=now;c.dueAt=h.dueAt;
+      s.tickets.filter(t=>h.ticketIds.includes(t.id)).forEach(t=>{t.ownerId=a.id;t.dueAt=h.dueAt;});
+      c.conversationIds.forEach(id=>{const conv=s.conversations.find(v=>v.id===id);if(conv?.aiAssist)conv.aiAssist.enabled=false;});
+      notify(s,c,`${a.name}已接收该事项，后续反馈时间 ${new Date(h.dueAt).toISOString()}。`,now);return h.id;
+    }
+    if(['serviceFollowup','resolveLogistics','serviceDispute','resolveServiceDispute','serviceReply'].includes(type)){
+      const c=issue(s,data.caseId);access(s,a,c);assert(c.service,'请选择明确的商品事项');
+      if(type==='serviceReply'){assert(a.role==='agent','请由事项负责人回复');const body=required(data.body,'事项回复');c.humanTouched=true;c.serviceVersion++;c.serviceHistory.push({at:now,text:a.name+'：'+body});c.conversationIds.forEach(id=>{const conv=s.conversations.find(v=>v.id===id);if(conv){conv.messages.push({id:uid(s,'MSG'),role:'agent',author:a.name,body,at:now,visibility:'public',caseId:c.id});conv.updatedAt=now;conv.firstHumanAt ||= now;}});return c.id;}
+      if(type==='serviceFollowup'){assert(a.role==='agent'&&c.status!=='completed','请由办理客服安排未完事项');const at=Number(data.dueAt);assert(Number.isFinite(at)&&at>now,'反馈时间须晚于当前时间');c.dueAt=at;ticket(s,c,now).dueAt=at;notify(s,c,'已安排下一次反馈时间。',now);return c.id;}
+      if(type==='resolveLogistics'){assert(a.role==='agent'&&c.kind==='logistics'&&c.status!=='completed','请由负责客服核实物流异常');const body=required(data.body,'核实结论'),ref=required(data.evidenceRef,'核实依据',500);c.humanTouched=true;finish(s,c,body,{kind:'logistics-verification',reference:ref,actorId:a.id},now);return c.id;}
+      if(type==='resolveServiceDispute'){
+        assert(a.role==='agent'&&c.feedback==='disputed'&&c.result,'请由负责客服核实原结果异议');const body=required(data.body,'异议复核结论'),ref=required(data.evidenceRef,'复核依据',500),previous=copy(c.result);
+        c.feedback='pending';assert(resultReady(s,c),'原业务结果尚无有效证据，不能只凭文本复核');finish(s,c,body,{...copy(previous.evidence),reviewReference:ref,reviewActorId:a.id,originalResultAt:previous.at},now);c.humanTouched=true;return c.id;
+      }
+      assert(a.role==='customer'&&c.result,'尚无结果可提出异议');const reason=required(data.reason,'异议原因');c.resultHistory.push(copy(c.result));c.status='open';c.feedback='disputed';c.completedAt=null;c.dueAt=now+s.settings.ticketHours*3600000;c.serviceStage='dispute_review';
+      const t=ticket(s,c,now);t.status=t.ownerId?'working':'new';t.dueAt=c.dueAt;notify(s,c,`客户提出异议：${reason}。原退款流水保留，继续由服务组核实。`,now);return c.id;
+    }
+    const app=find(s,'aftersales',data.aftersaleId),c=issue(s,app.caseId);
+    if(type==='applySimulatedReceipt'){assert(a.role==='admin','仅演示管理员可提供模拟业务回执');}
+    else access(s,a,c);
+    const ret=()=>list(s,'returns').find(r=>r.aftersaleId===app.id),refund=()=>list(s,'refunds').find(r=>r.aftersaleId===app.id),occupation=()=>list(s,'occupancies').find(o=>o.aftersaleId===app.id);
+    switch(type){
+      case 'submitReview':{
+        assert(a.role==='manager','审核须由服务经理明确决定');assert(app.status==='awaiting_review','申请当前不在待审核状态');assert(['approved','rejected','needs_info'].includes(data.decision),'审核决定无效');
+        const reason=required(data.reason,'审核依据',1000);app.reviews.push({decision:data.decision,reason,actorId:a.id,at:now,ruleVersion:app.ruleSnapshot.version});app.version++;c.humanTouched=true;
+        if(data.decision==='approved'){
+          const current=s.commerce.rules.find(r=>r.id===app.ruleSnapshot.id),pay=s.commerce.payments.find(p=>p.orderId===app.orderId);assert(current?.version===app.ruleSnapshot.version&&pay?.queryStatus==='ok'&&pay.status==='paid','规则或支付事实已变化，请重新核实申请');
+          app.status='approved';s.commerce.returns.push({id:uid(s,'RT'),aftersaleId:app.id,status:'awaiting_return',trackingNumber:'',createdAt:now});notify(s,c,'模拟人工审核通过，请按本事项提交寄回运单；退款须等待收货与验收通过。',now);
+        }else if(data.decision==='needs_info'){app.status='waiting_customer';c.status='waiting_customer';ticket(s,c,now).status='waiting_customer';notify(s,c,'审核需要补充资料：'+reason,now);}
+        else{app.status='rejected';occupation().state='released';finish(s,c,'本次申请已拒绝：'+reason,{kind:'review-decision',aftersaleId:app.id,decision:'rejected',actorId:a.id},now);}break;
+      }
+      case 'submitSupplement':{
+        assert(a.role==='customer'&&c.status!=='completed'&&['waiting_customer','awaiting_review','approved','withdrawal_requested'].includes(app.status),'终结申请如有异议，请使用仍需帮助');const body=required(data.body,'补充说明');app.supplements.push({at:now,body,evidenceRef:String(data.evidenceRef||'').trim()});
+        if(['waiting_customer','awaiting_review'].includes(app.status)){app.status='awaiting_review';c.status='open';ticket(s,c,now).status=c.ownerId?'working':'new';}app.version++;notify(s,c,'客户补充：'+body+'。材料保留在原申请，原反馈期限保持。',now);break;
+      }
+      case 'submitReturn':assert(a.role==='customer'&&app.status==='approved'&&ret()?.status==='awaiting_return','请等待审核通过后寄回');ret().trackingNumber=required(data.trackingNumber,'寄回运单',100);ret().status='in_transit';app.version++;notify(s,c,'已记录模拟寄回运单，等待仓库收货及验收。',now);break;
+      case 'requestWithdrawal':assert(a.role==='customer'&&!['withdrawn','rejected','withdrawal_requested'].includes(app.status)&&refund()?.status!=='succeeded','申请已终结或已退款，不能撤回');app.beforeWithdrawal=app.status;app.status='withdrawal_requested';app.withdrawalReason=required(data.reason,'撤回原因',1000);app.version++;notify(s,c,'已记录撤回请求；原执行与额度须待模拟业务确认安全终止后处理。',now);break;
+      case 'submitRefund':{
+        assert(a.role==='agent','请由负责客服提交已批准退款');const key=required(data.requestId,'退款提交标识',200),old=refund();if(old){assert(old.requestId===key,'已有原退款义务，请查询原流水，禁止另建重复执行');return old.id;}
+        assert(app.status==='approved'&&ret()?.status==='passed','申请须审核批准且仓库验收通过');assert(occupation()?.state==='reserved','原申请额度占用无效');
+        value={id:uid(s,'RF'),caseId:c.id,aftersaleId:app.id,obligationId:'OB-'+app.id,requestId:key,amountCents:app.approvedCents,status:'pending',createdAt:now,receipt:null,simulated:true};s.commerce.refunds.push(value);c.humanTouched=true;notify(s,c,'模拟退款请求已提交，等待支付渠道回执；当前尚未确认成功。',now);value=value.id;break;
+      }
+      case 'queryRefund':assert(a.role==='agent'&&refund(),'尚无原退款请求可查询');refund().queriedAt=now;value=copy(refund());break;
+      case 'applySimulatedReceipt':{
+        const kind=data.kind,version=Number(data.version),channel=String(kind).split('_')[0];assert(['warehouse_received','warehouse_passed','warehouse_failed','refund_succeeded','refund_unknown','refund_failed','notification_sent','notification_failed','withdrawal_confirmed'].includes(kind),'模拟事件无效');assert(positive(version),'业务回执版本须为正整数');
+        const content=JSON.stringify({kind,reason:String(data.reason||''),safeStopped:data.safeStopped===true}),prior=app.receipts.filter(r=>r.channel===channel),same=prior.find(r=>r.version===version),latest=prior.filter(r=>!r.ignored).sort((a,b)=>b.version-a.version)[0];
+        if(same){assert(same.fingerprint===content,'同版本业务回执内容矛盾，请核实');return same.id;}
+        if(latest&&version<latest.version){app.receipts.push({id:uid(s,'RC'),channel,kind,version,fingerprint:content,at:now,ignored:true});return null;}
+        const receipt={id:uid(s,'RC'),channel,kind,version,fingerprint:content,at:now,actorId:a.id,simulated:true,source:channel==='refund'?'模拟财务人工办理':'模拟'+channel+'业务服务'};
+        if(channel==='warehouse'){
+          assert(app.status==='approved'&&ret(),'须有已批准的寄回任务');assert(!['passed','review_required'].includes(ret().status),'验收已有终态，请人工核实矛盾回执');
+          if(kind==='warehouse_received'){assert(ret().status==='in_transit','请先提交寄回运单');ret().status='received';ret().receivedAt=now;}
+          else{assert(ret().status==='received','收货与验收分开，请先确认收货');ret().status=kind==='warehouse_passed'?'passed':'review_required';ret().passedAt=now;ret().evidence=receipt.id;c.humanTouched=true;}notify(s,c,kind==='warehouse_received'?'模拟仓库已收货，尚未完成验收。':kind==='warehouse_passed'?'模拟人工验收通过，可继续提交已批准退款。':'模拟验收异常，已交服务组核实，暂不退款。',now);
+        }else if(channel==='refund'){
+          const r=refund();assert(r,'须先提交原退款请求');const safetyUpdate=r.status==='failed'&&kind==='refund_failed'&&!r.safeStopped&&data.safeStopped===true;
+          assert(!['succeeded','failed'].includes(r.status)||safetyUpdate,'退款已有终态，矛盾结果须人工核实，不能覆盖');
+          r.status=kind.slice(7);r.receipt=receipt;r.safeStopped=data.safeStopped===true;c.humanTouched=true;
+          if(r.status==='succeeded'){occupation().state='used';finish(s,c,'模拟退款渠道已返回成功：'+money(r.amountCents)+'。实际到账与客户反馈分别核实。',{kind:'simulated-refund',aftersaleId:app.id,receiptId:receipt.id,requestId:r.requestId,amountCents:r.amountCents},now);}
+          else notify(s,c,r.status==='unknown'?'模拟退款结果未知，请查询原流水；未宣称成功，原额度仍占用。':'模拟退款失败，服务组须核实原义务与终止情况。',now);
+        }else if(channel==='notification'){
+          const n=list(s,'notifications').find(n=>n.caseId===c.id);assert(n,'尚无已形成的结果通知');assert(n.status!=='sent','通知已有成功回执，不能覆盖');n.status=kind==='notification_sent'?'sent':'failed';n.receipt=receipt;
+          if(n.status==='sent')notify(s,c,'模拟结果通知已送达；客户是否确认解决仍单独记录。',now);else notify(s,c,'模拟结果通知失败，已安排服务组补救；原业务结果保持。',now);
+        }else{
+          assert(app.status==='withdrawal_requested','须先提出撤回请求');assert(!refund()||(refund().status==='failed'&&refund().safeStopped===true),'原退款仍须核实安全终止，不能释放额度');assert(occupation()?.state==='reserved','已用金额不能释放');app.status='withdrawn';app.withdrawalReceipt=receipt;occupation().state='released';finish(s,c,'模拟业务已确认申请安全撤回，未用额度已释放。',{kind:'withdrawal-confirmation',aftersaleId:app.id,receiptId:receipt.id},now);
+        }
+        app.receipts.push(receipt);app.receiptVersion=Math.max(app.receiptVersion,version);app.version++;value=receipt.id;break;
+      }
+      default:throw Error('未知电商办理命令');
+    }
+    c.serviceStage=stage(s,c);return value===undefined?app.id:value;
+  }
+  function validServices(s){
+    if(!serviceTables.some(k=>s.commerce[k]!==undefined))return true;
+    if(!serviceTables.every(k=>table(s.commerce[k])))return false;
+    const c=id=>s.cases.find(c=>c.id===id),item=id=>s.commerce.items.find(i=>i.id===id),app=id=>list(s,'aftersales').find(a=>a.id===id);
+    if(!list(s,'rules').every(r=>item(r.itemId)&&positive(r.version)&&cents(r.amountCents)&&r.amountCents<=item(r.itemId).paidCents&&Number.isFinite(Date.parse(r.effectiveAt))))return false;
+    if(!list(s,'aftersales').every(a=>c(a.caseId)?.customerId===a.customerId&&c(a.caseId)?.itemId===a.itemId&&item(a.itemId)?.orderId===a.orderId&&['awaiting_review','waiting_customer','approved','rejected','withdrawal_requested','withdrawn'].includes(a.status)&&a.quantity===1&&cents(a.approvedCents)&&a.approvedCents<=item(a.itemId).paidCents&&positive(a.version)&&Array.isArray(a.reviews)&&Array.isArray(a.receipts)&&Array.isArray(a.supplements)&&typeof a.requestFingerprint==='string'))return false;
+    if(!list(s,'returns').every(r=>app(r.aftersaleId)&&['awaiting_return','in_transit','received','passed','review_required'].includes(r.status)))return false;
+    if(!list(s,'refunds').every(r=>app(r.aftersaleId)?.caseId===r.caseId&&cents(r.amountCents)&&r.amountCents===app(r.aftersaleId).approvedCents&&['pending','unknown','failed','succeeded'].includes(r.status)&&(r.status!=='succeeded'||r.receipt?.kind==='refund_succeeded')))return false;
+    if(new Set(list(s,'refunds').map(r=>r.obligationId)).size!==list(s,'refunds').length)return false;
+    if(!list(s,'occupancies').every(o=>app(o.aftersaleId)?.itemId===o.itemId&&app(o.aftersaleId)?.orderId===o.orderId&&o.amountCents===app(o.aftersaleId)?.approvedCents&&o.quantity===1&&['reserved','used','released'].includes(o.state)))return false;
+    if(!list(s,'aftersales').every(a=>list(s,'occupancies').filter(o=>o.aftersaleId===a.id).length===1))return false;
+    if(new Set(list(s,'aftersales').map(a=>a.caseId)).size!==list(s,'aftersales').length)return false;
+    if(!s.commerce.items.every(i=>list(s,'occupancies').filter(o=>o.itemId===i.id&&o.state!=='released').reduce((n,o)=>n+o.quantity,0)<=i.quantity))return false;
+    return list(s,'handoffs').every(h=>c(h.caseId)&&['pending','accepted','rejected','expired'].includes(h.status)&&positive(h.version)&&Number.isFinite(h.dueAt)&&s.staff.some(a=>a.id===h.targetId&&a.role==='agent'))&&list(s,'notifications').every(n=>c(n.caseId)&&['pending','sent','failed'].includes(n.status))&&s.cases.filter(c=>c.service).every(c=>item(c.itemId)?.orderId===c.orderId&&Number.isFinite(c.dueAt)&&(!c.ownerId||s.staff.some(a=>a.id===c.ownerId&&a.role==='agent'))&&(c.status!=='completed'||resultReady(s,c)));
+  }
+  const baseValid=valid;
+  const api={valid:s=>baseValid(s)&&validServices(s),snapshot,summary,money,paymentLabel,packageLabel,ensure,demands,collect,serviceCase,preview,command,project,metrics,resultReady,access};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SupportCommerce=api;
 })(typeof window!=='undefined'?window:globalThis);
 
@@ -814,6 +1070,11 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     operator: ['saveKnowledge', 'testKnowledge', 'publishKnowledge', 'disableKnowledge', 'saveFlow', 'testFlow', 'publishFlow', 'linkGap'],
     admin: ['export']
   };
+  roles.customer.push('previewAftersale','confirmAftersale','submitReturn','submitSupplement','requestWithdrawal','serviceDispute');
+  roles.agent.push('submitRefund','queryRefund','proposeHandoff','acceptHandoff','rejectHandoff','serviceFollowup','resolveLogistics','resolveServiceDispute','serviceReply');
+  roles.manager.push('submitReview','proposeHandoff','expireHandoffs');
+  roles.operator.push('runServiceEval');
+  roles.admin.push('applySimulatedReceipt');
   function actor(s, who) {
     assert(who && typeof who.id === 'string', '缺少操作者');
     if (who.role === 'customer') { get(s, 'customers', who.id); return {id: who.id, role: 'customer', name: get(s, 'customers', who.id).name, teams: []}; }
@@ -828,9 +1089,11 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
   const acceptedTicket = (s, c) => s.tickets.find(t => t.caseId === c.id && t.followupOnly !== true);
   const otherAftersalesTicket = (s, c) => c.orderId && s.tickets.find(t => t.caseId !== c.id && t.customerId === c.customerId && t.orderId === c.orderId && t.status !== 'done' && get(s, 'cases', t.caseId).kind === 'aftersales');
   const activeArticles = (s, now) => s.knowledge.filter(k => k.live && !k.disabled && Date.parse(k.live.effectiveAt) <= now && (!k.live.expiresAt || now < Date.parse(k.live.expiresAt)));
-  function retrieve(s, query, now = Date.now()) {
+  const mentionedItems=(s,query)=>s.schema===5?s.commerce.items.filter(i=>query.includes(i.id)||query.includes(i.name)||(i.skuId==='EC-SKU-CUP'&&/杯/.test(query))||(i.skuId==='EC-SKU-BAG'&&/袋/.test(query))||(i.skuId==='EC-SKU-BOX'&&/收纳盒|盒子/.test(query))).map(i=>i.id):[];
+  function retrieve(s, query, now = Date.now(), scopeQuery = query, customerId='C001') {
     const q = normalize(query);
-    const candidates = activeArticles(s, now).map(k => {
+    const mentioned=mentionedItems(s,scopeQuery);
+    const candidates = activeArticles(s, now).filter(k=>!mentioned.length||!k.live.scopeItemIds?.length||mentioned.every(id=>k.live.scopeItemIds.includes(id))).map(k => {
       const exact = q.includes(normalize(k.live.question));
       const hits = k.live.keywords.filter(w => q.includes(normalize(w))).length;
       return {k, exact, hits};
@@ -838,7 +1101,14 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     if (!candidates.length) return null;
     const first = candidates[0];
     if (candidates.some(x => x !== first && x.exact === first.exact && x.hits === first.hits && x.k.live.answer !== first.k.live.answer)) return {conflict: true};
-    return {id: first.k.id, ...copy(first.k.live)};
+    const article={id:first.k.id,...copy(first.k.live)};
+    if(s.schema===5&&(article.id==='KB001'||/(退货|售后).*(政策|规则|条件)|(政策|规则|条件).*(退货|售后)/.test(article.title+' '+article.question)))return policyKnowledge(s,article,scopeQuery,customerId,now);
+    return article;
+  }
+  function policyKnowledge(s,k,query,customerId,now){
+    const mentioned=mentionedItems(s,query),rules=(s.commerce.rules||[]).filter(r=>s.commerce.items.some(i=>i.id===r.itemId&&s.orders.some(o=>o.id===i.orderId&&o.customerId===customerId))&&(!mentioned.length||mentioned.includes(r.itemId))&&(!k.scopeItemIds?.length||k.scopeItemIds.includes(r.itemId))&&Date.parse(r.effectiveAt)<=now&&(!r.expiresAt||now<Date.parse(r.expiresAt)));
+    if(!rules.length||mentioned.some(id=>!rules.some(r=>r.itemId===id)))return null;
+    return {...k,answer:rules.map(r=>`${s.commerce.items.find(i=>i.id===r.itemId).name}：签收破损可核对一件退货退款，模拟规则金额为 ${Commerce.money(r.amountCents)}。须由服务经理审核${r.requiresReturn?'，审核通过后寄回商品并由仓库验收':'，根据审批决定继续办理'}；退款成功以原请求的业务回执为准，咨询不代表已受理、已退款或客户已确认。规则 ${r.id} v${r.version} · ${r.source}`).join('\n'),ruleId:rules[0].id,ruleVersion:rules[0].version,ruleRefs:rules.map(r=>({id:r.id,version:r.version,itemId:r.itemId,source:r.source}))};
   }
   function intentions(query, config, commerce=false) {
     const lower = query.toLowerCase();
@@ -881,7 +1151,8 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     if (p.intake) results.push({kind: config.intakeEnabled ? 'intake' : 'handoff', orderId: p.id, reason: '售后申请需要人工受理'});
     if (p.policy || !results.length) {
       const question = p.policy ? query.split(/[，,。；;]/).find(x => /(规则|条件|政策|无理由|如何退|怎么退|退货运费)/.test(x)) || query : query;
-      const knowledge = retrieve(s, question, now);
+      let knowledge = retrieve(s, question, now, query,customerId);
+      if(s.schema===5&&p.policy&&knowledge&&!knowledge.conflict){knowledge=policyKnowledge(s,knowledge,query,customerId,now);if(!knowledge){results.push({kind:'handoff',reason:'该商品没有当前可用的已核实政策，请人工核对'});return results;}}
       results.push(knowledge?.conflict ? {kind: 'conflict'} : knowledge ? {kind: 'answer', knowledge} : {kind: 'gap'});
     }
     return results;
@@ -908,11 +1179,12 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     pauseAi(conv,'已转交人工核实',now);
     if (conv.state !== 'human' && conv.state !== 'queued') { conv.state = 'queued'; conv.ownerId = ''; conv.waitingSince = now; conv.firstHumanAt = null; }
     conv.handoffReason = reason;
-    conv.caseIds.map(id => get(s, 'cases', id)).filter(c => c.status !== 'completed').forEach(c => c.humanTouched = true);
+    if(s.schema!==5)conv.caseIds.map(id => get(s, 'cases', id)).filter(c => c.status !== 'completed').forEach(c => c.humanTouched = true);
     const body = s.settings.accepting ? '已转入人工接待队列。你提供的信息会一并交给客服，不需要重新描述；等待时也可以继续补充。' : '人工客服当前不在线，问题已保留在待接待列表。你可以继续补充信息，之后在这里查看回复。';
     message(s, conv, 'system', body, now);
   }
   function complete(s, c, publicText, evidence, by, now) {
+    assert(!c.service||Commerce.resultReady(s,c),'商品办理须有对应业务结果回执，不能凭答复文本办结');
     if (c.result) c.resultHistory.push(copy(c.result));
     c.result = {publicText, evidence, by, at: now}; c.status = 'completed'; c.feedback = 'pending'; c.completedAt = now;
   }
@@ -945,6 +1217,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
   }
   function run(s, conv, query, now, options = {}) {
     const plan = intentions(query, conv.flow, s.schema===5);
+    if(s.schema===5&&!plan.human&&Commerce.collect(s,conv,query,now)){handoff(s,conv,'商品诉求已分别记录，需核对申请或异常',now);conv.runs.push({at:now,flowVersion:conv.flow.version,query,steps:['service-intent']});return;}
     const pending = conv.pendingCaseId && get(s, 'cases', conv.pendingCaseId);
     if (plan.onlyId && pending && pending.kind === 'aftersales') {
       const c = aftersalesCase(s, conv, pending, plan.id, now); conv.pendingCaseId = '';
@@ -963,7 +1236,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
         if (!conv.aiOptOut) message(s, conv, 'bot', r.body, now);
       } else if (r.kind === 'answer') {
         const c = makeCase(s, conv, 'knowledge', query, '', now);
-        const citation = {id: r.knowledge.id, version: r.knowledge.version, title: r.knowledge.title, source: r.knowledge.source, answer: r.knowledge.answer};
+        const citation = {id: r.knowledge.id, version: r.knowledge.version, title: r.knowledge.title, source: r.knowledge.source, answer: r.knowledge.answer,...(r.knowledge.ruleRefs?{ruleId:r.knowledge.ruleId,ruleVersion:r.knowledge.ruleVersion,ruleRefs:copy(r.knowledge.ruleRefs)}:{})};
         complete(s, c, r.knowledge.answer, {kind: 'knowledge', citation}, 'bot', now);
         message(s, conv, 'bot', r.knowledge.answer, now, {caseId: c.id, citation});
       } else if (['order', 'askOrder', 'orderDenied', 'orderFailure'].includes(r.kind)) {
@@ -1008,6 +1281,12 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     assert(typeof f.intakeEnabled === 'boolean', '售后受理配置无效');
   }
   function fingerprint(s) { return JSON.stringify({knowledge: s.knowledge.map(k => ({id: k.id, live: k.live, disabled: k.disabled})), flow: s.flow.live}); }
+  const serviceFingerprint=s=>JSON.stringify({knowledge:s.knowledge.map(k=>({id:k.id,live:k.live,draft:k.draft,disabled:k.disabled})),flow:{live:s.flow.live,draft:s.flow.draft},rules:s.commerce?.rules,facts:s.schema===5?{orders:s.orders,items:s.commerce.items,payments:s.commerce.payments,packages:s.commerce.packages}:null});
+  function serviceEvalCurrent(s,knowledgeId=''){
+    if(s.schema!==5)return true;
+    const expected=serviceFingerprint(s),k=knowledgeId?s.knowledge.find(k=>k.id===knowledgeId):null;
+    return Boolean(k?.validation?.service?.pass&&k.validation.service.fingerprint===expected||(s.commerce.evaluations||[]).some(e=>e.knowledgeId===knowledgeId&&e.pass&&e.fingerprint===expected));
+  }
   function candidate(s, id, mode) {
     const x = copy(s);
     if (mode === 'knowledge') { const k = get(x, 'knowledge', id); assert(k.draft, '没有待验证的草稿'); k.live = {...copy(k.draft), version: (k.live?.version || 0) + 1}; k.disabled = false; }
@@ -1034,6 +1313,38 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     if (articleId) rows.push({name: '待发布知识生效区间', query: articleId, actual: activeArticles(s, now).some(k => k.id === articleId) ? '可用' : '尚未生效或已过期', pass: activeArticles(s, now).some(k => k.id === articleId)});
     return {at: now, fingerprint: fingerprint(s), rows, passed: rows.every(r => r.pass)};
   }
+  function serviceEvaluation(source,now,knowledgeId='',flowDraft=false){
+    assert(source.schema===5,'流程评测仅适用于电商工作空间');
+    const customer={id:'C001',role:'customer'},agent={id:'lin',role:'agent'},manager={id:'manager',role:'manager'},admin={id:'admin',role:'admin'};
+    const check=(ok,why)=>assert(ok,why),rows=[];
+    function base(){
+      let s=copy(source);if(knowledgeId&&get(s,'knowledge',knowledgeId).draft)s=candidate(s,knowledgeId,'knowledge');if(flowDraft)s=candidate(s,'','flow');
+      s.conversations=[];s.cases=[];s.tickets=[];s.gaps=[];s.events=[];
+      ['aftersales','returns','refunds','occupancies','handoffs','notifications','evaluations'].forEach(k=>s.commerce[k]=[]);
+      s.customers.forEach(c=>c.connection='online');
+      return execute(s,customer,'newConversation',{},now).state;
+    }
+    const step=(s,a,type,data,at=now)=>execute(s,a,type,data,at);
+    const form=s=>({conversationId:s.conversations[0].id,orderId:'EC-SO20261005001',itemId:'EC-ITEM-001',quantity:1,serviceType:'return_refund',reason:'保温杯收到破损，希望退货退款',evidenceRef:'DEMO-DAMAGE-001'});
+    function request(){let s=base(),data=form(s),p=step(s,customer,'previewAftersale',data);data={...data,token:p.value.token,requestId:'eval-request',confirmed:true};const r=step(p.state,customer,'confirmAftersale',data);return {s:r.state,id:r.value,caseId:r.state.commerce.aftersales[0].caseId,data};}
+    function approved(){const f=request();f.s=step(f.s,agent,'claimConversation',{id:f.s.conversations[0].id}).state;f.s=step(f.s,manager,'submitReview',{aftersaleId:f.id,decision:'approved',reason:'模拟人工确认破损规则'}).state;return f;}
+    function pending(){const f=approved();f.s=step(f.s,customer,'submitReturn',{aftersaleId:f.id,trackingNumber:'DEMO-EVAL-RETURN'}).state;f.s=step(f.s,admin,'applySimulatedReceipt',{aftersaleId:f.id,kind:'warehouse_received',version:1}).state;f.s=step(f.s,admin,'applySimulatedReceipt',{aftersaleId:f.id,kind:'warehouse_passed',version:2}).state;f.s=step(f.s,agent,'submitRefund',{aftersaleId:f.id,requestId:'eval-refund'}).state;return f;}
+    const reject=(fn,why)=>{let failed=false;try{fn();}catch{failed=true;}check(failed,why);};
+    function run(id,title,fn){try{fn();rows.push({id,title,name:title,pass:true,reason:'实际领域命令、消息及状态断言通过'});}catch(err){rows.push({id,title,name:title,pass:false,reason:err.message});}}
+    run('trigger-policy','规则咨询引用执行规则且不触发申请',()=>{let s=base();s=step(s,customer,'say',{id:s.conversations[0].id,body:'保温杯退货规则是什么？'}).state;const rule=s.commerce.rules.find(r=>r.itemId==='EC-ITEM-001'),answer=s.conversations[0].messages.findLast(m=>m.role==='bot'&&m.citation);check(s.commerce.aftersales.length===0&&!s.cases.some(c=>c.service)&&answer?.citation.ruleVersion===rule?.version&&answer.body.includes(Commerce.money(rule.amountCents))&&/经理.*审核/.test(answer.body)&&(!rule.requiresReturn||/寄回.*验收/.test(answer.body)),'应引用有效执行规则、金额和前置条件且不受理');});
+    run('trigger-request','明确商品诉求只收集，客户确认后才受理',()=>{let s=base();s=step(s,customer,'say',{id:s.conversations[0].id,body:'保温杯破了想退货'}).state;check(s.cases.filter(c=>c.service).length===1&&!s.commerce.aftersales.length,'应保留未决诉求');const p=step(s,customer,'previewAftersale',form(s));check(!p.state.commerce.occupancies.length,'预览不占用');});
+    run('two-items','收纳袋物流与保温杯退货分别绑定',()=>{let s=base();s=step(s,customer,'say',{id:s.conversations[0].id,body:'收纳袋没到，保温杯破了想退'}).state;check(s.cases.filter(c=>c.service).length===2&&s.cases.every(c=>!c.result)&&new Set(s.cases.map(c=>c.itemId)).size===2,'应有两个未决商品事项');});
+    run('happy-path','核对、审核、寄回验收、退款、通知与反馈',()=>{const f=pending(),bag=JSON.stringify(f.s.commerce.items[1]);f.s=step(f.s,admin,'applySimulatedReceipt',{aftersaleId:f.id,kind:'refund_succeeded',version:3}).state;f.s=step(f.s,admin,'applySimulatedReceipt',{aftersaleId:f.id,kind:'notification_sent',version:4}).state;f.s=step(f.s,customer,'feedback',{id:f.caseId,confirmed:true}).state;check(f.s.commerce.refunds[0].amountCents===12900&&get(f.s,'cases',f.caseId).feedback==='confirmed'&&JSON.stringify(f.s.commerce.items[1])===bag,'成功回执与商品隔离须成立');});
+    run('review-reject','拒绝明确说明并只释放未用占用',()=>{const f=request();f.s=step(f.s,manager,'submitReview',{aftersaleId:f.id,decision:'rejected',reason:'模拟不满足适用条件'}).state;check(f.s.commerce.occupancies[0].state==='released'&&get(f.s,'cases',f.caseId).result.evidence.decision==='rejected','拒绝结果须有决定依据');});
+    run('supplement','补件接续原申请与原期限',()=>{const f=request(),due=get(f.s,'cases',f.caseId).dueAt;f.s=step(f.s,manager,'submitReview',{aftersaleId:f.id,decision:'needs_info',reason:'补充破损描述'}).state;f.s=step(f.s,customer,'submitSupplement',{aftersaleId:f.id,body:'杯体有裂痕',evidenceRef:'DEMO-DAMAGE-001'}).state;check(f.s.commerce.aftersales.length===1&&f.s.commerce.aftersales[0].status==='awaiting_review'&&get(f.s,'cases',f.caseId).dueAt===due,'不得新建或静默延长');});
+    run('handoff-timeout','交接超时原负责人仍承接',()=>{const f=approved();f.s=step(f.s,agent,'proposeHandoff',{caseId:f.caseId,targetId:'zhou',reason:'晚班续办',dueAt:now+60000}).state;f.s=step(f.s,manager,'expireHandoffs',{},now+60001).state;check(f.s.commerce.handoffs[0].status==='expired'&&get(f.s,'cases',f.caseId).ownerId==='lin','超时不能丢责');});
+    run('refund-unknown','未知查原流水且不能凭文本办结',()=>{const f=pending();f.s=step(f.s,admin,'applySimulatedReceipt',{aftersaleId:f.id,kind:'refund_unknown',version:3}).state;check(step(f.s,agent,'queryRefund',{aftersaleId:f.id}).value.requestId==='eval-refund'&&get(f.s,'cases',f.caseId).status==='open','应保留原请求和未决');reject(()=>step(f.s,agent,'updateTicket',{id:f.s.tickets[0].id,status:'done',publicText:'完成',evidence:'文字'}),'文本不得伪造退款');});
+    run('refund-idempotent','确认重放与重复退款被守卫',()=>{const f=pending();f.s=step(f.s,customer,'confirmAftersale',f.data).state;f.s=step(f.s,agent,'submitRefund',{aftersaleId:f.id,requestId:'eval-refund'}).state;reject(()=>step(f.s,agent,'submitRefund',{aftersaleId:f.id,requestId:'different'}),'不能另建义务');check(f.s.commerce.refunds.length===1&&f.s.commerce.occupancies.length===1,'只执行一次');});
+    run('changed-intent','改意图提出撤回，待回执后释放',()=>{const f=request();f.s=step(f.s,customer,'requestWithdrawal',{aftersaleId:f.id,reason:'想保留商品，撤回'}).state;check(f.s.commerce.occupancies[0].state==='reserved','本地撤回不能释放');f.s=step(f.s,admin,'applySimulatedReceipt',{aftersaleId:f.id,kind:'withdrawal_confirmed',version:1}).state;check(f.s.commerce.occupancies[0].state==='released','安全终止后方可释放');});
+    run('query-failure','查询故障保持未决且不显示未支付',()=>{let s=base();s.commerce.payments[0].queryStatus='failed';s=step(s,customer,'say',{id:s.conversations[0].id,body:'查支付 EC-SO20261005001'}).state;check(s.cases.some(c=>c.status==='open'&&!c.result)&&s.conversations[0].state==='queued'&&!s.conversations[0].messages.at(-2).body.includes('未支付'),'失败不能算查询成功');});
+    run('notification-failure','通知失败与退款结果、满意度独立',()=>{const f=pending();f.s=step(f.s,admin,'applySimulatedReceipt',{aftersaleId:f.id,kind:'refund_succeeded',version:3}).state;f.s=step(f.s,admin,'applySimulatedReceipt',{aftersaleId:f.id,kind:'notification_failed',version:4}).state;check(f.s.commerce.refunds[0].status==='succeeded'&&get(f.s,'cases',f.caseId).feedback==='pending'&&f.s.commerce.notifications[0].status==='failed','各状态不可互相替代');});
+    return {id:uid(copy(source),'EV'),knowledgeId,at:now,fingerprint:serviceFingerprint(source),pass:rows.every(r=>r.pass),rows,dependencies:{flowVersion:source.flow.live.version,ruleVersions:source.commerce.rules.map(r=>({id:r.id,version:r.version})),knowledgeVersions:source.knowledge.map(k=>({id:k.id,version:k.live?.version||0,candidate:knowledgeId===k.id}))},simulated:true};
+  }
   const SOP = [['intent','确认诉求'],['order','核对订单'],['logistics','查询物流'],['aftersales','退换货办理'],['information','补充资料'],['result','记录处理结果'],['callback','回访安排'],['close','结束沟通']];
   const wf = c => c.workflow ||= {overrides: {}};
   const latestCustomer = c => [...c.messages].reverse().find(m => m.role === 'customer');
@@ -1042,7 +1353,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
   function pauseAi(conv, reason, now) { if (conv.aiAssist?.enabled) { conv.aiAssist.enabled = false; conv.aiAssist.history.push({at: now, action: 'paused', reason}); } }
   function scopedCase(s, a, conversationId, caseId) {
     const conv = get(s, 'conversations', conversationId), c = get(s, 'cases', caseId);
-    agentOwns(a, conv); assert(conv.state === 'human' && conv.caseIds.includes(c.id) && c.customerId === conv.customerId, '问题不属于当前接待');
+    if(c.service)Commerce.access(s,a,c);else agentOwns(a, conv); assert(conv.state === 'human' && conv.caseIds.includes(c.id) && c.customerId === conv.customerId, '问题不属于当前接待');
     return {conv, c};
   }
   function bindCaseOrder(s, conv, c, orderId, now) {
@@ -1068,6 +1379,15 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     f.intentEvidence={messageId:latestCustomer(conv)?.id || '',text:body,at:now};
   }
   function recognise(s, conv, body, now) {
+    if(s.schema===5){
+      if(Commerce.collect(s,conv,body,now))return;
+      const services=conv.caseIds.map(id=>get(s,'cases',id)).filter(c=>c.service&&c.status!=='completed');
+      const p=intentions(body,conv.flow,true);
+      if(services.length&&!p.lookup&&!p.intake&&!p.policy&&!p.human){
+        const m=conv.messages.at(-1);if(services.length===1){m.caseId=services[0].id;services[0].serviceVersion++;services[0].serviceHistory.push({at:now,text:'客户补充：'+body});}
+        else message(s,conv,'system','补充已保留；请从对应商品事项提交材料，便于审核者准确关联。',now);return;
+      }
+    }
     const p = intentions(body, conv.flow,s.schema===5), ids = [...new Set((body.match(/\bSO[A-Z0-9]+\b/gi) || []).map(x => x.toUpperCase()))];
     const open = conv.caseIds.map(id => get(s, 'cases', id)).filter(c => c.status !== 'completed' && !c.workflow?.withdrawn);
     let c;
@@ -1093,10 +1413,10 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
   function suggestion(s, conversationId, caseId, now = Date.now()) {
     const conv = get(s, 'conversations', conversationId), c = caseId ? get(s, 'cases', caseId) : conv.caseIds.length ? get(s, 'cases', conv.caseIds.at(-1)) : null;
     assert(!c || conv.caseIds.includes(c.id), '问题不属于当前会话');
-    const m = latestCustomer(conv), query = m?.body || '', k = query ? retrieve(s, query, now) : null;
+    const m = latestCustomer(conv), query = m?.body || '', k = query ? retrieve(s, query, now,query,conv.customerId) : null;
     const token = JSON.stringify({conv: conv.id, owner: conv.ownerId, state: conv.state, message: m || null, case: c ? {id: c.id, kind: c.kind, orderId: c.orderId, status: c.status} : null, order: currentOrder(s, c) || null, referencedOrders: s.orders.filter(o=>o.customerId===conv.customerId && (query.toUpperCase().includes(o.id)||o.id===c?.orderId)).map(o=>({...o,...(s.schema===5?{commerce:Commerce.snapshot(s,o.id)}:{})})), knowledge: k, connection: customerConnection(s, conv.customerId)});
     if (!k || k.conflict) return {token, messageId: m?.id || '', query, body: '', status: k?.conflict ? 'conflict' : 'none', reason: k?.conflict ? '知识来源冲突，需要人工核实' : '尚无有效知识依据，请人工核实'};
-    return {token, messageId: m.id, query, body: k.answer, status: 'ready', knowledge: {id: k.id, title: k.title, version: k.version, source: k.source, answer: k.answer}};
+    return {token, messageId: m.id, query, body: k.answer, status: 'ready', knowledge: {id: k.id, title: k.title, version: k.version, source: k.source, answer: k.answer,...(k.ruleRefs?{ruleId:k.ruleId,ruleVersion:k.ruleVersion,ruleRefs:copy(k.ruleRefs)}:{})}};
   }
   function sopView(s, conversationId, caseId, now = Date.now()) {
     const conv = get(s, 'conversations', conversationId), c = caseId ? get(s, 'cases', caseId) : conv.caseIds.length ? get(s, 'cases', conv.caseIds.at(-1)) : null;
@@ -1189,16 +1509,24 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     const s = copy(state), a = actor(s, identity);
     assert(roles[a.role]?.includes(type), '当前角色无权执行此操作');
     if (a.role==='customer' && type!=='customerConnection') assert(customerConnection(s,a.id)==='online','当前连接不可用，请恢复在线后操作');
+    if(s.schema===5)Commerce.ensure(s);
     let value;
     switch (type) {
+      case 'previewAftersale':case 'confirmAftersale':case 'submitReview':case 'submitReturn':case 'submitSupplement':case 'requestWithdrawal':case 'submitRefund':case 'queryRefund':case 'applySimulatedReceipt':case 'proposeHandoff':case 'acceptHandoff':case 'rejectHandoff':case 'expireHandoffs':case 'serviceFollowup':case 'resolveLogistics':case 'serviceDispute':case 'resolveServiceDispute':case 'serviceReply':
+        value=Commerce.command(s,a,type,data,now);break;
+      case 'runServiceEval':{
+        assert(s.schema===5,'请进入电商工作空间');value=serviceEvaluation(s,now,data.knowledgeId||'');s.commerce.evaluations.push(copy(value));break;
+      }
       case 'confirmIntent': {
         const {conv,c} = scopedCase(s,a,data.conversationId,data.caseId);
+        assert(!c.service||data.kind===c.kind,'商品诉求不能通过通用确认更换业务类型');
         assert(['knowledge','order','aftersales','support'].includes(data.kind),'诉求类型无效');
         assert(c.kind===data.kind || (!c.result && !acceptedTicket(s,c)),'已有办理记录，不能更换诉求类型');
         c.kind=data.kind; if (data.title) c.title=text(data.title,'诉求说明',200); wf(c).intentConfirmedAt=now; pauseAi(conv,'诉求核对已更新',now); value=c.id; break;
       }
       case 'bindOrder': {
         const {conv,c} = scopedCase(s,a,data.conversationId,data.caseId); assert(['order','aftersales'].includes(c.kind),'此诉求不需要绑定订单');
+        assert(!c.service||data.orderId===c.orderId,'商品事项已绑定原订单，不能换绑');
         value=bindCaseOrder(s,conv,c,data.orderId,now).id; pauseAi(conv,'订单核对已更新',now); break;
       }
       case 'queryOrder': {
@@ -1214,6 +1542,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
       }
       case 'markSop': {
         const {c} = scopedCase(s,a,data.conversationId,data.caseId);
+        assert(!c.service,'商品办理节点由业务记录和回执决定，不能人工标为不适用');
         assert(SOP.some(([key])=>key===data.nodeKey) && data.nodeKey!=='close','节点无效');
         assert(['na','waiting','todo'].includes(data.status),'节点状态无效');
         const node=sopView(s,data.conversationId,c.id,now).nodes.find(n=>n.key===data.nodeKey);
@@ -1331,10 +1660,11 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
         assert(s.conversations.filter(x => x.state === 'human' && x.ownerId === a.id).length < s.settings.capacity, '已达到个人接待容量');
         c.state = 'human'; c.ownerId = a.id; if (!c.ownerHistory.includes(a.id)) c.ownerHistory.push(a.id);
         message(s, c, 'system', `${a.name}已接入，接下来由人工为您服务。`, now);
-        c.caseIds.map(id => get(s, 'cases', id)).filter(x => x.status !== 'completed').forEach(x => x.humanTouched = true); break;
+        c.caseIds.map(id => get(s, 'cases', id)).filter(x => x.status !== 'completed').forEach(x => {x.humanTouched=true;if(x.service&&!x.ownerId){x.ownerId=a.id;x.serviceVersion++;s.tickets.filter(t=>t.caseId===x.id&&!t.ownerId).forEach(t=>{t.ownerId=a.id;t.status=t.status==='new'?'working':t.status;});}}); break;
       }
       case 'reply': case 'note': {
-        const c = get(s, 'conversations', data.id); agentOwns(a, c); assert(c.state === 'human', '会话不在人工接待状态');
+        const c = get(s, 'conversations', data.id),targetId=type==='reply'&&(data.caseId||data.suggestionCaseId||data.orderCaseId||(c.caseIds.length===1?c.caseIds[0]:'')),target=targetId&&get(s,'cases',targetId);
+        if(target?.service)Commerce.access(s,a,target);else agentOwns(a, c); assert(c.state === 'human', '会话不在人工接待状态');
         let citation, orderId, caseId;
         if (type === 'reply' && data.suggestionToken) { const sg = suggestion(s,c.id,data.suggestionCaseId,now); assert(sg.status==='ready' && sg.token===data.suggestionToken,'推荐依据已变化，请重新核对后发送'); citation=copy(sg.knowledge); }
         if (type === 'reply' && (data.orderCaseId !== undefined || data.orderSnapshot !== undefined)) {
@@ -1376,6 +1706,8 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
       }
       case 'feedback': {
         const c = get(s, 'cases', data.id); owns(a, c); assert(c.status === 'completed', '尚未形成可确认的处理结果');
+        assert(!c.service||Commerce.resultReady(s,c),'业务结果尚未核实');
+        if(c.service&&data.confirmed!==true){value=Commerce.command(s,a,'serviceDispute',{caseId:c.id,reason:data.reason},now);break;}
         if (data.confirmed === true) { c.feedback = 'confirmed'; c.confirmedAt = now; }
         else {
           const reason = text(data.reason, '未解决原因'); c.feedback = 'disputed'; c.status = 'open'; c.completedAt = null;
@@ -1389,6 +1721,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
         break;
       }
       case 'createTicket': {
+        if(data.caseId)assert(!s.cases.find(c=>c.id===data.caseId)?.service,'请从商品申请入口核对，不能通过旧工单登记办理');
         const title = text(data.title, '工单标题', 100), description = text(data.description, '问题描述');
         assert(data.confirmed === true, '请核对申请后再确认受理');
         assert(s.schema!==5||(!data.structured&&(!data.caseId||get(s,'cases',data.caseId).kind!=='aftersales')),'当前入口仅提供售后咨询，请联系人工客服核实商品级申请');
@@ -1441,9 +1774,10 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
         for (const id of c.conversationIds) message(s, get(s, 'conversations', id), 'system', `已受理工单 ${t.id}：${title}。请在“服务进度”查看后续处理。`, now, {ticketId: t.id});
         value = {id: t.id, created: true}; break;
       }
-      case 'claimTicket': { const t = get(s, 'tickets', data.id); assert(within(a, t) && !t.ownerId && t.status === 'new', '工单已被领取或不在可领取范围'); t.ownerId = a.id; t.status = 'working'; t.history.push({at: now, publicText: '客服已开始核实处理。', actor: a.name}); break; }
+      case 'claimTicket': { const t=get(s,'tickets',data.id);assert(within(a,t)&&!t.ownerId&&t.status==='new','工单已被领取或不在可领取范围');t.ownerId=a.id;t.status='working';t.history.push({at:now,publicText:'客服已开始核实处理。',actor:a.name});const c=get(s,'cases',t.caseId);if(c.service){assert(!c.ownerId,'商品事项已由其他客服负责，请核对交接');c.ownerId=a.id;c.humanTouched=true;c.serviceVersion++;}break; }
       case 'updateTicket': {
         const t = get(s, 'tickets', data.id); agentOwns(a, t);
+        assert(!get(s,'cases',t.caseId).service,'商品业务工单须通过对应办理命令与结果回执更新');
         assert(['working', 'waiting_customer'].includes(t.status), '工单当前不可修改');
         assert(['working', 'waiting_customer', 'done'].includes(data.status), '工单状态无效');
         const publicText = text(data.publicText, '客户可见说明');
@@ -1462,9 +1796,12 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
       }
       case 'assignTicket': case 'assignConversation': {
         const r = get(s, type === 'assignTicket' ? 'tickets' : 'conversations', data.id); managing(a, r);
+        const serviceCases=s.schema===5?(type==='assignTicket'?[get(s,'cases',r.caseId)]:r.caseIds.map(id=>get(s,'cases',id))).filter(c=>c.service):[];
+        assert(!serviceCases.some(c=>c.ownerId),'已有商品责任须提出待接收交接，不能直接转派');
         const next = get(s, 'staff', data.ownerId); assert(next.role === 'agent' && within(next, r), '请选择该服务组的客服');
         if (type === 'assignTicket') { assert(r.status !== 'done' || r.callback?.status === 'pending', '已完成且无待回访的工单不再转派'); r.ownerId = next.id; if (r.status === 'new') r.status = 'working'; r.history.push({at: now, publicText: '已安排客服继续处理。', actor: a.name, internalText: `转派给${next.name}`}); }
-        else { assert(['queued', 'human'].includes(r.state), '仅能分配待接待或接待中的会话'); assert(next.available && s.conversations.filter(v => v.state === 'human' && v.ownerId === next.id && v.id !== r.id).length < s.settings.capacity, '目标客服不可接待或已满载'); pauseAi(r,'会话已转派',now); r.ownerId = next.id; r.state = 'human'; if (!r.ownerHistory.includes(next.id)) r.ownerHistory.push(next.id); message(s, r, 'system', `${next.name}将继续为您服务，已有信息会保留。`, now); } break;
+        else { assert(['queued', 'human'].includes(r.state), '仅能分配待接待或接待中的会话'); assert(next.available && s.conversations.filter(v => v.state === 'human' && v.ownerId === next.id && v.id !== r.id).length < s.settings.capacity, '目标客服不可接待或已满载'); pauseAi(r,'会话已转派',now); r.ownerId = next.id; r.state = 'human'; if (!r.ownerHistory.includes(next.id)) r.ownerHistory.push(next.id); message(s, r, 'system', `${next.name}将继续为您服务，已有信息会保留。`, now); }
+        serviceCases.forEach(c=>{c.ownerId=next.id;c.humanTouched=true;c.serviceVersion++;s.tickets.filter(t=>t.caseId===c.id&&!t.ownerId).forEach(t=>{t.ownerId=next.id;t.status=t.status==='new'?'working':t.status;});});break;
       }
       case 'presence': get(s, 'staff', a.id).available = Boolean(data.available); break;
       case 'serviceSettings': {
@@ -1475,35 +1812,47 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
       case 'flag': { const c = get(s, 'conversations', data.id); agentOwns(a, c); const q = [...c.messages].reverse().find(m => m.role === 'customer'); assert(q, '尚无客户提问'); gap(s, c, q.body, '答复疑义', now); break; }
       case 'saveKnowledge': {
         const draft = {title: text(data.title, '标题', 120), question: text(data.question, '标准问题', 300), keywords: split(data.keywords), answer: text(data.answer, '答复内容', 4000), source: text(data.source, '来源', 300), effectiveAt: data.effectiveAt, expiresAt: data.expiresAt || '', positive: text(data.positive, '正例问题', 300), negative: text(data.negative, '反例问题', 300)};
+        if(s.schema===5){const scopes=Array.isArray(data.scopeItemIds)?data.scopeItemIds:split(data.scopeItemIds||'');assert(scopes.every(id=>s.commerce.items.some(i=>i.id===id)),'知识商品范围无效');draft.scopeItemIds=[...new Set(scopes)];draft.ruleSource=text(data.ruleSource||data.source,'规则来源',300);draft.reviewer=text(data.reviewer||'知识运营','审核责任',120);if(data.effectiveFrom)draft.effectiveAt=new Date(data.effectiveFrom).toISOString();if(data.effectiveTo)draft.expiresAt=new Date(data.effectiveTo).toISOString();}
         validateArticle(draft); let k = data.id && get(s, 'knowledge', data.id);
         if (!k) { k = {id: uid(s, 'KB'), live: null, versions: [], disabled: false}; s.knowledge.push(k); }
         k.draft = draft; k.validation = null; value = k.id; break;
       }
-      case 'testKnowledge': { const k = get(s, 'knowledge', data.id); validateArticle(k.draft); k.validation = regression(candidate(s, k.id, 'knowledge'), now, k.id); value = copy(k.validation); break; }
+      case 'testKnowledge': { const k = get(s, 'knowledge', data.id); validateArticle(k.draft); k.validation = regression(candidate(s, k.id, 'knowledge'), now, k.id);if(s.schema===5){k.validation.service=serviceEvaluation(s,now,k.id);k.validation.passed&&=k.validation.service.pass;s.commerce.evaluations.push(copy(k.validation.service));}value = copy(k.validation); break; }
       case 'publishKnowledge': {
         const k = get(s, 'knowledge', data.id); const fresh = regression(candidate(s, k.id, 'knowledge'), now, k.id);
         assert(k.validation?.passed && k.validation.fingerprint === fresh.fingerprint && fresh.passed, '草稿或依赖已变化，或知识已失效；请重新测试且全部通过后发布');
+        assert(s.schema!==5||(serviceEvalCurrent(s,k.id)&&serviceEvaluation(s,now,k.id).pass),'办理规则失效或事实依赖已变化，请重跑完整流程测试');
         if (k.live) k.versions.push(copy(k.live)); k.live = {...copy(k.draft), version: (k.live?.version || 0) + 1, publishedAt: now}; k.draft = null; k.disabled = false; k.validation = null; break;
       }
       case 'disableKnowledge': { const k = get(s, 'knowledge', data.id); assert(k.live && !k.disabled, '知识未在使用中'); k.disabled = true; k.disabledReason = text(data.reason, '停用原因', 300); break; }
       case 'saveFlow': { const f = {humanWords: split(data.humanWords), intakeEnabled: data.intakeEnabled === true}; validateFlow(f); s.flow.draft = f; s.flow.validation = null; break; }
-      case 'testFlow': { validateFlow(s.flow.draft); s.flow.validation = regression(candidate(s, '', 'flow'), now); value = copy(s.flow.validation); break; }
+      case 'testFlow': { validateFlow(s.flow.draft); s.flow.validation = regression(candidate(s, '', 'flow'), now);if(s.schema===5){s.flow.validation.service=serviceEvaluation(s,now,'',true);s.flow.validation.passed&&=s.flow.validation.service.pass;s.commerce.evaluations.push(copy(s.flow.validation.service));}value = copy(s.flow.validation); break; }
       case 'publishFlow': {
         const fresh = regression(candidate(s, '', 'flow'), now); assert(s.flow.validation?.passed && s.flow.validation.fingerprint === fresh.fingerprint && fresh.passed, '流程或知识已变化，请重新运行测试后发布');
+        assert(s.schema!==5||(s.flow.validation.service?.pass&&s.flow.validation.service.fingerprint===serviceFingerprint(s)&&serviceEvaluation(s,now,'',true).pass),'业务依赖变化或规则失效，请重跑完整流程测试');
         s.flow.versions.push(copy(s.flow.live)); s.flow.live = {...copy(s.flow.draft), version: s.flow.live.version + 1}; s.flow.draft = null; s.flow.validation = null; break;
       }
       case 'reviewGap': {
         const g = get(s, 'gaps', data.id); managing(a, get(s, 'conversations', g.conversationId)); assert(g.status !== 'closed', '已验收记录不可改判');
         assert(['confirmed', 'dismissed'].includes(data.status), '复核结论无效'); g.review = text(data.review, '复核依据'); g.status = data.status;
-        if (g.status === 'confirmed') g.cause = text(data.cause, '根因说明'); break;
+        if(g.status==='confirmed'){g.cause=text(data.cause,'根因说明');if(s.schema===5){g.causeType=data.causeType||'knowledge';assert(['knowledge','routing','business','workflow','collaboration','notification'].includes(g.causeType),'根因类别无效');const conv=get(s,'conversations',g.conversationId),m=conv.messages.filter(m=>m.role==='customer'&&normalize(m.body)===normalize(g.query)).at(-1);g.sourceCaseIds=m?.caseIds?.length?copy(m.caseIds):[m?.caseId||conv.caseIds.at(-1)].filter(Boolean);g.sourceCaseId=g.sourceCaseIds[0]||'';}}break;
       }
-      case 'linkGap': { const g = get(s, 'gaps', data.id); assert(['confirmed', 'fixing'].includes(g.status), '请先由经理确认问题'); get(s, 'knowledge', data.knowledgeId); g.knowledgeId = data.knowledgeId; g.status = 'fixing'; g.validation = null; break; }
+      case 'linkGap': { const g = get(s, 'gaps', data.id); assert(['confirmed', 'fixing'].includes(g.status), '请先由经理确认问题');if(s.schema===5&&g.causeType&&g.causeType!=='knowledge'){g.remediation=text(data.remediation,'流程整改说明');const allowed={routing:['trigger-policy','trigger-request','two-items','changed-intent'],business:['query-failure','refund-unknown','refund-idempotent'],workflow:['happy-path','review-reject','supplement'],collaboration:['handoff-timeout'],notification:['notification-failure']};assert(allowed[g.causeType].includes(data.scenarioId),'请选择对应根因的复验场景');g.scenarioId=data.scenarioId;g.knowledgeId='';}else{get(s, 'knowledge', data.knowledgeId);g.knowledgeId=data.knowledgeId;} g.status = 'fixing'; g.validation = null; break; }
       case 'acceptGap': {
         const g = get(s, 'gaps', data.id); managing(a, get(s, 'conversations', g.conversationId)); assert(g.status === 'fixing', '尚未关联整改措施');
+        if(s.schema===5&&g.causeType&&g.causeType!=='knowledge'){
+          const all=serviceEvaluation(s,now),originals=(g.sourceCaseIds||[g.sourceCaseId]).filter(Boolean).map(id=>get(s,'cases',id));
+          assert(all.pass&&all.rows.some(r=>r.id===g.scenarioId&&r.pass),'完整流程或关联失败场景尚未通过');
+          assert(originals.length&&originals.every(c=>c.status==='completed'&&Commerce.resultReady(s,c)),'原始失败事项尚无完整解决证据，不能仅凭示例验收');
+          if(g.causeType==='notification')assert(originals.every(c=>s.commerce.notifications.some(n=>n.caseId===c.id&&n.status==='sent'&&n.receipt?.kind==='notification_sent')),'原事项通知尚无有效送达回执');
+          if(g.causeType==='collaboration')assert(originals.every(c=>{const h=s.commerce.handoffs.filter(h=>h.caseId===c.id).at(-1);return h?.status==='accepted'&&c.ownerId===h.targetId&&s.tickets.filter(t=>t.caseId===c.id).every(t=>t.ownerId===c.ownerId);}), '原交接尚无接收与责任落实证据');
+          if(g.causeType==='business')assert(originals.every(c=>c.result?.evidence?.kind==='simulated-refund'||c.result?.evidence?.kind==='simulated-commerce'&&c.result.evidence.snapshot?.queryStatus==='ok'||c.service&&Commerce.resultReady(s,c)),'原业务失败尚无成功回执或实际核对依据');
+          g.acceptance=text(data.acceptance,'验收说明');g.validation={...all,sourceCaseIds:originals.map(c=>c.id)};g.status='closed';break;
+        }
         const k = get(s, 'knowledge', g.knowledgeId); assert(k.live && !k.draft && !k.disabled, '整改知识尚未发布，或还有待发布草稿');
         const rs = classify(s, g.query, get(s, 'conversations', g.conversationId).customerId, now);
         assert(rs.some(r => r.knowledge?.id === k.id), '原始问题未命中关联知识，不能验收');
-        const all = regression(s, now); assert(all.passed, '全量回归未通过，不能验收');
+        const all = regression(s, now); assert(all.passed, '全量回归未通过，不能验收');if(s.schema===5)assert(serviceEvaluation(s,now).pass,'完整业务流程未通过，不能验收');
         g.acceptance = text(data.acceptance, '验收说明'); g.validation = {at: now, fingerprint: fingerprint(s), version: k.live.version, rows: all.rows}; g.status = 'closed'; break;
       }
       case 'export': value = copy(s); break;
@@ -1517,6 +1866,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     return {
       customer: copy(get(s, 'customers', customerId)),
       connection: customerConnection(s, customerId),
+      ...(s.schema===5?{services:s.cases.filter(c=>c.customerId===customerId&&c.service).map(c=>Commerce.project(s,c))}:{}),
       orders: s.orders.filter(o => o.customerId === customerId).map(o=>({...copy(o),...(s.schema===5?{commerce:Commerce.snapshot(s,o.id)}:{})})),
       conversations: s.conversations.filter(c => c.customerId === customerId).map(c => ({id: c.id, customerId: c.customerId, state: c.state, caseIds: [...c.caseIds], createdAt: c.createdAt, updatedAt: c.updatedAt, messages: c.messages.filter(m => m.visibility === 'public').map(m => Object.fromEntries(Object.entries(copy(m)).filter(([key]) => ['id','role','body','at','visibility','author','caseId','ticketId','orderId','intake','citation','aiAssist'].includes(key))))})),
       cases: s.cases.filter(c => c.customerId === customerId).map(c => ({id: c.id, kind: c.kind, title: c.title, orderId: c.orderId, status: c.status, feedback: c.feedback, conversationIds: [...c.conversationIds], createdAt: c.createdAt, result: c.result ? {publicText: c.result.publicText, at: c.result.at} : null})),
@@ -1529,14 +1879,23 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     const tickets = s.tickets.filter(t => within(a, t) && (t.ownerId === a.id || (!t.ownerId && t.status === 'new')));
     const relatedTickets = s.tickets.filter(t => within(a,t) && !tickets.some(x=>x.id===t.id) && conversations.some(c=>c.caseIds.includes(t.caseId)));
     const visibleCustomers = new Set([...conversations, ...tickets].map(x => x.customerId));
-    return copy({conversations, tickets, relatedTickets, customers: s.customers.filter(c => visibleCustomers.has(c.id)), orders: s.orders.filter(o => visibleCustomers.has(o.customerId)), cases: s.cases.filter(c => conversations.some(x => x.caseIds.includes(c.id)) || tickets.some(t => t.caseId === c.id))});
+    const handoffs=s.schema===5?(s.commerce.handoffs||[]).filter(h=>h.targetId===a.id&&h.status==='pending'):[];handoffs.forEach(h=>visibleCustomers.add(get(s,'cases',h.caseId).customerId));
+    return copy({conversations,tickets,relatedTickets,handoffs,customers:s.customers.filter(c=>visibleCustomers.has(c.id)),orders:s.orders.filter(o=>visibleCustomers.has(o.customerId)),cases:s.cases.filter(c=>conversations.some(x=>x.caseIds.includes(c.id))||tickets.some(t=>t.caseId===c.id)||handoffs.some(h=>h.caseId===c.id))});
+  }
+  function serviceView(s,identity,{caseId}){
+    const a=actor(s,identity),c=get(s,'cases',caseId);assert(s.schema===5,'请选择电商工作空间');
+    if(c.service){Commerce.access(s,a,c,{read:true});return {...Commerce.project(s,c,{internal:a.role!=='customer'}),service:true};}
+    const conv=s.conversations.find(v=>c.conversationIds.includes(v.id)&&v.ownerId===a.id);
+    const teamId=c.teamId||s.conversations.find(v=>c.conversationIds.includes(v.id))?.teamId;
+    if(a.role==='customer')owns(a,c);else assert(within(a,{teamId})&&(a.role==='manager'||a.role==='agent'&&(conv||s.tickets.some(t=>t.caseId===c.id&&t.ownerId===a.id))),'无权查看此事项');
+    return {...Commerce.project(s,c),service:false,ownerName:conv?s.staff.find(x=>x.id===conv.ownerId)?.name:'服务责任组',history:[],result:c.result?{at:c.result.at,publicText:c.result.publicText,evidence:copy(c.result.evidence)}:null};
   }
   function metrics(s, now = Date.now()) {
     const completed = s.cases.filter(c => c.status === 'completed');
     const confirmed = completed.filter(c => c.feedback === 'confirmed');
-    return {conversations: s.conversations.length, cases: s.cases.length, completed: completed.length, confirmed: confirmed.length, botConfirmed: confirmed.filter(c => !c.humanTouched).length, waiting: s.conversations.filter(c => c.state === 'queued').length, activeTickets: s.tickets.filter(t => t.status !== 'done').length, overdue: s.tickets.filter(t => t.status !== 'done' && t.dueAt < now).length, gaps: s.gaps.filter(g => !['closed', 'dismissed'].includes(g.status)).length};
+    return {conversations:s.conversations.length,cases:s.cases.length,completed:completed.length,confirmed:confirmed.length,botConfirmed:confirmed.filter(c=>!c.humanTouched).length,waiting:s.conversations.filter(c=>c.state==='queued').length,activeTickets:s.tickets.filter(t=>t.status!=='done').length,overdue:s.tickets.filter(t=>t.status!=='done'&&t.dueAt<now).length,gaps:s.gaps.filter(g=>!['closed','dismissed'].includes(g.status)).length,...(s.schema===5?{service:Commerce.metrics(s)}:{})};
   }
-  const api = {copy, get, split, roles, actor, retrieve, intentions, classify, execute, customerView, deskView, metrics, regression, fingerprint, activeArticles, sopView, suggestion, closePreview, aiPending, customerConnection, validWorkflow, intakeToken};
+  const api={copy,get,split,roles,actor,retrieve,intentions,classify,execute,customerView,deskView,serviceView,serviceEvalCurrent,metrics,regression,fingerprint,activeArticles,sopView,suggestion,closePreview,aiPending,customerConnection,validWorkflow,intakeToken};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.SupportDomain = api;
 })(typeof window !== 'undefined' ? window : globalThis);
 
@@ -1732,7 +2091,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
   const Commerce=root.SupportCommerce;
   function commerceOrderCard(order,mobile=false,offline=false){
     const value=order.commerce,disabled=offline?'disabled':'';
-    return `<article class="commerce-order-card ${mobile?'phone-order-card':'order-card'}"><div class="commerce-order-heading"><strong>订单 ${e(order.id)}</strong><small>演示数据 · ${e(value.source)}</small><div class="row between">${pill(Commerce.paymentLabel(value.payment))}<span class="price">${value.totalPaidCents===null?'实付金额待核实':e(Commerce.money(value.totalPaidCents))}</span></div></div><div class="commerce-item-list">${value.items.map(item=>`<div class="commerce-item"><strong>${e(item.name)}</strong><small>${e(item.variant)} · ${item.quantity} 件</small><span>商品实付 ${e(Commerce.money(item.paidCents))}</span><small>${value.packages.filter(p=>p.allocations.some(a=>a.itemId===item.id)).map(p=>e(p.id)+' · '+e(Commerce.packageLabel(p))).join('<br>')}</small></div>`).join('')}</div><div class="${mobile?'phone-order-actions':'order-actions'}">${b('查看支付与包裹','commerce-query',order.id,'text',disabled)}${b('联系人工核实','request-human','','text',disabled)}</div></article>`;
+    return `<article class="commerce-order-card ${mobile?'phone-order-card':'order-card'}"><div class="commerce-order-heading"><strong>订单 ${e(order.id)}</strong><small>演示数据 · ${e(value.source)}</small><div class="row between">${pill(Commerce.paymentLabel(value.payment))}<span class="price">${value.totalPaidCents===null?'实付金额待核实':e(Commerce.money(value.totalPaidCents))}</span></div></div><div class="commerce-item-list">${value.items.map(item=>`<div class="commerce-item"><strong>${e(item.name)}</strong><small>${e(item.variant)} · ${item.quantity} 件</small><span>商品实付 ${e(Commerce.money(item.paidCents))}</span><small>${value.packages.filter(p=>p.allocations.some(a=>a.itemId===item.id)).map(p=>e(p.id)+' · '+e(Commerce.packageLabel(p))).join('<br>')}</small>${b('申请售后','commerce-aftersale',order.id,'small text',`data-item="${e(item.id)}" ${disabled}`)}</div>`).join('')}</div><div class="${mobile?'phone-order-actions':'order-actions'}">${b('查看支付与包裹','commerce-query',order.id,'text',disabled)}${b('联系人工核实','request-human','','text',disabled)}</div></article>`;
   }
   function commerceDetails(value){
     const origin=record=>`${e(record.source)} · 事实版本 v${record.version} · ${date(record.queriedAt,true)}`;
@@ -1743,13 +2102,193 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
 
 </script>
 <script>
+// 产出 Agent：Codex
+(function(root){
+  'use strict';
+  const V=root.SupportViews,{e,b,pill,date,field,options,empty,icon}=V;
+  const statusNames={open:'待跟进',waiting_customer:'待客户补充',completed:'处理结果已记录',awaiting_review:'待经理审批',approved:'申请已批准',rejected:'申请未通过',withdrawal_requested:'撤回待确认',withdrawn:'已撤回',awaiting_return:'待寄回',in_transit:'寄回在途',received:'仓库已收件',passed:'验收通过',review_required:'验收待复核',not_submitted:'尚未提交退款',pending:'处理中',succeeded:'模拟退款成功',failed:'失败',unknown:'结果未知',sent:'已发送',proposed:'待接收',accepted:'已接收',rejected_handoff:'已拒接',expired:'接收已超时'};
+  const feedbackNames={pending:'待客户确认',confirmed:'客户已确认解决',disputed:'客户仍需帮助'};
+  const money=n=>Number.isSafeInteger(n)?root.SupportCommerce.money(n):'待核实';
+  const ruleText=rule=>typeof rule==='string'?rule:rule?[rule.title||'商品售后规则',rule.version?'v'+rule.version:'',rule.source||rule.ruleSource||'',rule.answer||rule.body||''].filter(Boolean).join(' · '):'请人工核实规则依据';
+  const name=value=>statusNames[value]||value||'尚未建立';
+  const line=(label,value,tone='')=>`<div class="service-axis"><span>${e(label)}</span>${pill(value,tone)}</div>`;
+  function nextStep(d){
+    if(d.request?.status==='withdrawal_requested')return '确认撤回条件及原执行状态，等待处理反馈。';
+    if(d.request?.status==='withdrawn')return '申请已撤回；其他服务事项继续单独跟进。';
+    if(d.request?.status==='rejected')return '查看未通过原因；如仍需帮助，可补充情况请客服继续核实。';
+    if(d.request?.status==='waiting_customer')return '请补充审批要求的资料，客服继续原申请核对。';
+    if(d.request?.status==='awaiting_review')return '等待服务经理核对申请与材料。';
+    if(d.return?.status==='awaiting_return')return '按客服说明寄回本申请商品，填写寄回运单号。';
+    if(d.return?.status==='in_transit')return '等待仓库收件与验收，寄回轨迹持续保留。';
+    if(d.return?.status==='received')return '仓库已收件，等待商品验收。';
+    if(d.return?.status==='review_required')return '验收存在待核实问题，客服继续人工复核。';
+    if(d.refund?.status==='unknown')return '核实原退款请求的结果，等待明确回执。';
+    if(d.refund?.status==='pending')return '退款请求已提交，等待原请求回执。';
+    if(d.refund?.status==='failed')return '原退款请求失败，客服核实失败原因和下一步。';
+    if(d.refund?.status==='succeeded')return '本地模拟退款已有成功回执，请单独确认实际到账与问题是否解决。';
+    if(d.return?.status==='passed')return '商品验收通过，客服按审批金额提交模拟退款。';
+    return d.status==='completed'?'处理结果已记录，请确认是否解决。':'客服继续核实该事项，并在约定时间反馈。';
+  }
+  V.serviceCard=function(d,mobile=false){
+    const stage=d.request?name(d.request.status)+(d.return?' · '+name(d.return.status):'')+(d.refund&&d.refund.status!=='not_submitted'?' · '+name(d.refund.status):''):name(d.status);
+    return `<button type="button" class="${mobile?'phone-progress-card':'progress-card'} service-progress-card" data-action="service-detail" data-id="${e(d.caseId||d.id)}"><div class="row between"><strong>${e(d.title)}</strong>${icon('arrow',15)}</div>${d.itemName?`<small>${e(d.itemName)} · ${e(d.orderId)}</small>`:`<small>${e(d.orderId||d.caseId||d.id)}</small>`}<span>${e(stage)}</span><small>负责人：${e(d.ownerName||'服务组待分配')} · 下次反馈：${d.dueAt?date(d.dueAt,true):'待安排'}</small>${pill(d.status==='completed'||d.feedback==='disputed'?feedbackNames[d.feedback]||'待客户确认':'尚未形成可确认结果',d.feedback==='confirmed'?'good':'')}</button>`;
+  };
+  function summary(d){
+    return `<div class="row between"><h3>${e(d.title)}</h3>${pill(name(d.status))}</div><p class="muted">${e(d.caseId||d.id)}${d.orderId?' · '+e(d.orderId):''}${d.itemName?' · '+e(d.itemName):''}</p><div class="service-axes">${line('服务事项',name(d.status))}${d.request?line('申请审批',name(d.request.status))+line('寄回验收',name(d.return?.status))+line('退款执行',name(d.refund?.status||'not_submitted'),['failed','unknown'].includes(d.refund?.status)?'warn':'')+line('通知',d.notification?.status==='pending'?'待发送':name(d.notification?.status||'pending')):''}${d.handoff?line('交接',d.handoff.status==='pending'?'待接收':d.handoff.status==='rejected'?'已拒接':name(d.handoff.status)):''}${line('客户反馈',d.status==='completed'||d.feedback==='disputed'?feedbackNames[d.feedback]||'待客户确认':'尚未形成可确认结果',d.feedback==='confirmed'?'good':'')}</div><dl class="sop-facts"><dt>下一步</dt><dd>${e(nextStep(d))}</dd><dt>负责人</dt><dd>${e(d.ownerName||'服务组待分配')}</dd><dt>下次反馈时间</dt><dd>${d.dueAt?date(d.dueAt,true):'待安排'}</dd>${d.reason?`<dt>当前说明</dt><dd>${e(d.reason)}</dd>`:''}</dl>${d.request?`<div class="result-note"><strong>商品级退货退款</strong><p>${e(d.itemName||d.request.itemName||'关联商品')} · ${e(d.request.quantity)} 件 · 审批金额 ${money(d.request.approvedCents)}</p><p>申请原因：${e(d.request.reason||d.reason||'见申请记录')}</p>${d.request.review?.reason||d.request.reviewReason?`<p>审批反馈：${e(d.request.review?.reason||d.request.reviewReason)}</p>`:''}${d.return?.trackingNumber?`<p>寄回运单：${e(d.return.trackingNumber)}</p>`:''}${d.refund?.requestId?`<p>原退款请求：${e(d.refund.requestId)}${Number.isSafeInteger(d.refund.amountCents)?' · '+money(d.refund.amountCents):''}</p>`:''}<small>业务结果来自本地模拟；退款回执与实际到账、客户满意分别确认。</small></div>`:''}`;
+  }
+  function summaryValues(value){
+    if(Array.isArray(value))return value.map(summaryValues).filter(Boolean).join('；');
+    if(value&&typeof value==='object')return Object.entries(value).map(([k,v])=>k+'：'+summaryValues(v)).join('；');
+    return value===null||value===undefined?'':String(value);
+  }
+  function handoffSummary(d){
+    const h=d.handoffSummary;if(!h)return '<p class="sop-hint">尚无交接摘要。</p>';
+    const titles={identity:'客户身份',customerName:'客户',orderId:'订单',itemName:'商品',intent:'客户诉求',facts:'已查询事实',attempted:'已尝试动作',failures:'失败与异常',missing:'待补资料',next:'下一步'};
+    return `<details class="service-handoff-summary"><summary>人工交接摘要</summary><dl class="sop-facts">${Object.entries(titles).map(([key,title])=>`<dt>${e(title)}</dt><dd>${e(summaryValues(h[key])||'暂无记录')}</dd>`).join('')}</dl><small>依据客户原话、查询与办理记录整理。</small></details>`;
+  }
+  V.servicePanel=function(s,d,ui,actor={role:'customer',id:'C001'}){
+    const customer=actor.role==='customer',owned=actor.role==='agent'&&d.ownerId===actor.id,request=d.request,attrs=`data-case="${e(d.caseId||d.id)}"`;
+    const offline=customer&&root.SupportDomain.customerConnection(s,actor.id)!=='online',disabled=offline?'disabled':'';
+    if(d.service===false)return `<section class="service-panel">${summary(d)}<div class="result-note"><strong>事项结果与依据</strong><p>${e(d.result?.publicText||'尚无有效结果，继续人工核对。')}</p>${d.result?.evidence?.citation?`<small>知识 ${e(d.result.evidence.citation.id)} v${e(d.result.evidence.citation.version)} · ${e(d.result.evidence.citation.source)}</small>`:d.result?.evidence?.snapshot?`<small>${e(d.result.evidence.snapshot.source||'本地模拟业务查询')} · 事实状态 ${e(d.result.evidence.snapshot.queryStatus||'已核对')}</small>`:''}</div></section>`;
+    let actions='';
+    if(customer){
+      if(request&&d.status!=='completed'&&['waiting_customer','awaiting_review','approved','withdrawal_requested'].includes(request.status)){
+        actions+=b('补充资料 / 消息','service-supplement',request.id,'small',attrs+' '+disabled);
+        if(d.return?.status==='awaiting_return'&&request.status==='approved')actions+=b('填写寄回运单','service-return',request.id,'small primary',attrs+' '+disabled);
+        if(['awaiting_review','waiting_customer','approved'].includes(request.status)&&d.refund?.status!=='succeeded')actions+=b('申请撤回','service-withdrawal',request.id,'small text',attrs+' '+disabled);
+      }else if(d.status!=='completed')actions+=b('继续补充消息','service-chat',d.caseId||d.id,'small',disabled);
+      if(d.status==='completed'&&d.feedback!=='confirmed')actions+=b('确认问题已解决','confirm-case',d.caseId||d.id,'small',disabled);
+      if(d.status==='completed')actions+=b('仍需帮助','service-dispute',d.caseId||d.id,'small text',disabled);
+    }else{
+      if(actor.role==='manager'&&request&&request.status==='awaiting_review'){
+        const v=ui.drafts?.['service-review:'+request.id]||{};
+        actions+=`<form class="sop-form service-review-form" data-form="service-review" data-id="${e(request.id)}" ${attrs}><label>审批结论<select name="decision">${options([['approved','批准'],['needs_info','请客户补充材料'],['rejected','拒绝申请']],v.decision||'approved')}</select></label><label>审批依据 / 补件要求<textarea name="reason" rows="3" required maxlength="1000">${e(v.reason||'')}</textarea></label><button type="submit" class="btn small primary">提交审批</button></form>`;
+      }else if(request&&['awaiting_review','waiting_customer'].includes(request.status))actions+='<p class="sop-hint">经理审批与客户补件持续跟进；审批决定由服务经理提交。</p>';
+      if(owned){
+          if(d.service!==false){const v=ui.drafts?.['service-reply:'+d.caseId]||{};actions+=`<form class="sop-form" data-form="service-reply" data-id="${e(d.caseId)}" data-case="${e(d.caseId)}"><label>本事项公开回复<textarea name="body" rows="3" required maxlength="2000">${e(v.body||'')}</textarea></label><button type="submit" class="btn small">发送事项回复</button></form>`;}
+        if(d.feedback==='disputed')actions+=b('记录异议复核结果','service-resolve-dispute',d.caseId||d.id,'small primary');
+        if(!request&&['order','logistics'].includes(d.kind)&&d.status!=='completed')actions+=b('记录物流核实结果','service-logistics',d.caseId||d.id,'small primary');
+        if(request?.status==='approved'&&d.return?.status==='passed'&&(!d.refund||d.refund.status==='not_submitted'))actions+=b('核对并提交模拟退款','service-refund',request.id,'small primary',attrs);
+        if(d.refund?.requestId&&['pending','unknown','failed'].includes(d.refund.status))actions+=b('核实原退款请求','service-query-refund',request.id,'small',attrs);
+        if(d.status!=='completed')actions+=b('安排反馈时间','service-followup',d.caseId||d.id,'small');
+        if(!d.handoff||d.handoff.status!=='pending')actions+=b('发起交接','service-handoff',d.caseId||d.id,'small');
+      }
+      if(d.handoff?.status==='pending'){
+        actions+=`<p class="sop-hint">待 ${e(d.handoff.targetName)} 接收 · 截止 ${date(d.handoff.dueAt,true)}；接收前由 ${e(d.ownerName||'原负责人')} 继续负责。</p>`;
+        if(actor.role==='agent'&&d.handoff.targetId===actor.id)actions+=b('接收交接','service-accept',d.handoff.id,'small primary',`data-version="${e(d.handoff.version)}"`)+b('拒接并说明原因','service-reject',d.handoff.id,'small',`data-version="${e(d.handoff.version)}"`);
+      }
+      actions+=handoffSummary(d);
+    }
+    return `<section class="service-panel" data-service-case="${e(d.caseId||d.id)}">${summary(d)}<div class="service-actions">${actions}</div>${(d.history||[]).length?`<details class="service-history"><summary>查看办理记录（${d.history.length} 条）</summary><div class="timeline">${d.history.map(h=>`<p><small>${date(h.at,true)}</small><br>${e(h.text||h.publicText||'')}</p>`).join('')}</div></details>`:''}</section>`;
+  };
+  root.SupportServiceUI={create(ctx){
+    const {D,ui,store,identity,apply,modal,closeModal,render,cache,toast,customerConversation}=ctx;
+    const $=selector=>document.querySelector(selector),hour=3600000;
+    const key=()=>crypto.randomUUID?.()||String(Date.now());
+    const bj=t=>new Date(Number(t)+8*hour).toISOString().slice(0,16);
+    const at=value=>Date.parse(value+':00+08:00');
+    const draft=(k,defaults)=>({...defaults,...ui.drafts[k]});
+    let pending=null;
+    function customerData(){return D.customerView(store.state,identity().id);}
+    function connected(){if(D.customerConnection(store.state,identity().id)!=='online')throw Error('连接已断开，请先恢复在线；输入内容已保留。');}
+    function detail(caseId){
+      if(identity().role==='customer'){
+        const d=customerData().services?.find(x=>(x.caseId||x.id)===caseId);if(!d)throw Error('无权查看这项服务');return d;
+      }
+      return D.serviceView(store.state,identity(),{caseId});
+    }
+    function openDetail(caseId){const d=detail(caseId);modal('服务事项详情',V.servicePanel(store.state,d,ui,identity()));}
+    function complete(form,caseId,message){delete ui.drafts[form.dataset.form+':'+(form.dataset.id||'new')];closeModal();render();if(caseId)openDetail(caseId);toast(message);cache();}
+    function application(orderId,itemId='',reuse=false){
+      if(identity().role!=='customer')throw Error('请引导客户选择商品并主动核对申请，客服不能代客户确认。');connected();
+      const data=customerData(),order=data.orders.find(o=>o.id===orderId&&o.commerce);if(!order)throw Error('请核对客户本人订单');
+      const previous=reuse?pending:null,draftKey='aftersale-request:'+orderId;
+      const defaults={orderId,itemId,quantity:1,serviceType:'return_refund',reason:'',evidenceRef:'DEMO-DAMAGE-001'};
+      const v=draft(draftKey,defaults);if(!reuse&&itemId)v.itemId=itemId;
+      pending={orderId,conversationId:previous?.conversationId||customerConversation().id,requestId:previous?.requestId||key(),draftKey};
+      modal('商品级退货退款申请',`<form data-form="aftersale-request" data-id="${e(orderId)}"><div class="readonly-context">订单 ${e(orderId)} · 客户主动申请</div><input type="hidden" name="orderId" value="${e(orderId)}"><input type="hidden" name="serviceType" value="return_refund"><label class="field"><span>选择本次申请商品</span><select name="itemId" required>${options([['','请选择商品'],...order.commerce.items.map(i=>[i.id,i.name+' · '+money(i.paidCents)])],v.itemId)}</select></label>${field('数量','quantity',1,'number','readonly min="1" max="1"')}${field('申请原因','reason',v.reason,'textarea','required maxlength="1000"')}${field('材料引用（演示）','evidenceRef',v.evidenceRef,'text','required maxlength="200"')}<p class="muted small-text">演示材料 DEMO-DAMAGE-001 代表保温杯受损照片。商品与办理条件将在预览时核对；其他诉求请联系人工。</p><div class="form-footer">${b('取消','close-modal')}<button type="submit" class="btn primary">预览并核对申请</button></div></form>`);
+    }
+    function forCase(caseId){
+      if(store.state.schema!==5)return false;
+      if(identity().role!=='customer'){modal('引导客户核对申请','<p>请先核对客户的具体商品、退货退款诉求与材料，并请客户在订单商品下主动提交申请。</p><p class="muted">审批与退款在已登记的商品级事项中办理。</p>');return true;}
+      const data=customerData(),c=data.cases.find(c=>c.id===caseId);if(!c)throw Error('无权查看此问题');
+      const service=data.services?.find(d=>(d.caseId||d.id)===caseId);if(service?.request){openDetail(caseId);return true;}
+      if(c.itemId&&c.orderId)application(c.orderId,c.itemId);else modal('核对具体诉求',`<p>请明确需要申请的商品、退货退款原因和材料。</p><p class="muted">可在“我的订单”选择具体商品；需要协助时，人工客服会继续本次咨询。</p>${b('联系人工核实','request-human',ui.customerConversation||'','primary')}`);
+      return true;
+    }
+    function smallForm(title,f,id,fields,caseId='',extra=''){
+      modal(title,`<form data-form="${f}" data-id="${e(id)}" data-case="${e(caseId)}" ${extra}>${fields}<div class="form-footer">${b('取消','close-modal')}<button type="submit" class="btn primary">确认提交</button></div></form>`);
+    }
+    const actions={
+      'commerce-aftersale'(el){application(el.dataset.id,el.dataset.item);},
+      'aftersale-back'(){if(!pending)throw Error('预览已失效，请重新核对申请');application(pending.orderId,'',true);},
+      'service-detail'(el){openDetail(el.dataset.id);},
+      'service-chat'(el){const c=customerData().conversations.find(c=>c.caseIds.includes(el.dataset.id));if(!c)throw Error('没有关联咨询，请联系人工');ui.customerConversation=c.id;closeModal();render();$('#customer-input')?.focus();},
+      'service-supplement'(el){const v=draft('service-supplement:'+el.dataset.id,{body:'',evidenceRef:''});smallForm('补充资料与消息','service-supplement',el.dataset.id,field('补充情况','body',v.body,'textarea','required maxlength="2000"')+field('补充材料引用（可选）','evidenceRef',v.evidenceRef,'text','maxlength="200"'),el.dataset.case);},
+      'service-return'(el){const v=draft('service-return:'+el.dataset.id,{trackingNumber:''});smallForm('填写寄回运单','service-return',el.dataset.id,field('寄回运单号','trackingNumber',v.trackingNumber,'text','required maxlength="100"')+'<p class="muted">只记录寄回信息；仓库收件与验收分别更新。</p>',el.dataset.case);},
+      'service-withdrawal'(el){const v=draft('service-withdrawal:'+el.dataset.id,{reason:''});smallForm('申请撤回','service-withdrawal',el.dataset.id,field('撤回原因','reason',v.reason,'textarea','required maxlength="1000"')+'<p class="muted">提交后等待撤回确认；已在执行的退款须核实原执行状态。</p>',el.dataset.case);},
+      'service-dispute'(el){const v=draft('service-dispute:'+el.dataset.id,{reason:''});smallForm('继续处理这个事项','service-dispute',el.dataset.id,field('还有什么没有解决？','reason',v.reason,'textarea','required maxlength="2000"')+'<p class="muted">继续原事项与原申请，保留首次受理记录。</p>',el.dataset.id);},
+      'service-logistics'(el){const v=draft('service-logistics:'+el.dataset.id,{body:'',evidenceRef:''});smallForm('记录物流核实结果','service-logistics',el.dataset.id,field('客户可见核实结论','body',v.body,'textarea','required maxlength="2000"')+field('核对依据引用','evidenceRef',v.evidenceRef,'text','required maxlength="200"'),el.dataset.id);},
+      'service-resolve-dispute'(el){const v=draft('service-resolve-dispute:'+el.dataset.id,{body:'',evidenceRef:''});smallForm('记录异议复核结果','service-resolve-dispute',el.dataset.id,field('客户可见复核结论','body',v.body,'textarea','required maxlength="2000"')+field('原结果核实依据','evidenceRef',v.evidenceRef,'text','required maxlength="200"')+'<p class="muted">复核关联原结果，保留原退款流水与客户反馈历史。</p>',el.dataset.id);},
+      'service-followup'(el){const d=detail(el.dataset.id),v=draft('service-followup:'+el.dataset.id,{dueAt:bj(d.dueAt>Date.now()?d.dueAt:Date.now()+24*hour)});smallForm('安排下一次反馈','service-followup',el.dataset.id,field('反馈时间（北京时间 UTC+08:00）','dueAt',v.dueAt,'datetime-local','required')+'<p class="muted">负责人继续跟进事项，安排时间不自动完成业务。</p>',el.dataset.id);},
+      'service-refund'(el){const v=draft('service-refund:'+el.dataset.id,{requestId:key()});ui.drafts['service-refund:'+el.dataset.id]=v;smallForm('核对并提交模拟退款','service-refund',el.dataset.id,`<input type="hidden" name="requestId" value="${e(v.requestId)}"><p>按已批准的商品金额发起一次本地模拟退款请求。</p><p class="muted">提交后进入处理中；结果未知时核实原请求。</p>`,el.dataset.case);},
+      'service-query-refund'(el){apply('queryRefund',{aftersaleId:el.dataset.id},'已核实原退款请求');closeModal();render();openDetail(el.dataset.case);},
+      'service-handoff'(el){const d=detail(el.dataset.id),staff=store.state.staff.filter(a=>a.role==='agent'&&a.id!==d.ownerId),v=draft('service-handoff:'+el.dataset.id,{targetId:staff[0]?.id||'',reason:'',dueAt:bj(Date.now()+hour)});smallForm('发起人工交接','service-handoff',el.dataset.id,`<label class="field"><span>接收客服</span><select name="targetId" required>${options(staff.map(a=>[a.id,a.name]),v.targetId)}</select></label>`+field('交接原因与要求','reason',v.reason,'textarea','required maxlength="1000"')+field('接收截止时间（北京时间 UTC+08:00）','dueAt',v.dueAt,'datetime-local','required')+'<p class="muted">接收前保留原负责人；摘要随原事项一并传递。</p>',el.dataset.id);},
+      'service-accept'(el){const h=store.state.commerce.handoffs.find(h=>h.id===el.dataset.id);apply('acceptHandoff',{handoffId:el.dataset.id,version:Number(el.dataset.version)},'已接收交接');closeModal();render();if(h)openDetail(h.caseId);},
+      'service-reject'(el){const v=draft('service-reject:'+el.dataset.id,{reason:''});smallForm('拒接并说明原因','service-reject',el.dataset.id,`<input type="hidden" name="version" value="${e(el.dataset.version)}">`+field('拒接原因','reason',v.reason,'textarea','required maxlength="1000"'));},
+      'service-metric'(el){ui.serviceMetric=el.dataset.id;render();},
+      'service-eval'(el){apply('runServiceEval',el.dataset.id?{knowledgeId:el.dataset.id}:{},'流程评测已运行，请查看逐项证据');render();},
+      'service-expire-handoffs'(){apply('expireHandoffs',{},'已核对超时交接；原负责人继续负责');render();},
+      'link-gap-repair'(el){const g=D.get(store.state,'gaps',el.dataset.id),scenarios={routing:['trigger-policy','trigger-request','two-items','changed-intent'],business:['query-failure','refund-unknown','refund-idempotent'],workflow:['happy-path','review-reject','supplement'],collaboration:['handoff-timeout'],notification:['notification-failure']},items=scenarios[g.causeType]||[],v=draft('link-gap-repair:'+g.id,{remediation:'',scenarioId:items[0]||''});smallForm('登记失败路径整改','link-gap-repair',g.id,field('整改说明','remediation',v.remediation,'textarea','required maxlength="2000"')+`<label class="field"><span>复验场景</span><select name="scenarioId" required>${options(items.map(id=>[id,id]),v.scenarioId)}</select></label><p class="muted">整改后由服务经理运行关联失败路径并验收。</p>`);},
+      'service-receipt'(el){const v=draft('service-receipt:'+el.dataset.id,{reason:''});smallForm('提交本地模拟回执','service-receipt',el.dataset.id,`<input type="hidden" name="kind" value="${e(el.dataset.kind)}"><input type="hidden" name="version" value="${e(el.dataset.version)}"><p>事件：${e(el.textContent)}</p>${field('回执说明 / 失败原因','reason',v.reason,'textarea','maxlength="1000"')}${el.dataset.kind==='refund_failed'?'<label class="row"><input type="checkbox" name="safeStopped" value="true">模拟确认原执行已终止（撤回时必需）</label>':''}<p class="muted">回执仅更新对应业务阶段，不替代实际到账与客户确认。</p>`);}
+    };
+    function submit(form,data){
+      const f=form.dataset.form,id=form.dataset.id,caseId=form.dataset.case;
+      if(f==='aftersale-request'){
+        if(!pending||pending.orderId!==id)throw Error('申请上下文已失效，请重新打开商品申请');connected();
+        const input={orderId:data.orderId,itemId:data.itemId,quantity:Number(data.quantity),serviceType:data.serviceType,reason:data.reason,evidenceRef:data.evidenceRef,conversationId:pending.conversationId};
+        const value=apply('previewAftersale',input);ui.drafts[pending.draftKey]={...data};pending={...pending,input,preview:value};
+        modal('核对商品级申请',`<div class="preview-block"><h3>${e(value.itemName)}</h3><p>订单 ${e(value.orderId)} · 数量 ${e(value.quantity)} 件</p><p>服务：退货退款 · 本次核对金额 ${money(value.amountCents)}</p><p>原因：${e(value.reason)}</p><p>材料：${e(value.evidenceRef)}</p><p>规则依据：${e(ruleText(value.rule))}</p></div><p class="muted">提交申请后等待经理审批、寄回和验收；退款执行另有回执。</p><form data-form="aftersale-confirm" data-id="${e(id)}"><div class="form-footer">${b('返回修改','aftersale-back')}${b('取消','close-modal')}<button type="submit" class="btn primary">确认提交本次申请</button></div></form>`);cache();return true;
+      }
+      if(f==='aftersale-confirm'){
+        if(!pending?.preview||pending.orderId!==id)throw Error('预览已失效，请重新核对申请');connected();
+        const request=pending,value=apply('confirmAftersale',{...request.input,token:request.preview.token,requestId:request.requestId,confirmed:true});
+        delete ui.drafts[request.draftKey];pending=null;closeModal();render();const d=customerData().services?.find(d=>d.request?.id===(typeof value==='string'?value:value.id));if(d)openDetail(d.caseId||d.id);toast('商品级申请已提交，等待审批');cache();return true;
+      }
+      const handlers={
+        'service-review':()=>apply('submitReview',{aftersaleId:id,decision:data.decision,reason:data.reason}),
+        'service-reply':()=>apply('serviceReply',{caseId:id,body:data.body}),
+        'service-supplement':()=>apply('submitSupplement',{aftersaleId:id,body:data.body,evidenceRef:data.evidenceRef||''}),
+        'service-return':()=>apply('submitReturn',{aftersaleId:id,trackingNumber:data.trackingNumber}),
+        'service-withdrawal':()=>apply('requestWithdrawal',{aftersaleId:id,reason:data.reason}),
+        'service-dispute':()=>apply('serviceDispute',{caseId:id,reason:data.reason}),
+        'service-logistics':()=>apply('resolveLogistics',{caseId:id,body:data.body,evidenceRef:data.evidenceRef}),
+        'service-resolve-dispute':()=>apply('resolveServiceDispute',{caseId:id,body:data.body,evidenceRef:data.evidenceRef}),
+        'service-followup':()=>apply('serviceFollowup',{caseId:id,dueAt:at(data.dueAt)}),
+        'service-refund':()=>apply('submitRefund',{aftersaleId:id,requestId:data.requestId}),
+        'service-handoff':()=>apply('proposeHandoff',{caseId:id,targetId:data.targetId,reason:data.reason,dueAt:at(data.dueAt)}),
+        'service-reject':()=>apply('rejectHandoff',{handoffId:id,version:Number(data.version),reason:data.reason}),
+        'service-receipt':()=>apply('applySimulatedReceipt',{aftersaleId:id,kind:data.kind,version:Number(data.version),reason:data.reason,safeStopped:data.safeStopped==='true'}),
+        'link-gap-repair':()=>apply('linkGap',{id,remediation:data.remediation,scenarioId:data.scenarioId})
+      };
+      if(!handlers[f])return false;
+      if(identity().role==='customer')connected();handlers[f]();
+      complete(form,caseId,{'service-refund':'模拟退款请求已提交，等待原请求回执','service-withdrawal':'撤回请求已提交，等待确认','service-receipt':'本地模拟回执已记录'}[f]||'处理记录已保存');return true;
+    }
+    return {actions,submit,openForCase:forCase,onClose(){pending=null;}};
+  }};
+})(window);
+
+</script>
+<script>
 (function(root){
   'use strict';const V=root.SupportViews,{e,icon,b,pill,date,empty,messages}=V;
   V.customer=function(data,ui){
     const offline=data.connection&&data.connection!=='online';
     const conv=data.conversations.find(c=>c.id===ui.customerConversation)||data.conversations[0];
-    const service=data.cases.filter(c=>c.kind==='aftersales'||c.feedback==='disputed');
-    return `<div class="customer-layout"><aside class="customer-home"><div class="store-brand"><span class="brand-mark">${icon('chat',18)}</span><div><strong>服务中心</strong><small>订单查询 · 售后服务</small></div></div><div class="welcome"><h1>有什么可以帮您？</h1><p>请描述问题，或选择下方服务。</p></div><div class="customer-shortcuts">${b(`${icon('book')}<span>服务规则</span>${icon('arrow')}`,'quick-policy','','shortcut')}${b(`${icon('users')}<span>联系人工</span>${icon('arrow')}`,'request-human',conv?.id||'','shortcut')}</div><div class="section-title"><h2>我的订单</h2><span>${data.orders.length} 笔</span></div>${data.orders.map(o=>o.commerce?V.commerceOrderCard(o,false,offline):`<div class="order-card"><div class="product-symbol">${e(o.symbol)}</div><div><strong>${e(o.product)}</strong><small>${e(o.id)}</small><div class="row">${pill(o.status)}<span class="price">¥${o.price.toFixed(2)}</span></div></div><div class="order-actions">${b('查物流','order-query',o.id,'text')}${b('申请售后','order-return',o.id,'text')}</div></div>`).join('')}<div class="section-title"><h2>服务进度</h2><span>${service.length} 项</span></div>${data.tickets.map(t=>`<button class="progress-card" type="button" data-action="ticket-detail" data-id="${e(t.id)}"><div class="row between"><strong>${e(t.title)}</strong>${icon('arrow',15)}</div><small>${e(t.id)} · ${date(t.createdAt,true)}</small>${pill(t.status,t.status==='waiting_customer'?'warn':'')}</button>`).join('')||'<p class="muted">暂无售后记录。</p>'}</aside><section class="messenger"><header class="messenger-head"><div class="assistant-avatar">${icon('bolt',22)}</div><div><strong>${conv?.state==='human'?'人工客服':'在线客服'}</strong><small><span class="status-dot"></span>${conv?e(V.labels[conv.state]):'在线咨询'}</small></div><div class="row push-right">${b('历史咨询','customer-history','','text')}${b(`${icon('plus')} 新咨询`,'new-conversation','','small')}</div></header>${conv?`<div class="messages customer-messages" id="customer-messages">${messages(conv,true)}${data.cases.filter(c=>conv.caseIds.includes(c.id)&&c.status==='completed').map(c=>`<div class="feedback-card"><strong>${e(c.kind==='knowledge'?'这个问题解决了吗？':'这个问题解决了吗？')}</strong>${c.feedback==='confirmed'?pill('已确认解决','good')+b('仍需帮助','dispute-case',c.id,'small text'):`<div class="row">${b('已解决','confirm-case',c.id,'small')}${b('仍需帮助','dispute-case',c.id,'small text')}</div>`}</div>`).join('')}</div><form class="composer customer-composer" data-form="customer-say" data-id="${e(conv.id)}"><label class="sr-only" for="customer-input">请输入问题</label><textarea id="customer-input" data-focus="customer-input" name="body" rows="2" maxlength="2000" required placeholder="请输入问题，或提供订单号…">${e(ui.drafts['customer-say:'+conv.id]?.body||'')}</textarea><div class="row between"><span class="muted small-text">${offline?'连接已断开，输入内容已保留，请到手机端演示恢复在线。':conv.state==='queued'?'已在排队，补充信息会一并交给客服。':conv.state==='closed'?'继续发送即可重新联系，原记录会保留。':'请勿发送密码或验证码。'}</span><button class="btn primary" type="submit" ${offline?'disabled':''}>发送 ${icon('send',15)}</button></div></form>${conv.state==='queued'?`<div class="queue-footer">${b('取消排队，继续咨询','cancel-queue',conv.id,'text')}</div>`:''}`:empty('暂无咨询记录','点击“新咨询”开始联系。')}</section></div>`;
+    const service=data.services||data.cases.filter(c=>c.kind==='aftersales'||c.feedback==='disputed');
+    const progress=data.services?data.services.map(d=>V.serviceCard(d)).join(''):data.tickets.map(t=>`<button class="progress-card" type="button" data-action="ticket-detail" data-id="${e(t.id)}"><div class="row between"><strong>${e(t.title)}</strong>${icon('arrow',15)}</div><small>${e(t.id)} · ${date(t.createdAt,true)}</small>${pill(t.status,t.status==='waiting_customer'?'warn':'')}</button>`).join('');
+    return `<div class="customer-layout"><aside class="customer-home"><div class="store-brand"><span class="brand-mark">${icon('chat',18)}</span><div><strong>服务中心</strong><small>订单查询 · 售后服务</small></div></div><div class="welcome"><h1>有什么可以帮您？</h1><p>请描述问题，或选择下方服务。</p></div><div class="customer-shortcuts">${b(`${icon('book')}<span>服务规则</span>${icon('arrow')}`,'quick-policy','','shortcut')}${b(`${icon('users')}<span>联系人工</span>${icon('arrow')}`,'request-human',conv?.id||'','shortcut')}</div><div class="section-title"><h2>我的订单</h2><span>${data.orders.length} 笔</span></div>${data.orders.map(o=>o.commerce?V.commerceOrderCard(o,false,offline):`<div class="order-card"><div class="product-symbol">${e(o.symbol)}</div><div><strong>${e(o.product)}</strong><small>${e(o.id)}</small><div class="row">${pill(o.status)}<span class="price">¥${o.price.toFixed(2)}</span></div></div><div class="order-actions">${b('查物流','order-query',o.id,'text')}${b('申请售后','order-return',o.id,'text')}</div></div>`).join('')}<div class="section-title"><h2>服务进度</h2><span>${service.length} 项</span></div>${progress||'<p class="muted">暂无服务事项。</p>'}</aside><section class="messenger"><header class="messenger-head"><div class="assistant-avatar">${icon('bolt',22)}</div><div><strong>${conv?.state==='human'?'人工客服':'在线客服'}</strong><small><span class="status-dot"></span>${conv?e(V.labels[conv.state]):'在线咨询'}</small></div><div class="row push-right">${b('历史咨询','customer-history','','text')}${b(`${icon('plus')} 新咨询`,'new-conversation','','small')}</div></header>${conv?`<div class="messages customer-messages" id="customer-messages">${messages(conv,true,{offline})}${data.cases.filter(c=>conv.caseIds.includes(c.id)&&c.status==='completed').map(c=>`<div class="feedback-card"><strong>${e(c.kind==='knowledge'?'这个问题解决了吗？':'这个问题解决了吗？')}</strong>${c.feedback==='confirmed'?pill('已确认解决','good')+b('仍需帮助',data.services?.some(d=>(d.caseId||d.id)===c.id)?'service-dispute':'dispute-case',c.id,'small text'):`<div class="row">${b('已解决','confirm-case',c.id,'small')}${b('仍需帮助',data.services?.some(d=>(d.caseId||d.id)===c.id)?'service-dispute':'dispute-case',c.id,'small text')}</div>`}</div>`).join('')}</div><form class="composer customer-composer" data-form="customer-say" data-id="${e(conv.id)}"><label class="sr-only" for="customer-input">请输入问题</label><textarea id="customer-input" data-focus="customer-input" name="body" rows="2" maxlength="2000" required placeholder="请输入问题，或提供订单号…">${e(ui.drafts['customer-say:'+conv.id]?.body||'')}</textarea><div class="row between"><span class="muted small-text">${offline?'连接已断开，输入内容已保留，请到手机端演示恢复在线。':conv.state==='queued'?'已在排队，补充信息会一并交给客服。':conv.state==='closed'?'继续发送即可重新联系，原记录会保留。':'请勿发送密码或验证码。'}</span><button class="btn primary" type="submit" ${offline?'disabled':''}>发送 ${icon('send',15)}</button></div></form>${conv.state==='queued'?`<div class="queue-footer">${b('取消排队，继续咨询','cancel-queue',conv.id,'text')}</div>`:''}`:empty('暂无咨询记录','点击“新咨询”开始联系。')}</section></div>`;
   };
 })(window);
 
@@ -1766,7 +2305,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
   }
   function feedback(data,conv,offline){
     return data.cases.filter(c=>conv.caseIds.includes(c.id)&&c.status==='completed').map(c=>
-      `<section class="feedback-card phone-feedback"><strong>这个问题解决了吗？</strong><div class="row">${c.feedback==='confirmed'?pill('已确认解决','good'):b('已解决','confirm-case',c.id,'small',offline?'disabled':'')}${b('仍需帮助','dispute-case',c.id,'small text',offline?'disabled':'')}</div></section>`
+      `<section class="feedback-card phone-feedback"><strong>这个问题解决了吗？</strong><div class="row">${c.feedback==='confirmed'?pill('已确认解决','good'):b('已解决','confirm-case',c.id,'small',offline?'disabled':'')}${b('仍需帮助',data.services?.some(d=>(d.caseId||d.id)===c.id)?'service-dispute':'dispute-case',c.id,'small text',offline?'disabled':'')}</div></section>`
     ).join('');
   }
   function progressCard(ticket){
@@ -1776,7 +2315,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     return `<div class="phone-order-list">${data.orders.map(order=>order.commerce?V.commerceOrderCard(order,true,isOffline(data)):`<article class="phone-order-card"><div class="phone-order-summary"><span class="phone-product-symbol" aria-hidden="true">${e(order.symbol||'▧')}</span><div><h3>${e(order.product)}</h3><small>${e(order.id)}</small><div class="row">${pill(order.status)}<span class="phone-price">¥${e(order.price.toFixed(2))}</span></div></div></div><div class="phone-order-actions">${b('查物流','order-query',order.id,'',disabled(data))}${b('申请退换货','order-return',order.id,'primary',disabled(data))}</div></article>`).join('')||empty('暂无订单','当前账户没有可查看的订单。')}${isOffline(data)?'<p class="phone-local-notice">连接已断开，恢复后可查询或提交申请。</p>':''}</div>`;
   };
   V.mobileProgress=function(data){
-    return `<div class="phone-progress-list">${data.tickets.map(progressCard).join('')||empty('暂无办理记录','申请受理后，可在这里查看处理进度。')}${isOffline(data)?'<p class="phone-local-notice">当前可查看已保存的进度，恢复连接后再提交补充。</p>':''}</div>`;
+    return `<div class="phone-progress-list">${(data.services?data.services.map(d=>V.serviceCard(d,true)):data.tickets.map(progressCard)).join('')||empty('暂无办理记录','申请受理后，可在这里查看处理进度。')}${isOffline(data)?'<p class="phone-local-notice">当前可查看已保存的进度，恢复连接后再提交补充。</p>':''}</div>`;
   };
   V.mobile=function(data,ui){
     const conv=current(data,ui),status=connection(data),offline=isOffline(data);
@@ -1784,8 +2323,8 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     const conversationStatus=offline?'连接已断开':conv?V.labels[conv.state]:'在线咨询';
     const draft=conv?ui.drafts?.['customer-say:'+conv.id]?.body||'':'';
     const assigned=conv&&['queued','human'].includes(conv.state);
-    const related=conv?data.tickets.filter(t=>conv.caseIds.includes(t.caseId)):[];
-    return `<section class="mobile-stage" aria-label="手机端演示"><div class="mobile-left"><div class="mobile-demo-controls"><span>演示状态：<strong>${e(statusText)}</strong></span>${b(offline?'恢复在线':'模拟离线','connection-toggle',offline?'online':'offline','small')}</div><div class="phone-frame"><div class="phone-screen"><div class="phone-status-bar" aria-hidden="true"><span>服务中心</span><span class="phone-status-symbols"><span class="phone-signal">▂▄▆</span><span class="phone-battery"></span></span></div><header class="phone-header"><span class="phone-avatar">${icon('chat',20)}</span><div class="phone-heading"><h1>在线客服</h1><p><span class="phone-status-dot ${offline?'offline':''}"></span>${e(conversationStatus)}</p></div><details class="phone-menu"><summary aria-label="更多咨询操作">•••</summary><div class="phone-menu-content">${b('历史咨询','customer-history','','text')}${b('新咨询','new-conversation','','text',offline?'disabled':'')}</div></details></header>${offline?'<div class="phone-connection-notice" role="status">连接已断开，输入内容已保留。</div>':''}<div class="messages customer-messages phone-messages" id="customer-messages" role="log" aria-label="咨询消息" aria-live="polite">${conv?messages(conv,true,{offline})+feedback(data,conv,offline)+(related.length?`<section class="phone-chat-progress"><h2>相关服务进度</h2>${related.map(progressCard).join('')}</section>`:''):empty('开始在线咨询','可以选择下方服务，或新建一段咨询。')}</div><nav class="phone-services" aria-label="常用服务">${b(`${icon('book',17)}<span>服务规则</span>`,'quick-policy','','text',offline?'disabled':'')}${b(`${icon('inbox',17)}<span>我的订单</span>`,'mobile-orders','','text')}${b(`${icon('ticket',17)}<span>服务进度</span>`,'mobile-progress','','text')}${b(`${icon('users',17)}<span>${conv?.state==='queued'?'人工排队中':conv?.state==='human'?'人工已接待':'联系人工'}</span>`,'request-human',conv?.id||'','text',offline||assigned?'disabled':'')}</nav>${conv?`<form class="composer phone-composer" data-form="customer-say" data-id="${e(conv.id)}" data-offline="${offline}"><label class="sr-only" for="customer-input">请输入问题</label><textarea id="customer-input" data-focus="customer-input" name="body" rows="2" maxlength="2000" required placeholder="请输入问题，或提供订单号…" aria-describedby="phone-send-hint">${e(draft)}</textarea><div class="phone-compose-actions"><span id="phone-send-hint">${offline?'恢复在线后可发送':conv.state==='queued'?'补充信息会一并交给客服':conv.state==='closed'?'继续发送可重新联系':'请勿发送密码或验证码'}</span><button class="btn primary" type="submit" ${offline?'disabled':''}>发送 ${icon('send',15)}</button></div></form>`:`<div class="phone-start">${b('新咨询','new-conversation','','primary',offline?'disabled':'')}</div>`}${conv?.state==='queued'?`<div class="phone-queue-footer">${b('取消排队，继续咨询','cancel-queue',conv.id,'text',offline?'disabled':'')}</div>`:''}<div class="phone-home-indicator" aria-hidden="true"></div><div class="phone-overlay-host"></div></div></div></div><div class="mobile-blank" aria-hidden="true"></div></section>`;
+    const related=conv?(data.services||data.tickets).filter(t=>conv.caseIds.includes(t.caseId||t.id)):[];
+    return `<section class="mobile-stage" aria-label="手机端演示"><div class="mobile-left"><div class="mobile-demo-controls"><span>演示状态：<strong>${e(statusText)}</strong></span>${b(offline?'恢复在线':'模拟离线','connection-toggle',offline?'online':'offline','small')}</div><div class="phone-frame"><div class="phone-screen"><div class="phone-status-bar" aria-hidden="true"><span>服务中心</span><span class="phone-status-symbols"><span class="phone-signal">▂▄▆</span><span class="phone-battery"></span></span></div><header class="phone-header"><span class="phone-avatar">${icon('chat',20)}</span><div class="phone-heading"><h1>在线客服</h1><p><span class="phone-status-dot ${offline?'offline':''}"></span>${e(conversationStatus)}</p></div><details class="phone-menu"><summary aria-label="更多咨询操作">•••</summary><div class="phone-menu-content">${b('历史咨询','customer-history','','text')}${b('新咨询','new-conversation','','text',offline?'disabled':'')}</div></details></header>${offline?'<div class="phone-connection-notice" role="status">连接已断开，输入内容已保留。</div>':''}<div class="messages customer-messages phone-messages" id="customer-messages" role="log" aria-label="咨询消息" aria-live="polite">${conv?messages(conv,true,{offline})+feedback(data,conv,offline)+(related.length?`<section class="phone-chat-progress"><h2>相关服务进度</h2>${related.map(d=>data.services?V.serviceCard(d,true):progressCard(d)).join('')}</section>`:''):empty('开始在线咨询','可以选择下方服务，或新建一段咨询。')}</div><nav class="phone-services" aria-label="常用服务">${b(`${icon('book',17)}<span>服务规则</span>`,'quick-policy','','text',offline?'disabled':'')}${b(`${icon('inbox',17)}<span>我的订单</span>`,'mobile-orders','','text')}${b(`${icon('ticket',17)}<span>服务进度</span>`,'mobile-progress','','text')}${b(`${icon('users',17)}<span>${conv?.state==='queued'?'人工排队中':conv?.state==='human'?'人工已接待':'联系人工'}</span>`,'request-human',conv?.id||'','text',offline||assigned?'disabled':'')}</nav>${conv?`<form class="composer phone-composer" data-form="customer-say" data-id="${e(conv.id)}" data-offline="${offline}"><label class="sr-only" for="customer-input">请输入问题</label><textarea id="customer-input" data-focus="customer-input" name="body" rows="2" maxlength="2000" required placeholder="请输入问题，或提供订单号…" aria-describedby="phone-send-hint">${e(draft)}</textarea><div class="phone-compose-actions"><span id="phone-send-hint">${offline?'恢复在线后可发送':conv.state==='queued'?'补充信息会一并交给客服':conv.state==='closed'?'继续发送可重新联系':'请勿发送密码或验证码'}</span><button class="btn primary" type="submit" ${offline?'disabled':''}>发送 ${icon('send',15)}</button></div></form>`:`<div class="phone-start">${b('新咨询','new-conversation','','primary',offline?'disabled':'')}</div>`}${conv?.state==='queued'?`<div class="phone-queue-footer">${b('取消排队，继续咨询','cancel-queue',conv.id,'text',offline?'disabled':'')}</div>`:''}<div class="phone-home-indicator" aria-hidden="true"></div><div class="phone-overlay-host"></div></div></div></div><div class="mobile-blank" aria-hidden="true"></div></section>`;
   };
 })(window);
 
@@ -1857,6 +2396,11 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     const attrs = caseAttributes(conv, item);
     const order = s.orders.find(order => order.id === sop.orderId && order.customerId === conv.customerId);
     const editableTicket = owned && ticket?.ownerId === ui.agentId;
+    if(s.schema===5&&item.service){
+      if(node.key==='intent')return `<p class="sop-hint">客户诉求：${e(item.title)}。商品和办理信息随原事项保留。</p>${owned?b('查看完整事项','service-detail',item.id,'small'):''}`;
+      if(['aftersales','information','result'].includes(node.key))return `<p class="sop-hint">商品申请、审批、寄回验收、退款回执与客户反馈分别跟进，见下方事项办理面板。</p>${owned?b('查看服务事项详情','service-detail',item.id,'small'):''}`;
+      if(node.key==='callback')return `<p class="sop-hint">事项负责人：${e(s.staff.find(a=>a.id===item.ownerId)?.name||'服务组待分配')} · 约定反馈：${item.dueAt?beijingDate(item.dueAt):'待安排'}</p>${owned?b('安排反馈时间','service-followup',item.id,'small'):''}`;
+    }
     if (node.key === 'intent') return intentDetail(conv, item, ui, owned);
     if (node.key === 'order') {
       const draft = ui.drafts?.['sop-order:' + item.id] || {};
@@ -1892,6 +2436,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
   V.sopBoard = function (s, conv, ui, owned) {
     const cases = s.cases.filter(item => conv.caseIds.includes(item.id) && item.customerId === conv.customerId);
     const item = cases.find(item => item.id === ui.sopCaseByConversation?.[conv.id]) || cases.find(item => item.status !== 'completed') || cases[0];
+    if(s.schema===5&&item?.service)owned=owned&&item.ownerId===ui.agentId;
     const sop = item ? root.SupportDomain.sopView(s, conv.id, item.id) : {nodes: [], orderId: ''};
     const nodes = NODE_TITLES.map(([key, title]) => sop.nodes.find(node => node.key === key) || {key, title, status: key === 'close' && conv.state === 'closed' ? 'done' : 'idle', reason: item ? '当前未触发' : '尚未建立客户问题'});
     const pending = nodes.filter(node => ['todo', 'doing', 'waiting', 'error'].includes(node.status)).length;
@@ -1904,9 +2449,9 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
       const expanded = !!item && openKey === node.key;
       const followup = node.ticketId && s.tickets.find(ticket => ticket.id === node.ticketId && ticket.customerId === conv.customerId && ticket.caseId === item?.id);
       const steps = node.key === 'aftersales' ? STEP_TITLES.map((title, index) => node.steps?.[index] || {title, status: 'idle'}) : [];
-      const canCorrect = owned && item && !['intent', 'result', 'close'].includes(node.key) && ['todo', 'doing', 'waiting', 'error'].includes(node.status);
+      const canCorrect = owned && item && !(s.schema===5&&item.service) && !['intent', 'result', 'close'].includes(node.key) && ['todo', 'doing', 'waiting', 'error'].includes(node.status);
       return `<li class="sop-node node-${e(node.key)} status-${e(node.status)} ${expanded ? 'expanded' : ''}" data-sop-node="${e(node.key)}"><button type="button" class="sop-node-toggle" data-action="toggle-sop-node" data-id="${e(node.key)}" data-case="${e(item?.id || '')}" aria-expanded="${expanded}" aria-controls="sop-detail-${e(conv.id)}-${e(node.key)}" ${item ? '' : 'disabled'}><span class="sop-number">${index + 1}</span><span class="sop-node-title">${e(node.title)}</span>${nodeStatus(node.status)}<span class="sop-chevron" aria-hidden="true">${expanded ? '−' : '+'}</span></button><p class="sop-node-reason">${e(node.reason || '当前未触发')}</p>${followup ? `<div class="sop-followup">已安排跟进 ${b(e(followup.id), 'ticket-detail', followup.id, 'text')}</div>` : ''}${steps.length ? `<ol class="sop-substeps">${steps.map(step => `<li><span>${e(step.title)}</span>${nodeStatus(step.status)}</li>`).join('')}</ol>` : ''}${expanded ? `<div class="sop-node-detail" id="sop-detail-${e(conv.id)}-${e(node.key)}">${nodeDetail(s, conv, item, node, sop, ui, owned, ticket)}${canCorrect ? `<div class="sop-corrections">${node.status !== 'waiting' ? b('等待客户补充', 'sop-wait', node.key, 'text', caseAttributes(conv, item)) : ''}${b('标记不适用', 'sop-na', node.key, 'text', caseAttributes(conv, item))}</div>` : ''}</div>` : ''}</li>`;
-    }).join('')}</ol>${item ? suggestionCard(conv, item, sop, ui, owned) : ''}<section class="sop-customer-profile"><h3>客户资料</h3><div class="row"><span class="avatar">${e(customer?.name.slice(-2))}</span><div><strong>${e(customer?.name)}</strong><small>${e(customer?.level)} · ${e(customer?.id)}</small></div></div><p>${e(customer?.email)}</p><div class="sop-actions">${b('查看关闭记录', 'close-history', conv.id, 'small')}</div></section></div></aside>`;
+    }).join('')}</ol>${s.schema===5&&item?.service?(item.ownerId===ui.agentId?V.servicePanel(s,root.SupportDomain.serviceView(s,{id:ui.agentId,role:'agent'},{caseId:item.id}),ui,{id:ui.agentId,role:'agent'}):`<section class="service-panel"><h3>事项责任与办理</h3><p class="sop-hint">${item.ownerId?'由 '+e(s.staff.find(a=>a.id===item.ownerId)?.name||'其他客服')+' 负责该事项。':'接管会话后可查看并办理本服务组事项。'}</p></section>`):''}${item ? suggestionCard(conv, item, sop, ui, owned) : ''}<section class="sop-customer-profile"><h3>客户资料</h3><div class="row"><span class="avatar">${e(customer?.name.slice(-2))}</span><div><strong>${e(customer?.name)}</strong><small>${e(customer?.level)} · ${e(customer?.id)}</small></div></div><p>${e(customer?.email)}</p><div class="sop-actions">${b('查看关闭记录', 'close-history', conv.id, 'small')}</div></section></div></aside>`;
   };
 
   function aiControl(s, conv, owned) {
@@ -1926,6 +2471,8 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
 
   V.inbox = function (s, data, ui, actor) {
     const group = ui.deskFilter || 'queue';
+    const incoming=(data.handoffs||[]).filter(h=>h.targetId===actor.id&&h.status==='pending');
+    const incomingPanel=incoming.length?`<section class="service-incoming-panel"><h3>待接收交接 · ${incoming.length} 项</h3>${incoming.map(h=>`<article><strong>${e(data.cases.find(c=>c.id===h.caseId)?.title||h.caseId)}</strong><small>${e(h.reason)} · 截止 ${beijingDate(h.dueAt)}</small><div class="row">${b('查看事项','service-detail',h.caseId,'small')}${b('接收','service-accept',h.id,'small primary',`data-version="${e(h.version)}"`)}</div></article>`).join('')}</section>`:'';
     const query = (ui.search.inbox || '').toLowerCase();
     const names = {queue: '待接待', mine: '我接待中', history: '我的历史'};
     const filtered = data.conversations.filter(conv => group === 'queue' ? conv.state === 'queued' : group === 'mine' ? conv.state === 'human' && conv.ownerId === actor.id : conv.state === 'closed').filter(conv => (conv.id + ' ' + (data.customers.find(customer => customer.id === conv.customerId)?.name || '') + ' ' + conv.messages.map(message => message.body).join(' ')).toLowerCase().includes(query));
@@ -1940,7 +2487,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
       return `<button type="button" class="conversation-row ${conv.id === selected?.id ? 'selected' : ''}" data-action="select-conversation" data-id="${e(conv.id)}"><div class="row"><span class="avatar">${e(person?.name.slice(-2))}</span><strong>${e(person?.name)}</strong><time>${date(conv.updatedAt)}</time></div><p>${e(latest?.body || '尚未提问')}</p><div class="row between">${pill(conv.state, conv.state === 'queued' ? 'warn' : '')}${due(conv, s)}</div></button>`;
     }).join('');
     const offline = selected && selected.state !== 'closed' && status !== 'online' ? `<div class="connection-banner ${status === 'offline' ? 'offline' : ''}" role="status">${icon('clock', 15)}<div><strong>${status === 'offline' ? '客户已离线，请整理本次沟通' : '客户连接中断，在线状态待确认'}</strong><small>${status === 'offline' ? 'AI 续答已暂停。未完成事项安排妥当后，再保存记录并关闭。' : '暂不自动续答；连接恢复前保留当前办理进度。'}</small></div></div>` : '';
-    return `${heading('会话接待', '接待客户咨询、查看上下文并跟进处理。', `<span class="muted">${actor.available ? '接待中' : '暂离'}</span>${b(actor.available ? '设为暂离' : '恢复接待', 'presence', actor.id, 'small')}`)}<div class="workbench-viewport"><div class="inbox-shell workbench-shell"><aside class="conversation-list"><div class="list-tools"><div class="segmented">${Object.entries(names).map(([key, label]) => `<button type="button" class="${key === group ? 'active' : ''}" data-action="inbox-filter" data-id="${key}">${label}</button>`).join('')}</div>${search('inbox', query, '搜索客户或对话内容')}</div><div class="list-caption">${e(names[group])}<span>${filtered.length}</span></div><div class="conversation-rows" data-scroll="conversations">${list || empty(query ? '没有匹配的会话' : '当前没有会话', query ? '换一个关键词试试。' : '客户发起人工请求后，会出现在待接待队列。')}</div></aside><section class="agent-conversation">${selected ? `<header class="conversation-header"><div><h2>${e(customer?.name)}</h2><small>${e(selected.id)} · ${e(connectionLabel(status))}</small></div><div class="row">${selected.state === 'queued' ? b('接管会话', 'claim-conversation', selected.id, 'primary') : owned ? b('结束沟通', 'close-conversation', selected.id, 'small') : pill('只读记录')}</div></header>${offline}<div class="messages" id="agent-messages">${selected.handoffReason ? `<div class="handoff-banner">${icon('bolt')}<div><strong>转人工原因</strong><p>${e(selected.handoffReason)}</p></div></div>` : ''}${V.messages(selected)}</div>${owned ? composer(s, selected, ui) : `<div class="read-only-bar">${selected.state === 'queued' ? '接管后即可回复，人工接待请求持续保留。' : '这段沟通已结束，历史记录只读保留。'}</div>`}` : empty('选择一段会话', '选择会话后查看消息和处理信息。')}</section>${selected ? V.sopBoard(s, selected, ui, owned) : `<aside class="sop-workbench sop-empty">${empty('SOP 看板', '选择会话后查看完整流程与客户资料。')}</aside>`}</div></div>`;
+    return `${heading('会话接待', '接待客户咨询、查看上下文并跟进处理。', `<span class="muted">${actor.available ? '接待中' : '暂离'}</span>${b(actor.available ? '设为暂离' : '恢复接待', 'presence', actor.id, 'small')}`)}<div class="workbench-viewport"><div class="inbox-shell workbench-shell"><aside class="conversation-list">${incomingPanel}<div class="list-tools"><div class="segmented">${Object.entries(names).map(([key, label]) => `<button type="button" class="${key === group ? 'active' : ''}" data-action="inbox-filter" data-id="${key}">${label}</button>`).join('')}</div>${search('inbox', query, '搜索客户或对话内容')}</div><div class="list-caption">${e(names[group])}<span>${filtered.length}</span></div><div class="conversation-rows" data-scroll="conversations">${list || empty(query ? '没有匹配的会话' : '当前没有会话', query ? '换一个关键词试试。' : '客户发起人工请求后，会出现在待接待队列。')}</div></aside><section class="agent-conversation">${selected ? `<header class="conversation-header"><div><h2>${e(customer?.name)}</h2><small>${e(selected.id)} · ${e(connectionLabel(status))}</small></div><div class="row">${selected.state === 'queued' ? b('接管会话', 'claim-conversation', selected.id, 'primary') : owned ? b('结束沟通', 'close-conversation', selected.id, 'small') : pill('只读记录')}</div></header>${offline}<div class="messages" id="agent-messages">${selected.handoffReason ? `<div class="handoff-banner">${icon('bolt')}<div><strong>转人工原因</strong><p>${e(selected.handoffReason)}</p></div></div>` : ''}${V.messages(selected)}</div>${owned ? composer(s, selected, ui) : `<div class="read-only-bar">${selected.state === 'queued' ? '接管后即可回复，人工接待请求持续保留。' : '这段沟通已结束，历史记录只读保留。'}</div>`}` : empty('选择一段会话', '选择会话后查看消息和处理信息。')}</section>${selected ? V.sopBoard(s, selected, ui, owned) : `<aside class="sop-workbench sop-empty">${empty('SOP 看板', '选择会话后查看完整流程与客户资料。')}</aside>`}</div></div>`;
   };
 
   V.tickets = function (s, rows, ui, manager = false) {
@@ -1954,27 +2501,74 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     }).filter(ticket => (ticket.id + ' ' + ticket.title + ' ' + ticket.description).toLowerCase().includes(query));
     return `${heading(manager ? '团队协同' : '工单处理', manager ? '查看团队待办、分配任务并跟进处理进度。' : '查看和处理工单，跟进客户补充、办理结果与回访。', manager ? '' : b(`${icon('plus')} 新建工单`, 'standalone-ticket', '', 'primary'))}<div class="panel"><div class="table-toolbar">${search('tickets', query, '搜索工单编号或问题')}<select aria-label="工单状态" data-select="ticket-filter">${V.options([['all', '全部状态'], ['pool', '待领取'], ['working', '处理中'], ['waiting_customer', '待客户补充'], ['done', '结果已记录'], ['callback_pending', '待回访'], ['callback_due', '已到期回访']], filter)}</select></div>${list.length ? `<div class="table-scroll"><table class="callback-ticket-table"><thead><tr><th>工单 / 客户问题</th><th>状态</th><th>负责人</th><th>受理时间</th><th>处理目标</th><th>回访时间</th><th>操作</th></tr></thead><tbody>${list.map(ticket => {
       const callback = ticket.callback;
-      const editable = !manager && ticket.ownerId === ui.agentId;
+      const serviceCase=s.schema===5&&ticket.service;
+      const editable = !manager && ticket.ownerId === ui.agentId && !serviceCase;
       const overdue = callback?.status === 'pending' && callback.at <= now;
-      const action = manager && (ticket.status !== 'done' || callback?.status === 'pending') ? b('转派', 'assign-ticket', ticket.id, 'small') : !manager && !ticket.ownerId ? b('领取', 'claim-ticket', ticket.id, 'small') : b('查看处理', 'ticket-detail', ticket.id, 'small');
-      return `<tr><td><button type="button" class="table-title" data-action="ticket-detail" data-id="${e(ticket.id)}">${e(ticket.title)}</button><small>${e(ticket.id)} · ${e(s.customers.find(customer => customer.id === ticket.customerId)?.name || '未关联')}</small></td><td>${pill(ticket.status, ticket.status === 'waiting_customer' ? 'warn' : ticket.status === 'done' ? 'good' : '')}</td><td>${e(s.staff.find(actor => actor.id === ticket.ownerId)?.name || '待领取')}</td><td>${date(ticket.createdAt, true)}</td><td>${ticket.status === 'done' ? '—' : `<span class="${ticket.dueAt < now ? 'danger-text' : ''}">${date(ticket.dueAt, true)}${ticket.dueAt < now ? ' · 已超时' : ''}</span>`}</td><td class="callback-cell">${callback ? `<span class="${overdue ? 'danger-text' : ''}">${beijingDate(callback.at)}</span><small>${e(CALLBACK_LABELS[callback.status] || callback.status)}${overdue ? ' · 已到期' : ''}</small>` : '<span class="muted">未安排</span>'}</td><td><div class="ticket-row-actions">${action}${editable ? b(callback?.status === 'pending' ? '调整回访' : '安排回访', 'callback-plan', ticket.id, 'small') : ''}${editable && callback?.status === 'pending' ? b('登记回访结果', 'callback-result', ticket.id, 'small') : ''}</div></td></tr>`;
+      const action = serviceCase?(!manager&&!ticket.ownerId?b('领取事项','claim-ticket',ticket.id,'small primary'):b('查看事项','service-detail',ticket.caseId,'small')):manager && (ticket.status !== 'done' || callback?.status === 'pending') ? b('转派', 'assign-ticket', ticket.id, 'small') : !manager && !ticket.ownerId ? b('领取', 'claim-ticket', ticket.id, 'small') : b('查看处理', 'ticket-detail', ticket.id, 'small');
+      return `<tr><td>${serviceCase&&!ticket.ownerId&&!manager?`<strong class="table-title">${e(ticket.title)}</strong>`:`<button type="button" class="table-title" data-action="ticket-detail" data-id="${e(ticket.id)}">${e(ticket.title)}</button>`}<small>${e(ticket.id)} · ${e(s.customers.find(customer => customer.id === ticket.customerId)?.name || '未关联')}</small></td><td>${pill(ticket.status, ticket.status === 'waiting_customer' ? 'warn' : ticket.status === 'done' ? 'good' : '')}</td><td>${e(s.staff.find(actor => actor.id === ticket.ownerId)?.name || '待领取')}</td><td>${date(ticket.createdAt, true)}</td><td>${ticket.status === 'done' ? '—' : `<span class="${ticket.dueAt < now ? 'danger-text' : ''}">${date(ticket.dueAt, true)}${ticket.dueAt < now ? ' · 已超时' : ''}</span>`}</td><td class="callback-cell">${callback ? `<span class="${overdue ? 'danger-text' : ''}">${beijingDate(callback.at)}</span><small>${e(CALLBACK_LABELS[callback.status] || callback.status)}${overdue ? ' · 已到期' : ''}</small>` : '<span class="muted">未安排</span>'}</td><td><div class="ticket-row-actions">${action}${editable ? b(callback?.status === 'pending' ? '调整回访' : '安排回访', 'callback-plan', ticket.id, 'small') : ''}${editable && callback?.status === 'pending' ? b('登记回访结果', 'callback-result', ticket.id, 'small') : ''}</div></td></tr>`;
     }).join('')}</tbody></table></div>` : empty(query ? '没有匹配的工单' : '当前没有符合条件的工单', '请调整搜索词或筛选条件。')}</div>`;
   };
 })(window);
 
 </script>
 <script>
+/* 产出 Agent：Codex。运营视图主写与收敛 Agent：Codex。 */
 (function(root){
   'use strict';const V=root.SupportViews,{e,icon,b,pill,date,empty,heading,field,options,testReport}=V;
-  V.overview=function(s){const m=root.SupportDomain.metrics(s),ratio=m.cases?Math.round(m.confirmed/m.cases*100):0;return `${heading('服务概览','当前工作空间 · 全部服务记录 · 按客户问题汇总。',pill('当前快照'))}<div class="metric-grid">${[['待人工接待',m.waiting,'进入队列，尚未被接管','chat'],['办理中工单',m.activeTickets,`${m.overdue} 张超过处理目标`,'ticket'],['处理完成',m.completed,'已经答复或记录办理结果','check'],['客户明确确认',m.confirmed,'客户主动反馈已解决','shield']].map(([label,value,desc,glyph])=>`<div class="metric-card"><div class="row between"><span>${label}</span>${icon(glyph)}</div><strong>${value}</strong><small>${desc}</small></div>`).join('')}</div><div class="overview-grid"><section class="panel"><div class="panel-heading"><h2>服务结果</h2><span class="muted">按客户问题统计</span></div><div class="result-summary"><div><strong>${m.cases}</strong><span>客户问题</span></div><div><strong>${m.completed}</strong><span>处理完成</span></div><div><strong>${m.confirmed}</strong><span>明确确认</span></div></div><div class="progress-track"><span style="width:${ratio}%"></span></div><p class="muted small-text">客户明确确认 / 全部问题：${m.confirmed} / ${m.cases}。其中 ${m.botConfirmed} 项没有人工介入。此处不推算完整自动解决率或满意度。</p><div class="metric-definition"><strong>统计口径</strong><p>“处理完成”是服务方已形成答复或结果记录；“客户明确确认”是客户主动表示已解决。异议重开后不再计入当前已完成。</p></div></section><section class="panel"><div class="panel-heading"><h2>需要关注</h2>${icon('bolt')}</div><div class="attention-row"><span>知识与服务问题待复核</span><strong>${m.gaps}</strong></div><div class="attention-row"><span>尚未分配的办理工单</span><strong>${s.tickets.filter(t=>!t.ownerId&&t.status!=='done').length}</strong></div><div class="attention-row"><span>待客户补充信息</span><strong>${s.tickets.filter(t=>t.status==='waiting_customer').length}</strong></div>${b('进入质量复核','ops-page','quality','primary full')}</section></div><section class="panel"><div class="panel-heading"><h2>接待负荷</h2><span class="muted">每人最多 ${s.settings.capacity} 段同时接待</span></div><div class="staff-grid">${s.staff.filter(a=>a.role==='agent').map(a=>`<div class="staff-card"><span class="avatar">${e(a.name.slice(-2))}</span><div><strong>${e(a.name)}</strong><small>${a.available?'可接待':'暂离'}</small></div><strong class="push-right">${s.conversations.filter(c=>c.ownerId===a.id&&c.state==='human').length}<span class="muted"> / ${s.settings.capacity}</span></strong></div>`).join('')}</div></section>`;};
-  V.knowledge=function(s,ui){const id=ui.knowledgeId||s.knowledge[0]?.id,k=id==='new'?null:s.knowledge.find(k=>k.id===id),v=k?.draft||k?.live||{title:'',question:ui.prefillQuery||'',keywords:[],answer:'',source:'',positive:ui.prefillQuery||'',negative:'我要查订单',effectiveAt:new Date().toISOString(),expiresAt:''};const formKey='knowledge:'+(k?.id||'new'), draft=ui.drafts[formKey];const x=draft?{...v,...draft}:v;return `${heading('知识与答复','编辑草稿 → 验证命中与边界 → 发布。客户答复保留引用版本。',b(`${icon('plus')} 新建知识`,'new-knowledge','','primary'))}<div class="knowledge-layout"><aside class="panel knowledge-list"><div class="panel-heading"><h2>服务知识</h2><span>${s.knowledge.length}</span></div>${s.knowledge.map(article=>`<button type="button" class="knowledge-row ${article.id===k?.id?'selected':''}" data-action="select-knowledge" data-id="${e(article.id)}"><strong>${e((article.draft||article.live)?.title||'未命名')}</strong><small>${e(article.id)} · ${article.live?'v'+article.live.version:'尚未发布'}</small><div class="row">${pill(article.disabled?'已停用':article.live?'已发布':'草稿',article.disabled?'warn':article.live?'good':'')}${article.draft&&article.live?pill('有草稿'):''}</div></button>`).join('')}</aside><section class="panel knowledge-editor"><div class="panel-heading"><div><h2>${k?'维护知识':'新增知识'}</h2><small class="muted">${k?.live?`当前客户可用版本 v${k.live.version}`:'保存后才能测试和发布'}</small></div>${k?.live&&!k.disabled?b('停用','disable-knowledge',k.id,'small text'):''}</div><form data-form="knowledge" data-id="${e(k?.id||'new')}"><div class="form-grid">${field('标题','title',x.title,'text','required maxlength="120"')}${field('标准问题','question',x.question,'text','required maxlength="300"')}</div>${field('答复内容','answer',x.answer,'textarea','required maxlength="4000"')}${field('来源 / 审核依据','source',x.source,'text','required maxlength="300" placeholder="填写文档名称或审核依据"')}${field('匹配关键词，用逗号分隔','keywords',Array.isArray(x.keywords)?x.keywords.join(','):x.keywords,'text','required maxlength="500"')}<div class="form-grid">${field('生效日期','effectiveAt',x.effectiveAt?.slice(0,10),'date','required')}${field('失效日期（可留空）','expiresAt',x.expiresAt?.slice(0,10),'date')}</div><div class="form-grid">${field('正例：应该用这条知识回答','positive',x.positive,'text','required maxlength="300"')}${field('反例：不应误命中这条知识','negative',x.negative,'text','required maxlength="300"')}</div><div class="form-footer"><span class="muted small-text">${draft?'有未保存的修改':'草稿不会直接影响客户答复'}</span><button class="btn primary" type="submit">保存草稿</button></div></form><div class="release-actions">${b('运行回归','test-knowledge',k?.id||'','',!k?.draft||draft?'disabled':'')}${b('发布当前草稿','publish-knowledge',k?.id||'','primary',!k?.validation?.passed||draft?'disabled':'')}<span class="muted small-text">${k?.draft?'发布后，下一次知识检索使用新版本':'发布内容与草稿分开保存'}</span></div>${testReport(k?.validation)}${k?.versions.length?`<details class="history-versions"><summary>历史发布版本（${k.versions.length}）</summary>${k.versions.map(v=>`<div><strong>v${v.version} · ${e(v.title)}</strong><p>${e(v.answer)}</p><small>${e(v.source)}</small></div>`).join('')}</details>`:''}</section></div>`;};
-  V.flow=function(s,ui){const draft=ui.drafts['flow:new'],v=draft||s.flow.draft||s.flow.live;return `${heading('接待策略与测试','管理诉求路由、人工交接与售后受理规则，验证后发布。',pill('发布版本 v'+s.flow.live.version,'good'))}<section class="panel"><div class="panel-heading"><h2>接待路径</h2><span class="muted">每段新咨询保存当时的策略版本</span></div><div class="flow-strip">${[['chat','客户表达','接收问题与已知订单'],['flow','识别诉求','多诉求分开处理'],['book','执行服务','知识 / 订单 / 售后'],['shield','核对边界','来源 / 归属 / 明确确认'],['users','完成或交接','结果记录 / 人工接续']].map(([glyph,title,sub],i)=>`${i?'<span class="flow-arrow">→</span>':''}<div class="flow-step">${icon(glyph,23)}<strong>${title}</strong><small>${sub}</small></div>`).join('')}</div></section><div class="overview-grid"><section class="panel"><div class="panel-heading"><h2>策略草稿</h2>${s.flow.draft?pill('待发布'):pill('与已发布策略一致')}</div><form data-form="flow" data-id="new">${field('明确转人工的触发词','humanWords',Array.isArray(v.humanWords)?v.humanWords.join(','):v.humanWords,'text','required')}<label class="field"><span>售后受理</span><select name="intakeEnabled">${options([['true','开启：核对订单后，填写并确认申请'],['false','关闭：交给人工协助登记']],String(v.intakeEnabled))}</select></label><p class="muted small-text">客户明确要求人工始终优先；订单必须属于当前客户。上述边界不可通过配置关闭。</p><div class="form-footer"><button class="btn primary" type="submit">保存策略草稿</button></div></form><div class="release-actions">${b('运行回归','test-flow','','',!s.flow.draft||draft?'disabled':'')}${b('发布策略','publish-flow','','primary',!s.flow.validation?.passed||draft?'disabled':'')}</div></section><section class="panel"><div class="panel-heading"><h2>草稿测试</h2>${pill('隔离运行')}</div><form data-form="flow-query" data-id="new">${field('输入问题','query',ui.drafts['flow-query:new']?.query||'查物流 SO20260926001，再申请退货','textarea','required')}<label class="checkbox"><input type="checkbox" name="orderFailure" value="true" ${ui.drafts['flow-query:new']?.orderFailure?'checked':''}>本次测试让订单查询失败</label><p class="muted small-text">按客户 001 的订单权限运行。测试不会创建客户会话、工单或修改接待配置。</p><p class="muted small-text" data-flow-unsaved ${draft?'':'hidden'}>请先保存策略草稿，再运行单条测试。</p><button class="btn" type="submit" ${draft?'disabled':''}>运行单条测试</button></form>${ui.flowTest?`<div class="query-result"><strong>实际执行分支</strong>${ui.flowTest.map(r=>`<p>${pill(r.kind)} ${e(r.knowledge?.title||r.order?.id||r.reason||'')}</p>`).join('')}</div>`:''}</section></div><section class="panel">${testReport(s.flow.validation)}</section><section class="panel"><div class="panel-heading"><h2>发布记录</h2><span class="muted">原会话继续使用启动时的版本</span></div><p>当前：v${s.flow.live.version} · 人工触发词：${e(s.flow.live.humanWords.join('、'))} · 售后受理${s.flow.live.intakeEnabled?'开启':'关闭'}</p>${s.flow.versions.map(v=>`<p class="muted">v${v.version} · ${e(v.humanWords.join('、'))} · 售后受理${v.intakeEnabled?'开启':'关闭'}</p>`).join('')}</section>`;};
-  V.quality=function(s,ui,role){const list=s.gaps;return `${heading(role==='manager'?'质量复核':'服务改进队列',role==='manager'?'复核服务问题，分派整改并验收。':'根据已确认的问题维护知识，跟进整改进度。',pill('知识与答复问题'))}<div class="quality-list">${list.map(g=>{const conv=s.conversations.find(c=>c.id===g.conversationId),reply=conv?.messages.find(m=>m.role==='bot'&&m.body!=='');return `<section class="panel quality-card"><div class="row between"><div class="row">${pill(g.category)}${pill(g.status,g.status==='closed'?'good':g.status==='new'?'warn':'')}</div><small class="muted">${e(g.id)} · ${date(g.createdAt,true)}</small></div><h2>${e(g.query)}</h2><p class="muted small-text">来自会话 ${e(g.conversationId)}。原始问题在验收时原样重放，不改写成更容易通过的问法。</p>${g.review?`<div class="review-note"><strong>复核依据</strong><p>${e(g.review)}</p>${g.cause?`<small>根因：${e(g.cause)}</small>`:''}</div>`:''}${g.knowledgeId?`<p class="small-text">关联整改知识：${e(g.knowledgeId)} · ${e(s.knowledge.find(k=>k.id===g.knowledgeId)?.live?.title||'待发布草稿')}</p>`:''}<div class="row">${role==='manager'&&!['closed','dismissed'].includes(g.status)?b('复核线索','review-gap',g.id,'small'):''}${role==='operator'&&['confirmed','fixing'].includes(g.status)?`${b('新增整改知识','new-gap-knowledge',g.id,'small')}${b('关联整改知识','link-gap',g.id,'small')}`:''}${role==='manager'&&g.status==='fixing'?b('验证原问题并验收','accept-gap',g.id,'primary small'):''}${g.status==='closed'?pill('已通过原问题验证与全量回归','good'):''}</div>${g.acceptance?`<p class="small-text">验收说明：${e(g.acceptance)}</p>`:''}${role==='manager'?`<details><summary>查看服务证据</summary><div class="evidence-messages">${conv?.messages.filter(m=>m.role!=='system').map(m=>`<p><strong>${e(m.author||m.role)}</strong> ${e(m.body)}</p>`).join('')||'原会话不可用'}</div></details>`:''}</section>`;}).join('')||`<div class="panel">${empty('暂无质量待办','未命中知识或客服标记问题后，会形成待复核线索。')}</div>`}</div>`;};
+  const serviceLabels={clarifying:'待澄清',awaiting_review:'待审核',waiting_customer:'待客户补充',approved:'已批准',rejected:'已拒绝',withdrawal_requested:'撤回待确认',withdrawn:'已撤回',awaiting_return:'待寄回',in_transit:'寄回运输中',received:'已收货，待验收',passed:'验收通过',review_required:'待复核',awaiting_refund:'待提交退款',not_submitted:'尚未提交',refund_pending:'退款处理中',refund_unknown:'退款结果未知',pending:'处理中',unknown:'结果未知',succeeded:'模拟渠道成功',failed:'失败，待核实',awaiting_notification:'待通知',sent:'模拟通知已发送',completed:'办理完成',dispute_review:'客户异议复核',confirmed:'客户已确认',disputed:'客户有异议',open:'待处理',none:'尚未开始'};
+  const serviceMetrics=[
+    ['total','全部有效事项','咨询与办理按事项去重；纯寒暄不建事项。','inbox'],
+    ['queries','已查询','取得有效业务查询事实的事项；查询结果不代表业务已经办理。','search'],
+    ['accepted','已受理','已经创建正式商品级申请的事项，包含后续拒绝或撤回。','ticket'],
+    ['completed','办理完成','已有对应诉求的解决证据且没有未结异议。','check'],
+    ['refundSucceeded','退款成功','有明确成功的模拟退款回执；客户到账反馈另行记录。','shield'],
+    ['confirmed','客户确认','当前办理完成，且客户主动确认已解决。','chat'],
+    ['aiIndependent','AI 独立完成','当前已有有效结果，且全程未记录人工办理；分母为全部有效事项。','bolt'],
+    ['humanInvolved','人工参与','实际接管、审查、验收或财务办理均计入。','users'],
+    ['waiting','等待中','当前尚未办理完成，包含补件与外部等待。','clock'],
+    ['unknown','结果未知','退款结果未知，需继续核实原请求。','bolt']
+  ];
+  const serviceStatus=value=>value?serviceLabels[value]||value:'—';
+  const serviceTime=value=>value?date(value,true):'未安排';
+  function commerceOverview(s,ui={},role='manager'){
+    const m=root.SupportDomain.metrics(s).service||{scope:'演示数据',total:0,rows:[],metricCaseIds:{}};
+    const selected=serviceMetrics.some(([key])=>key===ui.serviceMetric)?ui.serviceMetric:'total';
+    const [,,definition]=serviceMetrics.find(([key])=>key===selected),ids=new Set(m.metricCaseIds?.[selected]||[]);
+    const rows=(m.rows||[]).filter(row=>ids.has(row.caseId)),title=serviceMetrics.find(([key])=>key===selected)[1];
+    const pending=(s.commerce.aftersales||[]).filter(a=>a.status==='awaiting_review');
+    return `${heading('服务概览','当前电商工作空间 · 按有效事项统计 · 查询、办理、执行结果与客户反馈分别记录。',pill(m.scope||'演示数据','warn'))}<div class="metric-grid service-metrics">${serviceMetrics.map(([key,label,desc,glyph])=>`<button type="button" class="metric-card ${key===selected?'selected':''}" style="text-align:left" data-action="service-metric" data-id="${key}" aria-pressed="${key===selected}"><div class="row between"><span>${label}</span>${icon(glyph)}</div><strong>${e(m[key]??0)}</strong><small>${e(desc)}</small><small>分母：${e(m.total)} 个有效事项 · 查看对应事项</small></button>`).join('')}</div><section class="panel"><div class="panel-heading"><div><h2>${e(title)} · 对应事项</h2><small class="muted">${e(definition)}</small></div>${pill('演示数据')}</div><p class="muted small-text">当前指标：${e(m[selected]??0)} / 全部有效事项 ${e(m.total)}。同一事项可以同时属于多个指标；退款执行成功与客户确认分别统计。</p>${rows.length?`<div class="table-scroll"><table><thead><tr><th>事项与商品</th><th>服务阶段</th><th>申请 / 退款 / 通知</th><th>客户反馈</th><th>责任与下一次反馈</th><th>人工参与</th><th>证据</th></tr></thead><tbody>${rows.map(row=>`<tr data-service-case="${e(row.caseId)}"><td><strong>${e(row.title)}</strong><br><small>${e(row.caseId)} · ${e(row.itemName||'未关联商品')}</small></td><td>${pill(serviceStatus(row.serviceStage))}<br><small>${e(serviceStatus(row.status))}</small></td><td><small>申请：${e(serviceStatus(row.requestStatus))}<br>退款：${e(serviceStatus(row.refundStatus))}<br>通知：${e(serviceStatus(row.notificationStatus))}</small></td><td>${e(row.feedback==='pending'?(row.status==='completed'?'待客户确认':'尚未形成可确认结果'):serviceStatus(row.feedback))}</td><td>${e(row.ownerName||'服务责任组')}<br><small>下一次反馈：${e(serviceTime(row.dueAt))}</small></td><td>${row.humanInvolved?'有实际人工参与':'未记录人工参与'}</td><td>${b('查看事项','service-detail',row.caseId,'small')}</td></tr>`).join('')}</tbody></table></div>`:empty('该指标暂无对应事项','统计随实际演示操作更新。')}<div class="metric-definition"><strong>统计口径</strong><p>范围为当前电商演示数据。已查询、已受理、办理完成、退款成功和客户确认各有独立证据；异议复核保留成功退款事实，当前办理完成与客户确认按最新事项状态计算。这里不推算满意度、成本节省或 ROI。</p></div></section>${role==='manager'?`<section class="panel"><div class="panel-heading"><h2>交接时限</h2>${b('核对超时交接','service-expire-handoffs','','small')}</div><p class="muted small-text">接收逾期时保留原负责人，并升级服务经理跟进。待接收 ${(s.commerce.handoffs||[]).filter(h=>h.status==='pending').length} 项。</p></section><section class="panel"><div class="panel-heading"><h2>待审核申请</h2>${pill('服务经理审批')}</div><p class="muted small-text">批准只形成审批决定，寄回验收与退款执行仍须继续办理。每条申请保留负责人和下一次反馈时间。</p>${pending.map(a=>{const row=(m.rows||[]).find(r=>r.caseId===a.caseId);return `<div class="attention-row"><div><strong>${e(a.id)} · ${e(row?.itemName||s.commerce.items.find(i=>i.id===a.itemId)?.name||a.itemId)}</strong><p class="muted small-text">${e(row?.ownerName||'服务责任组')} · 下一次反馈：${e(serviceTime(row?.dueAt))}</p></div>${b('查看并审核','service-detail',a.caseId,'small primary')}</div>`;}).join('')||empty('暂无待审核申请','正式商品级申请进入审核后显示在此处。')}</section>`:''}`;
+  }
+  function knowledgeScope(s,x){
+    const day=value=>value&&Number.isFinite(new Date(value).getTime())?new Date(value).toISOString().slice(0,10):'';
+    return `${field('适用商品 ID，用逗号分隔（空值表示通用知识）','scopeItemIds',Array.isArray(x.scopeItemIds)?x.scopeItemIds.join(','):x.scopeItemIds||'','text','maxlength="500"')}<p class="muted small-text">演示商品：${s.commerce.items.map(item=>e(item.id)+' · '+e(item.name)).join('；')}。商品售后政策答复由适用的结构规则生成金额、审批与寄回要求；自由文案用于一般说明。个人资格、支付、物流与退款状态须查询业务记录。</p><div class="form-grid">${field('业务生效日期','effectiveFrom',day(x.effectiveFrom||x.effectiveAt),'date','required')}${field('业务失效日期（可留空）','effectiveTo',day(x.effectiveTo||x.expiresAt),'date')}</div><div class="form-grid">${field('规则来源','ruleSource',x.ruleSource||x.source||'','text','required maxlength="300"')}${field('审核责任人','reviewer',x.reviewer||'','text','required maxlength="120"')}</div><p class="muted small-text">保存草稿后重新验证适用商品、时间和规则依赖；发布沿用知识版本记录。</p>`;
+  }
+  function serviceEvalReport(report){
+    if(!report)return empty('还没有流程评测记录','运行固定样例后查看实际结果，失败或依赖变化时不能作为发布证据。');
+    const versions=report.dependencies?Object.entries(report.dependencies).map(([key,value])=>e(key)+'：'+e(typeof value==='object'?JSON.stringify(value):value)).join(' · '):'';
+    return `<div class="test-report service-eval-report"><div class="row between"><strong>流程评测 ${e(report.id)}</strong>${pill(report.pass?'全部通过':'存在失败',report.pass?'good':'warn')}</div><p class="muted small-text">执行时间：${date(report.at,true)}${versions?' · '+versions:''}</p><p class="muted small-text">评测保留知识、接待策略、商品规则与业务事实版本。固定样例通过只证明本地模拟流程；当前版本必须与评测依赖一致。</p>${(report.rows||[]).map(row=>`<div class="test-row" data-scenario="${e(row.id)}"><span class="${row.pass?'success-text':'danger-text'}">${row.pass?'✓':'×'}</span><div><strong>${e(row.title)}</strong><small>${e(row.id)} · ${e(row.reason||'')}</small></div></div>`).join('')}</div>`;
+  }
+  function serviceEvalPanel(s,knowledgeId=''){
+    const reports=s.commerce.evaluations||[],report=reports.filter(r=>!knowledgeId||r.knowledgeId===knowledgeId).at(-1)||(!knowledgeId?reports.at(-1):null);
+    const current=report&&root.SupportDomain.serviceEvalCurrent?.(s,knowledgeId);
+    return `<section class="panel service-eval-panel"><div class="panel-heading"><h2>流程评测</h2>${pill('隔离模拟')}${report?pill(current?'与当前依赖匹配':'需重新评测',current?'good':'warn'):''}</div><p class="muted small-text">固定覆盖规则咨询与业务触发、两商品、成功、拒绝、补件、超时、结果未知、退款幂等和改变诉求。评测在状态副本中运行，不创建客户业务记录或发送外部请求。</p>${b('运行流程评测','service-eval',knowledgeId,'primary')}<p class="muted small-text">规则草稿、商品范围、有效期或接待策略变化后，需要重新取得匹配当前依赖的通过记录。</p>${serviceEvalReport(report)}</section>`;
+  }
+  function commerceQuality(s,ui,role){
+    const causeNames={knowledge:'知识',routing:'检索 / 路由',business:'业务查询',workflow:'办理流程',collaboration:'协作',notification:'通知'};
+    return `${heading(role==='manager'?'质量复核':'服务改进队列',role==='manager'?'确认根因并用原失败路径验收。':'按根因登记整改，保留对应知识或流程评测依据。',pill('演示数据'))}<div class="quality-list">${s.gaps.map(g=>{const conv=s.conversations.find(c=>c.id===g.conversationId),kind=g.causeType||'knowledge',knowledge=kind==='knowledge';return `<section class="panel quality-card"><div class="row between"><div class="row">${pill(g.category)}${pill(g.status==='closed'?'已验收':g.status,g.status==='closed'?'good':g.status==='new'?'warn':'')}${pill(causeNames[kind]||kind)}</div><small class="muted">${e(g.id)} · ${date(g.createdAt,true)}</small></div><h2>${e(g.query)}</h2><p class="muted small-text">来自会话 ${e(g.conversationId)}。验收保留原始问题，复验对应的失败路径。</p>${g.review?`<div class="review-note"><strong>复核依据</strong><p>${e(g.review)}</p><small>根因：${e(causeNames[kind]||kind)} · ${e(g.cause)}</small></div>`:''}${knowledge&&g.knowledgeId?`<p class="small-text">关联整改知识：${e(g.knowledgeId)} · ${e(s.knowledge.find(k=>k.id===g.knowledgeId)?.live?.title||'待发布草稿')}</p>`:''}${!knowledge&&g.remediation?`<div class="review-note"><strong>流程整改</strong><p>${e(g.remediation)}</p><small>关联失败样例：${e(g.scenarioId)}</small></div>`:''}<div class="row">${role==='manager'&&!['closed','dismissed'].includes(g.status)?b('复核线索','review-gap',g.id,'small'):''}${role==='operator'&&['confirmed','fixing'].includes(g.status)?knowledge?`${b('新增整改知识','new-gap-knowledge',g.id,'small')}${b('关联整改知识','link-gap',g.id,'small')}`:b('登记流程整改','link-gap-repair',g.id,'small'):''}${role==='manager'&&g.status==='fixing'?b(knowledge?'验证原问题并验收':'复验失败路径并验收','accept-gap',g.id,'primary small'):''}${g.status==='closed'?pill('已记录对应整改复验','good'):''}</div>${g.acceptance?`<p class="small-text">验收说明：${e(g.acceptance)}</p>`:''}${g.validation?.at?`<p class="muted small-text">复验时间：${date(g.validation.at,true)} · 依赖指纹：${e(g.validation.fingerprint)}</p>`:''}${role==='manager'?`<details><summary>查看服务证据</summary><div class="evidence-messages">${conv?.messages.filter(m=>m.role!=='system').map(m=>`<p><strong>${e(m.author||m.role)}</strong> ${e(m.body)}${m.citation?`<small> · ${e(m.citation.title)} v${e(m.citation.version)}</small>`:''}</p>`).join('')||'原会话不可用'}</div></details>`:''}</section>`;}).join('')||`<div class="panel">${empty('暂无质量待办','未命中知识或客服标记问题后，会形成待复核线索。')}</div>`}</div>`;
+  }
+  function simulatedReceipts(s){
+    const kinds=[['warehouse_received','模拟仓库收货'],['warehouse_passed','模拟验收通过'],['warehouse_failed','模拟验收异常'],['refund_succeeded','模拟退款成功'],['refund_unknown','模拟退款未知'],['refund_failed','模拟退款失败'],['notification_sent','模拟通知发送成功'],['notification_failed','模拟通知发送失败'],['withdrawal_confirmed','模拟撤回确认']];
+    return `<section class="panel simulated-receipts"><div class="panel-heading"><h2>演示事件面板</h2>${pill('系统管理员 · 本地模拟','warn')}</div><p class="muted small-text">先按申请流程提交业务请求，再对对应申请注入模拟回执。每个事件经过业务守卫并留痕；未满足审批、寄回、退款请求或通知条件时会提示失败。</p>${(s.commerce.aftersales||[]).map(a=>`<section class="result-note"><h3>${e(a.id)} · ${e(s.commerce.items.find(i=>i.id===a.itemId)?.name||a.itemId)}</h3><p>${e(serviceStatus(a.status))} · 下一回执版本 v${e((a.receiptVersion||0)+1)}</p><div class="row wrap">${kinds.map(([kind,label])=>b(label,'service-receipt',a.id,'small',`data-kind="${kind}" data-version="${e((a.receiptVersion||0)+1)}"`)).join('')}</div></section>`).join('')||empty('暂无可注入回执的申请','先提交商品级售后申请，再选择对应申请操作。')}<p class="muted small-text">本地模拟回执不会执行资金操作、仓库动作或发送短信邮件。服务经理的审批仍从待审核申请进入。</p></section>`;
+  }
+  V.overview=function(s,ui={},role='manager'){if(s.schema===5)return commerceOverview(s,ui,role);const m=root.SupportDomain.metrics(s),ratio=m.cases?Math.round(m.confirmed/m.cases*100):0;return `${heading('服务概览','当前工作空间 · 全部服务记录 · 按客户问题汇总。',pill('当前快照'))}<div class="metric-grid">${[['待人工接待',m.waiting,'进入队列，尚未被接管','chat'],['办理中工单',m.activeTickets,`${m.overdue} 张超过处理目标`,'ticket'],['处理完成',m.completed,'已经答复或记录办理结果','check'],['客户明确确认',m.confirmed,'客户主动反馈已解决','shield']].map(([label,value,desc,glyph])=>`<div class="metric-card"><div class="row between"><span>${label}</span>${icon(glyph)}</div><strong>${value}</strong><small>${desc}</small></div>`).join('')}</div><div class="overview-grid"><section class="panel"><div class="panel-heading"><h2>服务结果</h2><span class="muted">按客户问题统计</span></div><div class="result-summary"><div><strong>${m.cases}</strong><span>客户问题</span></div><div><strong>${m.completed}</strong><span>处理完成</span></div><div><strong>${m.confirmed}</strong><span>明确确认</span></div></div><div class="progress-track"><span style="width:${ratio}%"></span></div><p class="muted small-text">客户明确确认 / 全部问题：${m.confirmed} / ${m.cases}。其中 ${m.botConfirmed} 项没有人工介入。此处不推算完整自动解决率或满意度。</p><div class="metric-definition"><strong>统计口径</strong><p>“处理完成”是服务方已形成答复或结果记录；“客户明确确认”是客户主动表示已解决。异议重开后不再计入当前已完成。</p></div></section><section class="panel"><div class="panel-heading"><h2>需要关注</h2>${icon('bolt')}</div><div class="attention-row"><span>知识与服务问题待复核</span><strong>${m.gaps}</strong></div><div class="attention-row"><span>尚未分配的办理工单</span><strong>${s.tickets.filter(t=>!t.ownerId&&t.status!=='done').length}</strong></div><div class="attention-row"><span>待客户补充信息</span><strong>${s.tickets.filter(t=>t.status==='waiting_customer').length}</strong></div>${b('进入质量复核','ops-page','quality','primary full')}</section></div><section class="panel"><div class="panel-heading"><h2>接待负荷</h2><span class="muted">每人最多 ${s.settings.capacity} 段同时接待</span></div><div class="staff-grid">${s.staff.filter(a=>a.role==='agent').map(a=>`<div class="staff-card"><span class="avatar">${e(a.name.slice(-2))}</span><div><strong>${e(a.name)}</strong><small>${a.available?'可接待':'暂离'}</small></div><strong class="push-right">${s.conversations.filter(c=>c.ownerId===a.id&&c.state==='human').length}<span class="muted"> / ${s.settings.capacity}</span></strong></div>`).join('')}</div></section>`;};
+  V.knowledge=function(s,ui){const id=ui.knowledgeId||s.knowledge[0]?.id,k=id==='new'?null:s.knowledge.find(k=>k.id===id),v=k?.draft||k?.live||{title:'',question:ui.prefillQuery||'',keywords:[],answer:'',source:'',positive:ui.prefillQuery||'',negative:'我要查订单',effectiveAt:new Date().toISOString(),expiresAt:''};const formKey='knowledge:'+(k?.id||'new'), draft=ui.drafts[formKey];const x=draft?{...v,...draft}:v;return `${heading('知识与答复','编辑草稿 → 验证命中与边界 → 发布。客户答复保留引用版本。',b(`${icon('plus')} 新建知识`,'new-knowledge','','primary'))}<div class="knowledge-layout"><aside class="panel knowledge-list"><div class="panel-heading"><h2>服务知识</h2><span>${s.knowledge.length}</span></div>${s.knowledge.map(article=>`<button type="button" class="knowledge-row ${article.id===k?.id?'selected':''}" data-action="select-knowledge" data-id="${e(article.id)}"><strong>${e((article.draft||article.live)?.title||'未命名')}</strong><small>${e(article.id)} · ${article.live?'v'+article.live.version:'尚未发布'}</small><div class="row">${pill(article.disabled?'已停用':article.live?'已发布':'草稿',article.disabled?'warn':article.live?'good':'')}${article.draft&&article.live?pill('有草稿'):''}</div></button>`).join('')}</aside><section class="panel knowledge-editor"><div class="panel-heading"><div><h2>${k?'维护知识':'新增知识'}</h2><small class="muted">${k?.live?`当前客户可用版本 v${k.live.version}`:'保存后才能测试和发布'}</small></div>${k?.live&&!k.disabled?b('停用','disable-knowledge',k.id,'small text'):''}</div><form data-form="knowledge" data-id="${e(k?.id||'new')}"><div class="form-grid">${field('标题','title',x.title,'text','required maxlength="120"')}${field('标准问题','question',x.question,'text','required maxlength="300"')}</div>${field('答复内容','answer',x.answer,'textarea','required maxlength="4000"')}${field('来源 / 审核依据','source',x.source,'text','required maxlength="300" placeholder="填写文档名称或审核依据"')}${field('匹配关键词，用逗号分隔','keywords',Array.isArray(x.keywords)?x.keywords.join(','):x.keywords,'text','required maxlength="500"')}${s.schema===5?knowledgeScope(s,x):''}<div class="form-grid">${field(s.schema===5?'知识生效日期':'生效日期','effectiveAt',x.effectiveAt?.slice(0,10),'date','required')}${field(s.schema===5?'知识失效日期（可留空）':'失效日期（可留空）','expiresAt',x.expiresAt?.slice(0,10),'date')}</div><div class="form-grid">${field('正例：应该用这条知识回答','positive',x.positive,'text','required maxlength="300"')}${field('反例：不应误命中这条知识','negative',x.negative,'text','required maxlength="300"')}</div><div class="form-footer"><span class="muted small-text">${draft?'有未保存的修改':'草稿不会直接影响客户答复'}</span><button class="btn primary" type="submit">保存草稿</button></div></form><div class="release-actions">${b('运行回归','test-knowledge',k?.id||'','',!k?.draft||draft?'disabled':'')}${b('发布当前草稿','publish-knowledge',k?.id||'','primary',!k?.validation?.passed||draft||s.schema===5&&!root.SupportDomain.serviceEvalCurrent?.(s,k?.id||'')?'disabled':'')}<span class="muted small-text">${k?.draft?'发布后，下一次知识检索使用新版本':'发布内容与草稿分开保存'}</span></div>${testReport(k?.validation)}${s.schema===5?serviceEvalPanel(s,k?.id||''):''}${k?.versions.length?`<details class="history-versions"><summary>历史发布版本（${k.versions.length}）</summary>${k.versions.map(v=>`<div><strong>v${v.version} · ${e(v.title)}</strong><p>${e(v.answer)}</p><small>${e(v.source)}</small></div>`).join('')}</details>`:''}</section></div>`;};
+  V.flow=function(s,ui){const draft=ui.drafts['flow:new'],v=draft||s.flow.draft||s.flow.live;return `${heading('接待策略与测试','管理诉求路由、人工交接与售后受理规则，验证后发布。',pill('发布版本 v'+s.flow.live.version,'good'))}<section class="panel"><div class="panel-heading"><h2>接待路径</h2><span class="muted">每段新咨询保存当时的策略版本</span></div><div class="flow-strip">${[['chat','客户表达','接收问题与已知订单'],['flow','识别诉求','多诉求分开处理'],['book','执行服务','知识 / 订单 / 售后'],['shield','核对边界','来源 / 归属 / 明确确认'],['users','完成或交接','结果记录 / 人工接续']].map(([glyph,title,sub],i)=>`${i?'<span class="flow-arrow">→</span>':''}<div class="flow-step">${icon(glyph,23)}<strong>${title}</strong><small>${sub}</small></div>`).join('')}</div></section><div class="overview-grid"><section class="panel"><div class="panel-heading"><h2>策略草稿</h2>${s.flow.draft?pill('待发布'):pill('与已发布策略一致')}</div><form data-form="flow" data-id="new">${field('明确转人工的触发词','humanWords',Array.isArray(v.humanWords)?v.humanWords.join(','):v.humanWords,'text','required')}<label class="field"><span>售后受理</span><select name="intakeEnabled">${options([['true','开启：核对订单后，填写并确认申请'],['false','关闭：交给人工协助登记']],String(v.intakeEnabled))}</select></label><p class="muted small-text">客户明确要求人工始终优先；订单必须属于当前客户。上述边界不可通过配置关闭。</p><div class="form-footer"><button class="btn primary" type="submit">保存策略草稿</button></div></form><div class="release-actions">${b('运行回归','test-flow','','',!s.flow.draft||draft?'disabled':'')}${b('发布策略','publish-flow','','primary',!s.flow.validation?.passed||draft?'disabled':'')}</div></section><section class="panel"><div class="panel-heading"><h2>草稿测试</h2>${pill('隔离运行')}</div><form data-form="flow-query" data-id="new">${field('输入问题','query',ui.drafts['flow-query:new']?.query||'查物流 SO20260926001，再申请退货','textarea','required')}<label class="checkbox"><input type="checkbox" name="orderFailure" value="true" ${ui.drafts['flow-query:new']?.orderFailure?'checked':''}>本次测试让订单查询失败</label><p class="muted small-text">按客户 001 的订单权限运行。测试不会创建客户会话、工单或修改接待配置。</p><p class="muted small-text" data-flow-unsaved ${draft?'':'hidden'}>请先保存策略草稿，再运行单条测试。</p><button class="btn" type="submit" ${draft?'disabled':''}>运行单条测试</button></form>${ui.flowTest?`<div class="query-result"><strong>实际执行分支</strong>${ui.flowTest.map(r=>`<p>${pill(r.kind)} ${e(r.knowledge?.title||r.order?.id||r.reason||'')}</p>`).join('')}</div>`:''}</section></div><section class="panel">${testReport(s.flow.validation)}</section><section class="panel"><div class="panel-heading"><h2>发布记录</h2><span class="muted">原会话继续使用启动时的版本</span></div><p>当前：v${s.flow.live.version} · 人工触发词：${e(s.flow.live.humanWords.join('、'))} · 售后受理${s.flow.live.intakeEnabled?'开启':'关闭'}</p>${s.flow.versions.map(v=>`<p class="muted">v${v.version} · ${e(v.humanWords.join('、'))} · 售后受理${v.intakeEnabled?'开启':'关闭'}</p>`).join('')}</section>${s.schema===5?serviceEvalPanel(s):''}`;};
+  V.quality=function(s,ui,role){if(s.schema===5)return commerceQuality(s,ui,role);const list=s.gaps;return `${heading(role==='manager'?'质量复核':'服务改进队列',role==='manager'?'复核服务问题，分派整改并验收。':'根据已确认的问题维护知识，跟进整改进度。',pill('知识与答复问题'))}<div class="quality-list">${list.map(g=>{const conv=s.conversations.find(c=>c.id===g.conversationId),reply=conv?.messages.find(m=>m.role==='bot'&&m.body!=='');return `<section class="panel quality-card"><div class="row between"><div class="row">${pill(g.category)}${pill(g.status,g.status==='closed'?'good':g.status==='new'?'warn':'')}</div><small class="muted">${e(g.id)} · ${date(g.createdAt,true)}</small></div><h2>${e(g.query)}</h2><p class="muted small-text">来自会话 ${e(g.conversationId)}。原始问题在验收时原样重放，不改写成更容易通过的问法。</p>${g.review?`<div class="review-note"><strong>复核依据</strong><p>${e(g.review)}</p>${g.cause?`<small>根因：${e(g.cause)}</small>`:''}</div>`:''}${g.knowledgeId?`<p class="small-text">关联整改知识：${e(g.knowledgeId)} · ${e(s.knowledge.find(k=>k.id===g.knowledgeId)?.live?.title||'待发布草稿')}</p>`:''}<div class="row">${role==='manager'&&!['closed','dismissed'].includes(g.status)?b('复核线索','review-gap',g.id,'small'):''}${role==='operator'&&['confirmed','fixing'].includes(g.status)?`${b('新增整改知识','new-gap-knowledge',g.id,'small')}${b('关联整改知识','link-gap',g.id,'small')}`:''}${role==='manager'&&g.status==='fixing'?b('验证原问题并验收','accept-gap',g.id,'primary small'):''}${g.status==='closed'?pill('已通过原问题验证与全量回归','good'):''}</div>${g.acceptance?`<p class="small-text">验收说明：${e(g.acceptance)}</p>`:''}${role==='manager'?`<details><summary>查看服务证据</summary><div class="evidence-messages">${conv?.messages.filter(m=>m.role!=='system').map(m=>`<p><strong>${e(m.author||m.role)}</strong> ${e(m.body)}</p>`).join('')||'原会话不可用'}</div></details>`:''}</section>`;}).join('')||`<div class="panel">${empty('暂无质量待办','未命中知识或客服标记问题后，会形成待复核线索。')}</div>`}</div>`;};
   V.serviceSettings=function(s,ui){const v={...s.settings,...ui.drafts['service-settings:new']};return `${heading('接待规则','管理接待容量与处理目标；历史受理时间不会随配置改变。')}<section class="panel narrow"><form data-form="service-settings" data-id="new"><label class="field"><span>服务组接待状态</span><select name="accepting">${options([['true','开放人工接待'],['false','暂停接待，保留待处理请求']],String(v.accepting))}</select></label>${field('每位客服同时接待上限','capacity',v.capacity,'number','min="1" max="20" required')}${field('人工首响目标（分钟）','responseMinutes',v.responseMinutes,'number','min="1" max="120" required')}${field('新工单处理目标（小时）','ticketHours',v.ticketHours,'number','min="1" max="168" required')}<p class="muted small-text">首响从进入人工队列起算，只有公开人工答复停止计时，内部备注不算首响。本版按自然时间计算，不提供节假日或营业日历 SLA。</p><button type="submit" class="btn primary">保存接待规则</button></form></section>`;};
-  V.integrations=function(){return `${heading('接入与运行边界','明确哪些链路已在本地运行，哪些外部能力尚未接入。')}<div class="integration-grid">${[['chat','Web 客户服务','本地页面可用','客户咨询、历史记录、服务申请与客服工作台共享当前浏览器的数据。','good'],['book','知识与接待引擎','本地规则','使用关键词检索和确定性状态流转，不调用真实大模型或向量检索服务。',''],['plug','订单系统','外部未接入','订单信息来自内置本地适配器；没有访问商家真实订单系统。','warn'],['shield','支付与退款','未接入','记录办理结果不代表执行退款。没有资金操作、支付请求或退款回执。','warn'],['users','登录与组织','服务端未接入','角色切换用于验证岗位行为；浏览器内的校验不是身份认证或安全隔离。','warn'],['inbox','邮件、短信与其他渠道','未接入','消息只保存在当前工作空间，没有发送短信、邮件或外部通知。','warn']].map(([glyph,title,status,body,color])=>`<section class="panel integration-card"><div class="integration-icon">${icon(glyph,25)}</div><h2>${title}</h2>${pill(status,color)}<p>${body}</p></section>`).join('')}</div>`;};
+  V.integrations=function(s){return `${heading('接入与运行边界','明确哪些链路已在本地运行，哪些外部能力尚未接入。')}<div class="integration-grid">${[['chat','Web 客户服务','本地页面可用','客户咨询、历史记录、服务申请与客服工作台共享当前浏览器的数据。','good'],['book','知识与接待引擎','本地规则','使用关键词检索和确定性状态流转，不调用真实大模型或向量检索服务。',''],['plug','订单系统','外部未接入','订单信息来自内置本地适配器；没有访问商家真实订单系统。','warn'],['shield','支付与退款','未接入',s?.schema===5?'本地模拟退款请求与业务回执可演示；未访问支付渠道，没有真实资金操作。':'记录办理结果不代表执行退款。没有资金操作、支付请求或退款回执。','warn'],['users','登录与组织','服务端未接入','角色切换用于验证岗位行为；浏览器内的校验不是身份认证或安全隔离。','warn'],['inbox','邮件、短信与其他渠道','未接入','消息只保存在当前工作空间，没有发送短信、邮件或外部通知。','warn']].map(([glyph,title,status,body,color])=>`<section class="panel integration-card"><div class="integration-icon">${icon(glyph,25)}</div><h2>${title}</h2>${pill(status,color)}<p>${body}</p></section>`).join('')}</div>`;};
   V.permissions=function(){return `${heading('角色与职责','角色行为在业务命令入口校验；正式上线仍须由服务端校验身份与数据归属。')}<section class="panel"><div class="table-scroll"><table><thead><tr><th>角色</th><th>工作范围</th><th>明确禁止</th></tr></thead><tbody>${[['客户','本人的咨询、订单、服务申请和公开处理进度','其他客户资料、内部备注、核对依据、运行日志'],['一线客服','本人接待、本人工单、授权公共池、服务问题标记','未经接管回复、修改他人任务、知识发布与系统配置'],['服务经理','授权团队的分配、质量复核、整改验收、接待规则','冒充客服发送回复、编辑或发布知识'],['知识运营','知识和策略草稿、回归、发布、关联整改','工单办理、正式质检裁决、客户全量资料'],['系统管理员','接入状态、权限说明、审计记录与数据导出','直接参与客户接待、替运营发布知识']].map(row=>`<tr>${row.map(x=>`<td>${e(x)}</td>`).join('')}</tr>`).join('')}</tbody></table></div></section>`;};
   V.logs=function(s){return `${heading('操作审计','当前工作空间的实际操作记录；无成功回执的写入不会显示为成功。')}<section class="panel"><div class="table-scroll"><table><thead><tr><th>时间</th><th>操作者</th><th>动作</th><th>对象</th></tr></thead><tbody>${s.events.slice().reverse().slice(0,100).map(ev=>`<tr><td>${date(ev.at,true)}</td><td>${e(ev.actor)}</td><td>${e(ev.type)}</td><td>${e(ev.target||'—')}</td></tr>`).join('')}</tbody></table></div><p class="muted small-text">展示最近 100 条，完整记录包含在工作空间导出文件中。浏览器存储不是防篡改审计服务。</p></section>`;};
-  V.data=function(commerceMode=false){return `${heading('数据维护','导出当前工作空间，或保存旧版本的原始数据。')}<section class="panel narrow"><h2>当前工作空间</h2><p class="muted">数据仅保存在当前浏览器。换设备、清理站点数据或隐私模式都可能影响保留。本版不提供多人并发保证。</p>${b('导出工作空间 JSON','export-data','','primary')}<hr><h2>旧版本数据</h2><p class="muted">新版本使用独立存储，不覆盖旧版的会话、工单和草稿。旧数据不自动导入新状态模型，可先导出留存。</p>${b('导出 V4 原始数据','export-v4')} ${b('导出旧版本原始数据','export-legacy')}<p class="muted">${commerceMode?'本工作空间使用独立电商样例，旧 V4 数据与草稿原样保留。':'可进入独立电商样例查看商品、支付与双包裹。'}</p><a href="?data=ecommerce#customer">打开电商演示</a><hr><h2>使用范围</h2><p class="muted">不要在此工作空间录入真实客户资料、支付信息或密钥。外部接入与服务端权限尚未完成。</p></section>`;};
+  V.data=function(commerceMode=false,s,ui){return `${heading('数据维护','导出当前工作空间，或保存旧版本的原始数据。')}<section class="panel narrow"><h2>当前工作空间</h2><p class="muted">数据仅保存在当前浏览器。换设备、清理站点数据或隐私模式都可能影响保留。本版不提供多人并发保证。</p>${b('导出工作空间 JSON','export-data','','primary')}<hr><h2>旧版本数据</h2><p class="muted">新版本使用独立存储，不覆盖旧版的会话、工单和草稿。旧数据不自动导入新状态模型，可先导出留存。</p>${b('导出 V4 原始数据','export-v4')} ${b('导出旧版本原始数据','export-legacy')}<p class="muted">${commerceMode?'本工作空间使用独立电商样例，旧 V4 数据与草稿原样保留。':'可进入独立电商样例查看商品、支付与双包裹。'}</p><a href="?data=ecommerce#customer">打开电商演示</a><hr><h2>使用范围</h2><p class="muted">不要在此工作空间录入真实客户资料、支付信息或密钥。外部接入与服务端权限尚未完成。</p></section>${commerceMode&&s?.schema===5&&ui?.opsRole==='admin'?simulatedReceipts(s):''}`;};
 })(window);
 
 </script>
@@ -1997,6 +2591,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     function after(success){closeModal();render();if(success)toast(success);cache();}
     function orderFacts(id,customerId){const o=store.state.orders.find(o=>o.id===id&&o.customerId===customerId);return o?`<div class="order-facts"><strong>${e(o.product)}</strong><p>${e(o.id)} · ${e(o.status)} · ¥${Number(o.price).toFixed(2)}</p><p>规格：${e(o.spec||o.variant||'待核对')}　数量：${e(o.quantity??'待核对')}</p><small>订单记录提供以上信息；退换货资格仍需客服核对。</small></div>`:'<p class="muted">请选择客户本人订单。未确认的信息保持为空。</p>';}
     function intake(caseId,conversationId='',reuse=false){
+      if(store.state.schema===5&&ctx.service.openForCase(caseId))return;
       const c=currentCase(caseId);if(c.kind!=='aftersales')return legacyIntake(caseId,conversationId);
       if(identity().role==='customer'){connected();if(c.customerId!==identity().id)throw Error('无权查看该问题');}
       else owned(convFor(caseId,conversationId));
@@ -2173,7 +2768,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
   let cached={};try{cached=JSON.parse(sessionStorage.getItem(viewKey)||'{}');}catch{}
   const ui={workspace:'customer',deskPage:'inbox',opsPage:'overview',opsRole:'manager',agentId:'lin',customerConversation:'',deskConversation:'',deskFilter:'queue',ticketFilter:'all',knowledgeId:'',composeMode:'reply',search:{},drafts:{},...cached,flowTest:null};
   if(!['manager','operator','admin'].includes(ui.opsRole))ui.opsRole='manager';
-  if(!['lin','zhou'].includes(ui.agentId))ui.agentId='lin';
+  if(!store.state?.staff.some(a=>a.role==='agent'&&a.id===ui.agentId))ui.agentId=store.state?.staff.find(a=>a.role==='agent')?.id||'lin';
   ui.search||={};ui.draftScopes||={[draftScope()]:ui.drafts||{}};ui.drafts={};let activeDraftScope='';
   const opsMenus={manager:[['overview','服务概览','chart'],['team','团队协同','users'],['quality','质量复核','shield'],['service','接待规则','settings']],operator:[['knowledge','知识与答复','book'],['flow','接待策略与测试','flow'],['quality','服务改进队列','shield']],admin:[['integrations','接入与运行','plug'],['permissions','角色与职责','users'],['logs','操作审计','shield'],['data','数据维护','settings']]};
   const $=s=>document.querySelector(s);let toastTimer,focusBeforeDialog;
@@ -2208,16 +2803,16 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     else if(ui.workspace==='desk'){const data=D.deskView(s,identity());content=ui.deskPage==='tickets'?V.tickets(s,data.tickets,ui):V.inbox(s,data,ui,D.actor(s,identity()));}
     else {
       switch(ui.opsPage){
-        case'overview':content=V.overview(s);break;
-        case'team':content=V.tickets(s,s.tickets.filter(t=>D.actor(s,identity()).teams.includes(t.teamId)),ui,true)+`<section class="panel"><div class="panel-heading"><h2>当前人工接待</h2></div>${s.conversations.filter(c=>['queued','human'].includes(c.state)&&D.actor(s,identity()).teams.includes(c.teamId)).map(c=>`<div class="attention-row"><div><strong>${e(s.customers.find(x=>x.id===c.customerId)?.name||c.customerId)}</strong><small>${e(c.id)} · ${e(c.handoffReason)}</small></div><div class="row">${pill(c.state)}${b('分配客服','assign-conversation',c.id,'small')}</div></div>`).join('')||empty('暂无待分配会话')}</section>`;break;
+        case'overview':content=V.overview(s,ui,ui.opsRole);break;
+        case'team':content=V.tickets(s,s.tickets.filter(t=>D.actor(s,identity()).teams.includes(t.teamId)),ui,true)+`<section class="panel"><div class="panel-heading"><h2>当前人工接待</h2></div>${s.conversations.filter(c=>['queued','human'].includes(c.state)&&D.actor(s,identity()).teams.includes(c.teamId)).map(c=>`<div class="attention-row"><div><strong>${e(s.customers.find(x=>x.id===c.customerId)?.name||c.customerId)}</strong><small>${e(c.id)} · ${e(c.handoffReason)}</small></div><div class="row">${pill(c.state)}${s.schema===5&&c.caseIds.some(id=>s.cases.some(x=>x.id===id&&x.service&&x.ownerId))?b('查看服务事项','service-detail',c.caseIds.find(id=>s.cases.some(x=>x.id===id&&x.service)),'small'):b('分配客服','assign-conversation',c.id,'small')}</div></div>`).join('')||empty('暂无待分配会话')}</section>`;break;
         case'knowledge':content=V.knowledge(s,ui);break;
         case'flow':content=V.flow(s,ui);break;
         case'quality':content=V.quality(s,ui,ui.opsRole);break;
         case'service':content=V.serviceSettings(s,ui);break;
-        case'integrations':content=V.integrations();break;
+        case'integrations':content=V.integrations(s);break;
         case'permissions':content=V.permissions();break;
         case'logs':content=V.logs(s);break;
-        case'data':content=V.data(commerceMode);break;
+        case'data':content=V.data(commerceMode,s,ui);break;
       }
     }
     const scrolls=[...document.querySelectorAll('.messages,.sop-workbench-scroll,.conversation-rows')].map(x=>[x.className,x.scrollTop,x.scrollHeight-x.clientHeight-x.scrollTop<40]);
@@ -2230,12 +2825,12 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
   }
   function scrollMessages(){requestAnimationFrame(()=>document.querySelectorAll('.messages').forEach(x=>x.scrollTop=x.scrollHeight));}
   function modal(title,body){focusBeforeDialog=document.activeElement;$('#dialog-title').textContent=title;$('#dialog-body').innerHTML=body;$('#dialog-body').querySelectorAll('form[data-form]').forEach(form=>{const draft=ui.drafts[form.dataset.form+':'+(form.dataset.id||'new')];if(draft)Object.entries(draft).forEach(([name,value])=>{const input=form.elements.namedItem(name);if(input){if(input.type==='checkbox')input.checked=Boolean(value);else input.value=value;}});});$('#dialog-error').hidden=true;$('#dialog-error').textContent='';const dialog=$('#dialog'),host=ui.workspace==='customer'&&ui.customerMode==='mobile'?$('.phone-overlay-host'):null;if(host){host.append(dialog);[...host.parentElement.children].filter(x=>x!==host).forEach(x=>x.inert=true);if(!dialog.open)dialog.show();}else{if(dialog.parentElement!==document.body)document.body.append(dialog);if(!dialog.open)dialog.showModal();}$('#dialog-body').querySelector('input:not([type=hidden]),textarea,select,button')?.focus();}
-  function closeModal(){document.querySelectorAll('.phone-screen>[inert]').forEach(x=>x.inert=false);if($('#dialog').open)$('#dialog').close();if(workbench.onClose())render();if(focusBeforeDialog?.isConnected)focusBeforeDialog.focus();}
+  function closeModal(){document.querySelectorAll('.phone-screen>[inert]').forEach(x=>x.inert=false);if($('#dialog').open)$('#dialog').close();service.onClose();if(workbench.onClose())render();if(focusBeforeDialog?.isConnected)focusBeforeDialog.focus();}
   function customerConversation(){const list=D.customerView(store.state,'C001').conversations;let c=list.find(c=>c.id===ui.customerConversation)||list[0];if(!c){ui.customerConversation=apply('newConversation',{});c=D.get(store.state,'conversations',ui.customerConversation);}return c;}
   function quick(body){closeModal();const c=customerConversation();apply('say',{id:c.id,body});ui.customerConversation=c.id;render();scrollMessages();}
   function formDraft(key,defaults){return {...defaults,...ui.drafts[key]};}
   function ticketForUI(id){const s=store.state;if(ui.workspace==='customer'){const t=D.customerView(s,'C001').tickets.find(t=>t.id===id);if(!t)throw Error('无权查看此工单');return t;}if(ui.workspace==='desk'){const t=[...D.deskView(s,identity()).tickets,...D.deskView(s,identity()).relatedTickets].find(t=>t.id===id);if(!t)throw Error('此工单不在本人任务或公共池中');return t;}if(ui.opsRole==='manager'){const t=D.get(s,'tickets',id);if(!D.actor(s,identity()).teams.includes(t.teamId))throw Error('无权查看此工单');return t;}throw Error('当前角色无权查看工单详情');}
-  function ticketDetail(id){const s=store.state,t=ticketForUI(id),customer=ui.workspace==='customer',canEdit=ui.workspace==='desk'&&t.ownerId===ui.agentId&&t.status!=='done';const c=customer?D.customerView(s,'C001').cases.find(c=>c.id===t.caseId):D.get(s,'cases',t.caseId);const draft=formDraft('ticket-update:'+id,{status:t.status,publicText:'',evidence:'',internalText:''});
+  function ticketDetail(id){const s=store.state,t=ticketForUI(id);if(s.schema===5&&s.cases.some(c=>c.id===t.caseId&&c.service))return service.actions['service-detail']({dataset:{id:t.caseId}});const customer=ui.workspace==='customer',canEdit=ui.workspace==='desk'&&t.ownerId===ui.agentId&&t.status!=='done';const c=customer?D.customerView(s,'C001').cases.find(c=>c.id===t.caseId):D.get(s,'cases',t.caseId);const draft=formDraft('ticket-update:'+id,{status:t.status,publicText:'',evidence:'',internalText:''});
     modal('工单详情',`<div class="row between"><h2>${e(t.title)}</h2>${pill(t.status)}</div><p class="muted">${e(t.id)} · ${date(t.createdAt,true)} · ${e(t.orderId||'未关联订单')}</p><div class="result-note">${e(t.description)}</div>${t.serviceType?`<dl><dt>申请类型</dt><dd>${t.serviceType==='exchange'?'换货':'退货'}</dd>${t.exchangeRequest?`<dt>换货要求</dt><dd>${e(t.exchangeRequest)}</dd>`:''}${t.extraNote?`<dt>补充说明</dt><dd>${e(t.extraNote)}</dd>`:''}</dl>`:''}<div class="timeline">${t.history.map(h=>`<div class="timeline-entry"><small>${date(h.at,true)} · ${e(h.actor||'客服')}</small><p>${e(h.publicText)}</p>${!customer&&h.internalText?`<div class="internal-evidence">内部备注：${e(h.internalText)}</div>`:''}${!customer&&h.evidence?`<div class="internal-evidence">核对依据：${e(h.evidence)}</div>`:''}</div>`).join('')}</div>${customer?t.status!=='done'?`<form data-form="supplement" data-id="${e(id)}">${field('补充信息','body',ui.drafts['supplement:'+id]?.body||'','textarea','required maxlength="2000"')}<button class="btn primary" type="submit">提交补充</button></form>`:`<div class="row">${c.feedback==='confirmed'?pill('客户已确认','good')+b('仍需帮助','dispute-case',c.id):`${b('确认已解决','confirm-case',c.id,'primary')}${b('仍需帮助','dispute-case',c.id)}`}</div>`:canEdit?`<form data-form="ticket-update" data-id="${e(id)}"><label class="field"><span>处理动作</span><select name="status">${options([['working','继续处理'],['waiting_customer','请客户补充'],['done','记录办理结果']],draft.status)}</select></label>${field('客户可见说明','publicText',draft.publicText,'textarea','required maxlength="2000"')}${field('核对依据（记录结果时必填，仅内部可见）','evidence',draft.evidence,'textarea','maxlength="2000"')}${field('内部协同备注','internalText',draft.internalText,'textarea','maxlength="2000"')}<p class="muted small-text">此操作记录处理结果，不会调用退款、支付或发货接口。</p><button class="btn primary" type="submit">提交处理记录</button></form>`:ui.workspace==='desk'&&!t.ownerId?b('领取工单','claim-ticket',id,'primary'):pill('只读记录')}`);
   }
   function intake(caseId,conversationId='',standalone=false){
@@ -2248,7 +2843,8 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
   }
   function confirmation(title,body,action,id){modal(title,`<p>${e(body)}</p><div class="form-footer">${b('取消','close-modal')}${b('确认','confirm-action',id,'primary',`data-command="${e(action)}"`)}</div>`);}
   function download(name,value){const blob=new Blob([typeof value==='string'?value:JSON.stringify(value,null,2)],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-  const workbench=window.SupportWorkbench.create({D,V,ui,store,identity,apply,modal,closeModal,render,cache,toast,intake,scrollMessages});
+  const service=window.SupportServiceUI.create({D,V,ui,store,identity,apply,modal,closeModal,render,cache,toast,customerConversation});
+  const workbench=window.SupportWorkbench.create({D,V,ui,store,identity,apply,modal,closeModal,render,cache,toast,intake,scrollMessages,service});
   const actions={
     workspace(el){closeModal();navigate(el.dataset.id);render();scrollMessages();},
     'desk-page'(el){navigate('desk',el.dataset.id);render();},
@@ -2258,7 +2854,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     'order-query'(el){quick('查物流 '+el.dataset.id);},
     'commerce-query'(el){const value=apply('queryCommerce',{orderId:el.dataset.id});modal('订单、支付与包裹',V.commerceDetails(value));},
     'order-return'(el){quick('申请退货 '+el.dataset.id);},
-    'request-human'(el){closeModal();const c=el.dataset.id||customerConversation().id;apply('requestHuman',{id:c},'已提交人工请求');render();scrollMessages();},
+    'request-human'(el){closeModal();const c=el.dataset.id||customerConversation().id,record=D.customerView(store.state,'C001').conversations.find(x=>x.id===c);if(!record)throw Error('无权访问此咨询');ui.customerConversation=c;if(['queued','human'].includes(record.state)){render();scrollMessages();toast(record.state==='queued'?'人工请求已在排队，可继续补充消息':'人工客服已接待，可继续补充消息');return;}apply('requestHuman',{id:c},'已提交人工请求');render();scrollMessages();},
     'cancel-queue'(el){apply('cancelQueue',{id:el.dataset.id},'已取消当前排队');render();},
     'customer-history'(){const data=D.customerView(store.state,'C001');modal('历史咨询',data.conversations.map(c=>`<button type="button" class="history-row" data-action="open-history" data-id="${e(c.id)}"><strong>${e(c.messages.find(m=>m.role==='customer')?.body||'新的咨询')}</strong><small>${e(c.id)} · ${date(c.createdAt,true)}</small>${pill(c.state)}</button>`).join('')||empty('暂无历史咨询'));},
     'open-history'(el){ui.customerConversation=el.dataset.id;closeModal();render();scrollMessages();},
@@ -2288,17 +2884,18 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     'disable-knowledge'(el){modal('停用知识',`<form data-form="disable-knowledge" data-id="${e(el.dataset.id)}">${field('停用原因','reason','','textarea','required maxlength="300"')}<button class="btn primary" type="submit">确认停用</button></form>`);},
     'test-flow'(){apply('testFlow',{},'回归已运行，请查看逐项结果');render();},
     'publish-flow'(){confirmation('发布接待策略','新咨询将使用新策略；正在进行的咨询继续使用开始时的版本。','publishFlow','');},
-    'review-gap'(el){const g=D.get(store.state,'gaps',el.dataset.id);const v=formDraft('review-gap:'+g.id,{status:'confirmed',review:g.review,cause:g.cause});modal('复核服务问题',`<p class="result-note">${e(g.query)}</p><form data-form="review-gap" data-id="${e(g.id)}"><label class="field"><span>复核结论</span><select name="status">${options([['confirmed','确认问题，交给运营整改'],['dismissed','排除线索，不形成整改']],v.status)}</select></label>${field('复核依据','review',v.review,'textarea','required')}${field('根因说明（确认问题时必填）','cause',v.cause,'textarea')}<button class="btn primary" type="submit">保存复核结论</button></form>`);},
+    'review-gap'(el){const g=D.get(store.state,'gaps',el.dataset.id);const v=formDraft('review-gap:'+g.id,{status:'confirmed',review:g.review,cause:g.cause});modal('复核服务问题',`<p class="result-note">${e(g.query)}</p><form data-form="review-gap" data-id="${e(g.id)}"><label class="field"><span>复核结论</span><select name="status">${options([['confirmed','确认问题，交给运营整改'],['dismissed','排除线索，不形成整改']],v.status)}</select></label>${store.state.schema===5?`<label class="field"><span>根因分类</span><select name="causeType">${options([['knowledge','知识'],['routing','触发与路由'],['business','业务数据与回执'],['workflow','办理流程'],['collaboration','人工协同'],['notification','通知']],v.causeType||g.causeType||'knowledge')}</select></label>`:''}${field('复核依据','review',v.review,'textarea','required')}${field('根因说明（确认问题时必填）','cause',v.cause,'textarea')}<button class="btn primary" type="submit">保存复核结论</button></form>`);},
     'new-gap-knowledge'(el){const g=D.get(store.state,'gaps',el.dataset.id);if(ui.opsRole!=='operator'||!['confirmed','fixing'].includes(g.status))throw Error('请先完成问题复核');ui.knowledgeId='new';ui.prefillQuery=g.query;navigate('ops','knowledge');render();},
     'link-gap'(el){const g=D.get(store.state,'gaps',el.dataset.id);modal('关联整改知识',`<p>${e(g.query)}</p><form data-form="link-gap" data-id="${e(g.id)}"><label class="field"><span>选择用于修复的知识</span><select name="knowledgeId" required>${options(store.state.knowledge.map(k=>[k.id,(k.draft||k.live).title+' · '+k.id]),g.knowledgeId)}</select></label><p class="muted small-text">关联后仍需发布修订，并由经理用原始问题验收。</p><button class="btn primary" type="submit">保存关联</button></form>`);},
-    'accept-gap'(el){modal('验证原问题并验收',`<form data-form="accept-gap" data-id="${e(el.dataset.id)}">${field('验收说明','acceptance','','textarea','required')}<p class="muted small-text">提交时重放原问题并运行全量回归，不能用手动勾选替代验证。</p><button class="btn primary" type="submit">执行验证并验收</button></form>`);},
+    'accept-gap'(el){const g=D.get(store.state,'gaps',el.dataset.id),path=store.state.schema===5&&(g.causeType||'knowledge')!=='knowledge';modal(path?'复验失败路径并验收':'验证原问题并验收',`<form data-form="accept-gap" data-id="${e(el.dataset.id)}">${field('验收说明','acceptance','','textarea','required')}<p class="muted small-text">${path?'提交时运行已关联的失败路径场景，并保存动作与状态证据。检查通过后方可验收。':'提交时重放原问题并运行全量回归，不能用手动勾选替代验证。'}</p><button class="btn primary" type="submit">执行验证并验收</button></form>`);},
     'confirm-action'(el){apply(el.dataset.command,{id:el.dataset.id},'操作已完成');closeModal();ui.flowTest=null;render();},
     'close-modal'(){closeModal();},
     'export-data'(){const data=apply('export',{});download('客服工作空间.json',data);toast('已生成工作空间导出文件');},
     'export-legacy'(){if(identity().role!=='admin')throw Error('需要系统管理员角色');const raw=localStorage.getItem('zhixu-customer-demo-v3.1');if(raw===null)throw Error('当前浏览器未读取到旧版本保存值');download('客服旧版本原始数据.json',raw);toast('已导出旧版本原始保存值，未做转换');},
     'export-v4'(){if(identity().role!=='admin')throw Error('需要系统管理员角色');const raw=storage.getItem(window.SupportStore.KEY);if(raw===null)throw Error('当前浏览器未读取到 V4 保存值');download('客服V4原始数据.json',raw);toast('已导出 V4 原始保存值，未做转换');},
     'export-broken'(){if(store.original===null)throw Error('无法读取原始保存值，可能是浏览器禁用了存储');download('客服异常原始数据.json',store.original);},
-    ...workbench.actions
+    ...workbench.actions,
+    ...service.actions
   };
   function assign(type,id){modal('分配负责人',`<form data-form="assign" data-id="${e(id)}" data-command="${type}"><label class="field"><span>接收客服</span><select name="ownerId">${options(store.state.staff.filter(a=>a.role==='agent').map(a=>[a.id,a.name]),'lin')}</select></label><p class="muted small-text">转派保留原受理时间和处理记录，原负责人不能继续修改任务。</p><button class="btn primary" type="submit">确认分配</button></form>`);}
   document.addEventListener('click',ev=>{const el=ev.target.closest('[data-action]');if(!el||el.disabled)return;try{const handler=actions[el.dataset.action];if(!handler)throw Error('此操作不可用');handler(el);cache();}catch(err){fail(err);}});
@@ -2323,7 +2920,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
     const form=ev.target.closest('form[data-form]');if(!form)return;ev.preventDefault();
     const f=form.dataset.form,id=form.dataset.id,data=Object.fromEntries(new FormData(form)),key=f+':'+(id||'new');
     try{
-      if(workbench.submit(form,data))return;
+      if(service.submit(form,data)||workbench.submit(form,data))return;
       if(f==='ticket-request'){
         ui.pendingTicket={...ui.pendingTicket,...data,draftKey:key};
         modal('核对服务申请',`<div class="preview-block"><h2>${e(data.title)}</h2><p>${e(data.description)}</p>${ui.pendingTicket.caseId?`<small>关联问题：${e(ui.pendingTicket.caseId)}</small>`:`<small>客户：${e(store.state.customers.find(c=>c.id===data.customerId)?.name)}</small>`}</div><p class="muted">确认后创建或继续原工单。取消不会产生受理记录，也不会执行退款。</p><form data-form="ticket-confirm" data-id="new"><div class="form-footer">${b('取消','close-modal')}<button class="btn primary" type="submit">确认提交申请</button></div></form>`);return;
@@ -2343,7 +2940,7 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
       else if(f==='service-settings')apply('serviceSettings',{...data,accepting:data.accepting==='true'},'接待规则已更新');
       else if(f==='review-gap'){apply('reviewGap',{id,...data},'复核结论已保存');closeModal();}
       else if(f==='link-gap'){apply('linkGap',{id,knowledgeId:data.knowledgeId},'已关联整改知识');closeModal();}
-      else if(f==='accept-gap'){apply('acceptGap',{id,acceptance:data.acceptance},'原问题验证及全量回归通过，已验收');closeModal();}
+      else if(f==='accept-gap'){apply('acceptGap',{id,acceptance:data.acceptance},'复验通过，已验收');closeModal();}
       else throw Error('未知表单');
       if(f!=='flow-query')delete ui.drafts[key];cache();render();if(['customer-say','reply','note'].includes(f))scrollMessages();
     }catch(err){fail(err);}

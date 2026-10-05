@@ -20,6 +20,11 @@
     operator: ['saveKnowledge', 'testKnowledge', 'publishKnowledge', 'disableKnowledge', 'saveFlow', 'testFlow', 'publishFlow', 'linkGap'],
     admin: ['export']
   };
+  roles.customer.push('previewAftersale','confirmAftersale','submitReturn','submitSupplement','requestWithdrawal','serviceDispute');
+  roles.agent.push('submitRefund','queryRefund','proposeHandoff','acceptHandoff','rejectHandoff','serviceFollowup','resolveLogistics','resolveServiceDispute','serviceReply');
+  roles.manager.push('submitReview','proposeHandoff','expireHandoffs');
+  roles.operator.push('runServiceEval');
+  roles.admin.push('applySimulatedReceipt');
   function actor(s, who) {
     assert(who && typeof who.id === 'string', '缺少操作者');
     if (who.role === 'customer') { get(s, 'customers', who.id); return {id: who.id, role: 'customer', name: get(s, 'customers', who.id).name, teams: []}; }
@@ -34,9 +39,11 @@
   const acceptedTicket = (s, c) => s.tickets.find(t => t.caseId === c.id && t.followupOnly !== true);
   const otherAftersalesTicket = (s, c) => c.orderId && s.tickets.find(t => t.caseId !== c.id && t.customerId === c.customerId && t.orderId === c.orderId && t.status !== 'done' && get(s, 'cases', t.caseId).kind === 'aftersales');
   const activeArticles = (s, now) => s.knowledge.filter(k => k.live && !k.disabled && Date.parse(k.live.effectiveAt) <= now && (!k.live.expiresAt || now < Date.parse(k.live.expiresAt)));
-  function retrieve(s, query, now = Date.now()) {
+  const mentionedItems=(s,query)=>s.schema===5?s.commerce.items.filter(i=>query.includes(i.id)||query.includes(i.name)||(i.skuId==='EC-SKU-CUP'&&/杯/.test(query))||(i.skuId==='EC-SKU-BAG'&&/袋/.test(query))||(i.skuId==='EC-SKU-BOX'&&/收纳盒|盒子/.test(query))).map(i=>i.id):[];
+  function retrieve(s, query, now = Date.now(), scopeQuery = query, customerId='C001') {
     const q = normalize(query);
-    const candidates = activeArticles(s, now).map(k => {
+    const mentioned=mentionedItems(s,scopeQuery);
+    const candidates = activeArticles(s, now).filter(k=>!mentioned.length||!k.live.scopeItemIds?.length||mentioned.every(id=>k.live.scopeItemIds.includes(id))).map(k => {
       const exact = q.includes(normalize(k.live.question));
       const hits = k.live.keywords.filter(w => q.includes(normalize(w))).length;
       return {k, exact, hits};
@@ -44,7 +51,14 @@
     if (!candidates.length) return null;
     const first = candidates[0];
     if (candidates.some(x => x !== first && x.exact === first.exact && x.hits === first.hits && x.k.live.answer !== first.k.live.answer)) return {conflict: true};
-    return {id: first.k.id, ...copy(first.k.live)};
+    const article={id:first.k.id,...copy(first.k.live)};
+    if(s.schema===5&&(article.id==='KB001'||/(退货|售后).*(政策|规则|条件)|(政策|规则|条件).*(退货|售后)/.test(article.title+' '+article.question)))return policyKnowledge(s,article,scopeQuery,customerId,now);
+    return article;
+  }
+  function policyKnowledge(s,k,query,customerId,now){
+    const mentioned=mentionedItems(s,query),rules=(s.commerce.rules||[]).filter(r=>s.commerce.items.some(i=>i.id===r.itemId&&s.orders.some(o=>o.id===i.orderId&&o.customerId===customerId))&&(!mentioned.length||mentioned.includes(r.itemId))&&(!k.scopeItemIds?.length||k.scopeItemIds.includes(r.itemId))&&Date.parse(r.effectiveAt)<=now&&(!r.expiresAt||now<Date.parse(r.expiresAt)));
+    if(!rules.length||mentioned.some(id=>!rules.some(r=>r.itemId===id)))return null;
+    return {...k,answer:rules.map(r=>`${s.commerce.items.find(i=>i.id===r.itemId).name}：签收破损可核对一件退货退款，模拟规则金额为 ${Commerce.money(r.amountCents)}。须由服务经理审核${r.requiresReturn?'，审核通过后寄回商品并由仓库验收':'，根据审批决定继续办理'}；退款成功以原请求的业务回执为准，咨询不代表已受理、已退款或客户已确认。规则 ${r.id} v${r.version} · ${r.source}`).join('\n'),ruleId:rules[0].id,ruleVersion:rules[0].version,ruleRefs:rules.map(r=>({id:r.id,version:r.version,itemId:r.itemId,source:r.source}))};
   }
   function intentions(query, config, commerce=false) {
     const lower = query.toLowerCase();
@@ -87,7 +101,8 @@
     if (p.intake) results.push({kind: config.intakeEnabled ? 'intake' : 'handoff', orderId: p.id, reason: '售后申请需要人工受理'});
     if (p.policy || !results.length) {
       const question = p.policy ? query.split(/[，,。；;]/).find(x => /(规则|条件|政策|无理由|如何退|怎么退|退货运费)/.test(x)) || query : query;
-      const knowledge = retrieve(s, question, now);
+      let knowledge = retrieve(s, question, now, query,customerId);
+      if(s.schema===5&&p.policy&&knowledge&&!knowledge.conflict){knowledge=policyKnowledge(s,knowledge,query,customerId,now);if(!knowledge){results.push({kind:'handoff',reason:'该商品没有当前可用的已核实政策，请人工核对'});return results;}}
       results.push(knowledge?.conflict ? {kind: 'conflict'} : knowledge ? {kind: 'answer', knowledge} : {kind: 'gap'});
     }
     return results;
@@ -114,11 +129,12 @@
     pauseAi(conv,'已转交人工核实',now);
     if (conv.state !== 'human' && conv.state !== 'queued') { conv.state = 'queued'; conv.ownerId = ''; conv.waitingSince = now; conv.firstHumanAt = null; }
     conv.handoffReason = reason;
-    conv.caseIds.map(id => get(s, 'cases', id)).filter(c => c.status !== 'completed').forEach(c => c.humanTouched = true);
+    if(s.schema!==5)conv.caseIds.map(id => get(s, 'cases', id)).filter(c => c.status !== 'completed').forEach(c => c.humanTouched = true);
     const body = s.settings.accepting ? '已转入人工接待队列。你提供的信息会一并交给客服，不需要重新描述；等待时也可以继续补充。' : '人工客服当前不在线，问题已保留在待接待列表。你可以继续补充信息，之后在这里查看回复。';
     message(s, conv, 'system', body, now);
   }
   function complete(s, c, publicText, evidence, by, now) {
+    assert(!c.service||Commerce.resultReady(s,c),'商品办理须有对应业务结果回执，不能凭答复文本办结');
     if (c.result) c.resultHistory.push(copy(c.result));
     c.result = {publicText, evidence, by, at: now}; c.status = 'completed'; c.feedback = 'pending'; c.completedAt = now;
   }
@@ -151,6 +167,7 @@
   }
   function run(s, conv, query, now, options = {}) {
     const plan = intentions(query, conv.flow, s.schema===5);
+    if(s.schema===5&&!plan.human&&Commerce.collect(s,conv,query,now)){handoff(s,conv,'商品诉求已分别记录，需核对申请或异常',now);conv.runs.push({at:now,flowVersion:conv.flow.version,query,steps:['service-intent']});return;}
     const pending = conv.pendingCaseId && get(s, 'cases', conv.pendingCaseId);
     if (plan.onlyId && pending && pending.kind === 'aftersales') {
       const c = aftersalesCase(s, conv, pending, plan.id, now); conv.pendingCaseId = '';
@@ -169,7 +186,7 @@
         if (!conv.aiOptOut) message(s, conv, 'bot', r.body, now);
       } else if (r.kind === 'answer') {
         const c = makeCase(s, conv, 'knowledge', query, '', now);
-        const citation = {id: r.knowledge.id, version: r.knowledge.version, title: r.knowledge.title, source: r.knowledge.source, answer: r.knowledge.answer};
+        const citation = {id: r.knowledge.id, version: r.knowledge.version, title: r.knowledge.title, source: r.knowledge.source, answer: r.knowledge.answer,...(r.knowledge.ruleRefs?{ruleId:r.knowledge.ruleId,ruleVersion:r.knowledge.ruleVersion,ruleRefs:copy(r.knowledge.ruleRefs)}:{})};
         complete(s, c, r.knowledge.answer, {kind: 'knowledge', citation}, 'bot', now);
         message(s, conv, 'bot', r.knowledge.answer, now, {caseId: c.id, citation});
       } else if (['order', 'askOrder', 'orderDenied', 'orderFailure'].includes(r.kind)) {
@@ -214,6 +231,12 @@
     assert(typeof f.intakeEnabled === 'boolean', '售后受理配置无效');
   }
   function fingerprint(s) { return JSON.stringify({knowledge: s.knowledge.map(k => ({id: k.id, live: k.live, disabled: k.disabled})), flow: s.flow.live}); }
+  const serviceFingerprint=s=>JSON.stringify({knowledge:s.knowledge.map(k=>({id:k.id,live:k.live,draft:k.draft,disabled:k.disabled})),flow:{live:s.flow.live,draft:s.flow.draft},rules:s.commerce?.rules,facts:s.schema===5?{orders:s.orders,items:s.commerce.items,payments:s.commerce.payments,packages:s.commerce.packages}:null});
+  function serviceEvalCurrent(s,knowledgeId=''){
+    if(s.schema!==5)return true;
+    const expected=serviceFingerprint(s),k=knowledgeId?s.knowledge.find(k=>k.id===knowledgeId):null;
+    return Boolean(k?.validation?.service?.pass&&k.validation.service.fingerprint===expected||(s.commerce.evaluations||[]).some(e=>e.knowledgeId===knowledgeId&&e.pass&&e.fingerprint===expected));
+  }
   function candidate(s, id, mode) {
     const x = copy(s);
     if (mode === 'knowledge') { const k = get(x, 'knowledge', id); assert(k.draft, '没有待验证的草稿'); k.live = {...copy(k.draft), version: (k.live?.version || 0) + 1}; k.disabled = false; }
@@ -240,6 +263,38 @@
     if (articleId) rows.push({name: '待发布知识生效区间', query: articleId, actual: activeArticles(s, now).some(k => k.id === articleId) ? '可用' : '尚未生效或已过期', pass: activeArticles(s, now).some(k => k.id === articleId)});
     return {at: now, fingerprint: fingerprint(s), rows, passed: rows.every(r => r.pass)};
   }
+  function serviceEvaluation(source,now,knowledgeId='',flowDraft=false){
+    assert(source.schema===5,'流程评测仅适用于电商工作空间');
+    const customer={id:'C001',role:'customer'},agent={id:'lin',role:'agent'},manager={id:'manager',role:'manager'},admin={id:'admin',role:'admin'};
+    const check=(ok,why)=>assert(ok,why),rows=[];
+    function base(){
+      let s=copy(source);if(knowledgeId&&get(s,'knowledge',knowledgeId).draft)s=candidate(s,knowledgeId,'knowledge');if(flowDraft)s=candidate(s,'','flow');
+      s.conversations=[];s.cases=[];s.tickets=[];s.gaps=[];s.events=[];
+      ['aftersales','returns','refunds','occupancies','handoffs','notifications','evaluations'].forEach(k=>s.commerce[k]=[]);
+      s.customers.forEach(c=>c.connection='online');
+      return execute(s,customer,'newConversation',{},now).state;
+    }
+    const step=(s,a,type,data,at=now)=>execute(s,a,type,data,at);
+    const form=s=>({conversationId:s.conversations[0].id,orderId:'EC-SO20261005001',itemId:'EC-ITEM-001',quantity:1,serviceType:'return_refund',reason:'保温杯收到破损，希望退货退款',evidenceRef:'DEMO-DAMAGE-001'});
+    function request(){let s=base(),data=form(s),p=step(s,customer,'previewAftersale',data);data={...data,token:p.value.token,requestId:'eval-request',confirmed:true};const r=step(p.state,customer,'confirmAftersale',data);return {s:r.state,id:r.value,caseId:r.state.commerce.aftersales[0].caseId,data};}
+    function approved(){const f=request();f.s=step(f.s,agent,'claimConversation',{id:f.s.conversations[0].id}).state;f.s=step(f.s,manager,'submitReview',{aftersaleId:f.id,decision:'approved',reason:'模拟人工确认破损规则'}).state;return f;}
+    function pending(){const f=approved();f.s=step(f.s,customer,'submitReturn',{aftersaleId:f.id,trackingNumber:'DEMO-EVAL-RETURN'}).state;f.s=step(f.s,admin,'applySimulatedReceipt',{aftersaleId:f.id,kind:'warehouse_received',version:1}).state;f.s=step(f.s,admin,'applySimulatedReceipt',{aftersaleId:f.id,kind:'warehouse_passed',version:2}).state;f.s=step(f.s,agent,'submitRefund',{aftersaleId:f.id,requestId:'eval-refund'}).state;return f;}
+    const reject=(fn,why)=>{let failed=false;try{fn();}catch{failed=true;}check(failed,why);};
+    function run(id,title,fn){try{fn();rows.push({id,title,name:title,pass:true,reason:'实际领域命令、消息及状态断言通过'});}catch(err){rows.push({id,title,name:title,pass:false,reason:err.message});}}
+    run('trigger-policy','规则咨询引用执行规则且不触发申请',()=>{let s=base();s=step(s,customer,'say',{id:s.conversations[0].id,body:'保温杯退货规则是什么？'}).state;const rule=s.commerce.rules.find(r=>r.itemId==='EC-ITEM-001'),answer=s.conversations[0].messages.findLast(m=>m.role==='bot'&&m.citation);check(s.commerce.aftersales.length===0&&!s.cases.some(c=>c.service)&&answer?.citation.ruleVersion===rule?.version&&answer.body.includes(Commerce.money(rule.amountCents))&&/经理.*审核/.test(answer.body)&&(!rule.requiresReturn||/寄回.*验收/.test(answer.body)),'应引用有效执行规则、金额和前置条件且不受理');});
+    run('trigger-request','明确商品诉求只收集，客户确认后才受理',()=>{let s=base();s=step(s,customer,'say',{id:s.conversations[0].id,body:'保温杯破了想退货'}).state;check(s.cases.filter(c=>c.service).length===1&&!s.commerce.aftersales.length,'应保留未决诉求');const p=step(s,customer,'previewAftersale',form(s));check(!p.state.commerce.occupancies.length,'预览不占用');});
+    run('two-items','收纳袋物流与保温杯退货分别绑定',()=>{let s=base();s=step(s,customer,'say',{id:s.conversations[0].id,body:'收纳袋没到，保温杯破了想退'}).state;check(s.cases.filter(c=>c.service).length===2&&s.cases.every(c=>!c.result)&&new Set(s.cases.map(c=>c.itemId)).size===2,'应有两个未决商品事项');});
+    run('happy-path','核对、审核、寄回验收、退款、通知与反馈',()=>{const f=pending(),bag=JSON.stringify(f.s.commerce.items[1]);f.s=step(f.s,admin,'applySimulatedReceipt',{aftersaleId:f.id,kind:'refund_succeeded',version:3}).state;f.s=step(f.s,admin,'applySimulatedReceipt',{aftersaleId:f.id,kind:'notification_sent',version:4}).state;f.s=step(f.s,customer,'feedback',{id:f.caseId,confirmed:true}).state;check(f.s.commerce.refunds[0].amountCents===12900&&get(f.s,'cases',f.caseId).feedback==='confirmed'&&JSON.stringify(f.s.commerce.items[1])===bag,'成功回执与商品隔离须成立');});
+    run('review-reject','拒绝明确说明并只释放未用占用',()=>{const f=request();f.s=step(f.s,manager,'submitReview',{aftersaleId:f.id,decision:'rejected',reason:'模拟不满足适用条件'}).state;check(f.s.commerce.occupancies[0].state==='released'&&get(f.s,'cases',f.caseId).result.evidence.decision==='rejected','拒绝结果须有决定依据');});
+    run('supplement','补件接续原申请与原期限',()=>{const f=request(),due=get(f.s,'cases',f.caseId).dueAt;f.s=step(f.s,manager,'submitReview',{aftersaleId:f.id,decision:'needs_info',reason:'补充破损描述'}).state;f.s=step(f.s,customer,'submitSupplement',{aftersaleId:f.id,body:'杯体有裂痕',evidenceRef:'DEMO-DAMAGE-001'}).state;check(f.s.commerce.aftersales.length===1&&f.s.commerce.aftersales[0].status==='awaiting_review'&&get(f.s,'cases',f.caseId).dueAt===due,'不得新建或静默延长');});
+    run('handoff-timeout','交接超时原负责人仍承接',()=>{const f=approved();f.s=step(f.s,agent,'proposeHandoff',{caseId:f.caseId,targetId:'zhou',reason:'晚班续办',dueAt:now+60000}).state;f.s=step(f.s,manager,'expireHandoffs',{},now+60001).state;check(f.s.commerce.handoffs[0].status==='expired'&&get(f.s,'cases',f.caseId).ownerId==='lin','超时不能丢责');});
+    run('refund-unknown','未知查原流水且不能凭文本办结',()=>{const f=pending();f.s=step(f.s,admin,'applySimulatedReceipt',{aftersaleId:f.id,kind:'refund_unknown',version:3}).state;check(step(f.s,agent,'queryRefund',{aftersaleId:f.id}).value.requestId==='eval-refund'&&get(f.s,'cases',f.caseId).status==='open','应保留原请求和未决');reject(()=>step(f.s,agent,'updateTicket',{id:f.s.tickets[0].id,status:'done',publicText:'完成',evidence:'文字'}),'文本不得伪造退款');});
+    run('refund-idempotent','确认重放与重复退款被守卫',()=>{const f=pending();f.s=step(f.s,customer,'confirmAftersale',f.data).state;f.s=step(f.s,agent,'submitRefund',{aftersaleId:f.id,requestId:'eval-refund'}).state;reject(()=>step(f.s,agent,'submitRefund',{aftersaleId:f.id,requestId:'different'}),'不能另建义务');check(f.s.commerce.refunds.length===1&&f.s.commerce.occupancies.length===1,'只执行一次');});
+    run('changed-intent','改意图提出撤回，待回执后释放',()=>{const f=request();f.s=step(f.s,customer,'requestWithdrawal',{aftersaleId:f.id,reason:'想保留商品，撤回'}).state;check(f.s.commerce.occupancies[0].state==='reserved','本地撤回不能释放');f.s=step(f.s,admin,'applySimulatedReceipt',{aftersaleId:f.id,kind:'withdrawal_confirmed',version:1}).state;check(f.s.commerce.occupancies[0].state==='released','安全终止后方可释放');});
+    run('query-failure','查询故障保持未决且不显示未支付',()=>{let s=base();s.commerce.payments[0].queryStatus='failed';s=step(s,customer,'say',{id:s.conversations[0].id,body:'查支付 EC-SO20261005001'}).state;check(s.cases.some(c=>c.status==='open'&&!c.result)&&s.conversations[0].state==='queued'&&!s.conversations[0].messages.at(-2).body.includes('未支付'),'失败不能算查询成功');});
+    run('notification-failure','通知失败与退款结果、满意度独立',()=>{const f=pending();f.s=step(f.s,admin,'applySimulatedReceipt',{aftersaleId:f.id,kind:'refund_succeeded',version:3}).state;f.s=step(f.s,admin,'applySimulatedReceipt',{aftersaleId:f.id,kind:'notification_failed',version:4}).state;check(f.s.commerce.refunds[0].status==='succeeded'&&get(f.s,'cases',f.caseId).feedback==='pending'&&f.s.commerce.notifications[0].status==='failed','各状态不可互相替代');});
+    return {id:uid(copy(source),'EV'),knowledgeId,at:now,fingerprint:serviceFingerprint(source),pass:rows.every(r=>r.pass),rows,dependencies:{flowVersion:source.flow.live.version,ruleVersions:source.commerce.rules.map(r=>({id:r.id,version:r.version})),knowledgeVersions:source.knowledge.map(k=>({id:k.id,version:k.live?.version||0,candidate:knowledgeId===k.id}))},simulated:true};
+  }
   const SOP = [['intent','确认诉求'],['order','核对订单'],['logistics','查询物流'],['aftersales','退换货办理'],['information','补充资料'],['result','记录处理结果'],['callback','回访安排'],['close','结束沟通']];
   const wf = c => c.workflow ||= {overrides: {}};
   const latestCustomer = c => [...c.messages].reverse().find(m => m.role === 'customer');
@@ -248,7 +303,7 @@
   function pauseAi(conv, reason, now) { if (conv.aiAssist?.enabled) { conv.aiAssist.enabled = false; conv.aiAssist.history.push({at: now, action: 'paused', reason}); } }
   function scopedCase(s, a, conversationId, caseId) {
     const conv = get(s, 'conversations', conversationId), c = get(s, 'cases', caseId);
-    agentOwns(a, conv); assert(conv.state === 'human' && conv.caseIds.includes(c.id) && c.customerId === conv.customerId, '问题不属于当前接待');
+    if(c.service)Commerce.access(s,a,c);else agentOwns(a, conv); assert(conv.state === 'human' && conv.caseIds.includes(c.id) && c.customerId === conv.customerId, '问题不属于当前接待');
     return {conv, c};
   }
   function bindCaseOrder(s, conv, c, orderId, now) {
@@ -274,6 +329,15 @@
     f.intentEvidence={messageId:latestCustomer(conv)?.id || '',text:body,at:now};
   }
   function recognise(s, conv, body, now) {
+    if(s.schema===5){
+      if(Commerce.collect(s,conv,body,now))return;
+      const services=conv.caseIds.map(id=>get(s,'cases',id)).filter(c=>c.service&&c.status!=='completed');
+      const p=intentions(body,conv.flow,true);
+      if(services.length&&!p.lookup&&!p.intake&&!p.policy&&!p.human){
+        const m=conv.messages.at(-1);if(services.length===1){m.caseId=services[0].id;services[0].serviceVersion++;services[0].serviceHistory.push({at:now,text:'客户补充：'+body});}
+        else message(s,conv,'system','补充已保留；请从对应商品事项提交材料，便于审核者准确关联。',now);return;
+      }
+    }
     const p = intentions(body, conv.flow,s.schema===5), ids = [...new Set((body.match(/\bSO[A-Z0-9]+\b/gi) || []).map(x => x.toUpperCase()))];
     const open = conv.caseIds.map(id => get(s, 'cases', id)).filter(c => c.status !== 'completed' && !c.workflow?.withdrawn);
     let c;
@@ -299,10 +363,10 @@
   function suggestion(s, conversationId, caseId, now = Date.now()) {
     const conv = get(s, 'conversations', conversationId), c = caseId ? get(s, 'cases', caseId) : conv.caseIds.length ? get(s, 'cases', conv.caseIds.at(-1)) : null;
     assert(!c || conv.caseIds.includes(c.id), '问题不属于当前会话');
-    const m = latestCustomer(conv), query = m?.body || '', k = query ? retrieve(s, query, now) : null;
+    const m = latestCustomer(conv), query = m?.body || '', k = query ? retrieve(s, query, now,query,conv.customerId) : null;
     const token = JSON.stringify({conv: conv.id, owner: conv.ownerId, state: conv.state, message: m || null, case: c ? {id: c.id, kind: c.kind, orderId: c.orderId, status: c.status} : null, order: currentOrder(s, c) || null, referencedOrders: s.orders.filter(o=>o.customerId===conv.customerId && (query.toUpperCase().includes(o.id)||o.id===c?.orderId)).map(o=>({...o,...(s.schema===5?{commerce:Commerce.snapshot(s,o.id)}:{})})), knowledge: k, connection: customerConnection(s, conv.customerId)});
     if (!k || k.conflict) return {token, messageId: m?.id || '', query, body: '', status: k?.conflict ? 'conflict' : 'none', reason: k?.conflict ? '知识来源冲突，需要人工核实' : '尚无有效知识依据，请人工核实'};
-    return {token, messageId: m.id, query, body: k.answer, status: 'ready', knowledge: {id: k.id, title: k.title, version: k.version, source: k.source, answer: k.answer}};
+    return {token, messageId: m.id, query, body: k.answer, status: 'ready', knowledge: {id: k.id, title: k.title, version: k.version, source: k.source, answer: k.answer,...(k.ruleRefs?{ruleId:k.ruleId,ruleVersion:k.ruleVersion,ruleRefs:copy(k.ruleRefs)}:{})}};
   }
   function sopView(s, conversationId, caseId, now = Date.now()) {
     const conv = get(s, 'conversations', conversationId), c = caseId ? get(s, 'cases', caseId) : conv.caseIds.length ? get(s, 'cases', conv.caseIds.at(-1)) : null;
@@ -395,16 +459,24 @@
     const s = copy(state), a = actor(s, identity);
     assert(roles[a.role]?.includes(type), '当前角色无权执行此操作');
     if (a.role==='customer' && type!=='customerConnection') assert(customerConnection(s,a.id)==='online','当前连接不可用，请恢复在线后操作');
+    if(s.schema===5)Commerce.ensure(s);
     let value;
     switch (type) {
+      case 'previewAftersale':case 'confirmAftersale':case 'submitReview':case 'submitReturn':case 'submitSupplement':case 'requestWithdrawal':case 'submitRefund':case 'queryRefund':case 'applySimulatedReceipt':case 'proposeHandoff':case 'acceptHandoff':case 'rejectHandoff':case 'expireHandoffs':case 'serviceFollowup':case 'resolveLogistics':case 'serviceDispute':case 'resolveServiceDispute':case 'serviceReply':
+        value=Commerce.command(s,a,type,data,now);break;
+      case 'runServiceEval':{
+        assert(s.schema===5,'请进入电商工作空间');value=serviceEvaluation(s,now,data.knowledgeId||'');s.commerce.evaluations.push(copy(value));break;
+      }
       case 'confirmIntent': {
         const {conv,c} = scopedCase(s,a,data.conversationId,data.caseId);
+        assert(!c.service||data.kind===c.kind,'商品诉求不能通过通用确认更换业务类型');
         assert(['knowledge','order','aftersales','support'].includes(data.kind),'诉求类型无效');
         assert(c.kind===data.kind || (!c.result && !acceptedTicket(s,c)),'已有办理记录，不能更换诉求类型');
         c.kind=data.kind; if (data.title) c.title=text(data.title,'诉求说明',200); wf(c).intentConfirmedAt=now; pauseAi(conv,'诉求核对已更新',now); value=c.id; break;
       }
       case 'bindOrder': {
         const {conv,c} = scopedCase(s,a,data.conversationId,data.caseId); assert(['order','aftersales'].includes(c.kind),'此诉求不需要绑定订单');
+        assert(!c.service||data.orderId===c.orderId,'商品事项已绑定原订单，不能换绑');
         value=bindCaseOrder(s,conv,c,data.orderId,now).id; pauseAi(conv,'订单核对已更新',now); break;
       }
       case 'queryOrder': {
@@ -420,6 +492,7 @@
       }
       case 'markSop': {
         const {c} = scopedCase(s,a,data.conversationId,data.caseId);
+        assert(!c.service,'商品办理节点由业务记录和回执决定，不能人工标为不适用');
         assert(SOP.some(([key])=>key===data.nodeKey) && data.nodeKey!=='close','节点无效');
         assert(['na','waiting','todo'].includes(data.status),'节点状态无效');
         const node=sopView(s,data.conversationId,c.id,now).nodes.find(n=>n.key===data.nodeKey);
@@ -537,10 +610,11 @@
         assert(s.conversations.filter(x => x.state === 'human' && x.ownerId === a.id).length < s.settings.capacity, '已达到个人接待容量');
         c.state = 'human'; c.ownerId = a.id; if (!c.ownerHistory.includes(a.id)) c.ownerHistory.push(a.id);
         message(s, c, 'system', `${a.name}已接入，接下来由人工为您服务。`, now);
-        c.caseIds.map(id => get(s, 'cases', id)).filter(x => x.status !== 'completed').forEach(x => x.humanTouched = true); break;
+        c.caseIds.map(id => get(s, 'cases', id)).filter(x => x.status !== 'completed').forEach(x => {x.humanTouched=true;if(x.service&&!x.ownerId){x.ownerId=a.id;x.serviceVersion++;s.tickets.filter(t=>t.caseId===x.id&&!t.ownerId).forEach(t=>{t.ownerId=a.id;t.status=t.status==='new'?'working':t.status;});}}); break;
       }
       case 'reply': case 'note': {
-        const c = get(s, 'conversations', data.id); agentOwns(a, c); assert(c.state === 'human', '会话不在人工接待状态');
+        const c = get(s, 'conversations', data.id),targetId=type==='reply'&&(data.caseId||data.suggestionCaseId||data.orderCaseId||(c.caseIds.length===1?c.caseIds[0]:'')),target=targetId&&get(s,'cases',targetId);
+        if(target?.service)Commerce.access(s,a,target);else agentOwns(a, c); assert(c.state === 'human', '会话不在人工接待状态');
         let citation, orderId, caseId;
         if (type === 'reply' && data.suggestionToken) { const sg = suggestion(s,c.id,data.suggestionCaseId,now); assert(sg.status==='ready' && sg.token===data.suggestionToken,'推荐依据已变化，请重新核对后发送'); citation=copy(sg.knowledge); }
         if (type === 'reply' && (data.orderCaseId !== undefined || data.orderSnapshot !== undefined)) {
@@ -582,6 +656,8 @@
       }
       case 'feedback': {
         const c = get(s, 'cases', data.id); owns(a, c); assert(c.status === 'completed', '尚未形成可确认的处理结果');
+        assert(!c.service||Commerce.resultReady(s,c),'业务结果尚未核实');
+        if(c.service&&data.confirmed!==true){value=Commerce.command(s,a,'serviceDispute',{caseId:c.id,reason:data.reason},now);break;}
         if (data.confirmed === true) { c.feedback = 'confirmed'; c.confirmedAt = now; }
         else {
           const reason = text(data.reason, '未解决原因'); c.feedback = 'disputed'; c.status = 'open'; c.completedAt = null;
@@ -595,6 +671,7 @@
         break;
       }
       case 'createTicket': {
+        if(data.caseId)assert(!s.cases.find(c=>c.id===data.caseId)?.service,'请从商品申请入口核对，不能通过旧工单登记办理');
         const title = text(data.title, '工单标题', 100), description = text(data.description, '问题描述');
         assert(data.confirmed === true, '请核对申请后再确认受理');
         assert(s.schema!==5||(!data.structured&&(!data.caseId||get(s,'cases',data.caseId).kind!=='aftersales')),'当前入口仅提供售后咨询，请联系人工客服核实商品级申请');
@@ -647,9 +724,10 @@
         for (const id of c.conversationIds) message(s, get(s, 'conversations', id), 'system', `已受理工单 ${t.id}：${title}。请在“服务进度”查看后续处理。`, now, {ticketId: t.id});
         value = {id: t.id, created: true}; break;
       }
-      case 'claimTicket': { const t = get(s, 'tickets', data.id); assert(within(a, t) && !t.ownerId && t.status === 'new', '工单已被领取或不在可领取范围'); t.ownerId = a.id; t.status = 'working'; t.history.push({at: now, publicText: '客服已开始核实处理。', actor: a.name}); break; }
+      case 'claimTicket': { const t=get(s,'tickets',data.id);assert(within(a,t)&&!t.ownerId&&t.status==='new','工单已被领取或不在可领取范围');t.ownerId=a.id;t.status='working';t.history.push({at:now,publicText:'客服已开始核实处理。',actor:a.name});const c=get(s,'cases',t.caseId);if(c.service){assert(!c.ownerId,'商品事项已由其他客服负责，请核对交接');c.ownerId=a.id;c.humanTouched=true;c.serviceVersion++;}break; }
       case 'updateTicket': {
         const t = get(s, 'tickets', data.id); agentOwns(a, t);
+        assert(!get(s,'cases',t.caseId).service,'商品业务工单须通过对应办理命令与结果回执更新');
         assert(['working', 'waiting_customer'].includes(t.status), '工单当前不可修改');
         assert(['working', 'waiting_customer', 'done'].includes(data.status), '工单状态无效');
         const publicText = text(data.publicText, '客户可见说明');
@@ -668,9 +746,12 @@
       }
       case 'assignTicket': case 'assignConversation': {
         const r = get(s, type === 'assignTicket' ? 'tickets' : 'conversations', data.id); managing(a, r);
+        const serviceCases=s.schema===5?(type==='assignTicket'?[get(s,'cases',r.caseId)]:r.caseIds.map(id=>get(s,'cases',id))).filter(c=>c.service):[];
+        assert(!serviceCases.some(c=>c.ownerId),'已有商品责任须提出待接收交接，不能直接转派');
         const next = get(s, 'staff', data.ownerId); assert(next.role === 'agent' && within(next, r), '请选择该服务组的客服');
         if (type === 'assignTicket') { assert(r.status !== 'done' || r.callback?.status === 'pending', '已完成且无待回访的工单不再转派'); r.ownerId = next.id; if (r.status === 'new') r.status = 'working'; r.history.push({at: now, publicText: '已安排客服继续处理。', actor: a.name, internalText: `转派给${next.name}`}); }
-        else { assert(['queued', 'human'].includes(r.state), '仅能分配待接待或接待中的会话'); assert(next.available && s.conversations.filter(v => v.state === 'human' && v.ownerId === next.id && v.id !== r.id).length < s.settings.capacity, '目标客服不可接待或已满载'); pauseAi(r,'会话已转派',now); r.ownerId = next.id; r.state = 'human'; if (!r.ownerHistory.includes(next.id)) r.ownerHistory.push(next.id); message(s, r, 'system', `${next.name}将继续为您服务，已有信息会保留。`, now); } break;
+        else { assert(['queued', 'human'].includes(r.state), '仅能分配待接待或接待中的会话'); assert(next.available && s.conversations.filter(v => v.state === 'human' && v.ownerId === next.id && v.id !== r.id).length < s.settings.capacity, '目标客服不可接待或已满载'); pauseAi(r,'会话已转派',now); r.ownerId = next.id; r.state = 'human'; if (!r.ownerHistory.includes(next.id)) r.ownerHistory.push(next.id); message(s, r, 'system', `${next.name}将继续为您服务，已有信息会保留。`, now); }
+        serviceCases.forEach(c=>{c.ownerId=next.id;c.humanTouched=true;c.serviceVersion++;s.tickets.filter(t=>t.caseId===c.id&&!t.ownerId).forEach(t=>{t.ownerId=next.id;t.status=t.status==='new'?'working':t.status;});});break;
       }
       case 'presence': get(s, 'staff', a.id).available = Boolean(data.available); break;
       case 'serviceSettings': {
@@ -681,35 +762,47 @@
       case 'flag': { const c = get(s, 'conversations', data.id); agentOwns(a, c); const q = [...c.messages].reverse().find(m => m.role === 'customer'); assert(q, '尚无客户提问'); gap(s, c, q.body, '答复疑义', now); break; }
       case 'saveKnowledge': {
         const draft = {title: text(data.title, '标题', 120), question: text(data.question, '标准问题', 300), keywords: split(data.keywords), answer: text(data.answer, '答复内容', 4000), source: text(data.source, '来源', 300), effectiveAt: data.effectiveAt, expiresAt: data.expiresAt || '', positive: text(data.positive, '正例问题', 300), negative: text(data.negative, '反例问题', 300)};
+        if(s.schema===5){const scopes=Array.isArray(data.scopeItemIds)?data.scopeItemIds:split(data.scopeItemIds||'');assert(scopes.every(id=>s.commerce.items.some(i=>i.id===id)),'知识商品范围无效');draft.scopeItemIds=[...new Set(scopes)];draft.ruleSource=text(data.ruleSource||data.source,'规则来源',300);draft.reviewer=text(data.reviewer||'知识运营','审核责任',120);if(data.effectiveFrom)draft.effectiveAt=new Date(data.effectiveFrom).toISOString();if(data.effectiveTo)draft.expiresAt=new Date(data.effectiveTo).toISOString();}
         validateArticle(draft); let k = data.id && get(s, 'knowledge', data.id);
         if (!k) { k = {id: uid(s, 'KB'), live: null, versions: [], disabled: false}; s.knowledge.push(k); }
         k.draft = draft; k.validation = null; value = k.id; break;
       }
-      case 'testKnowledge': { const k = get(s, 'knowledge', data.id); validateArticle(k.draft); k.validation = regression(candidate(s, k.id, 'knowledge'), now, k.id); value = copy(k.validation); break; }
+      case 'testKnowledge': { const k = get(s, 'knowledge', data.id); validateArticle(k.draft); k.validation = regression(candidate(s, k.id, 'knowledge'), now, k.id);if(s.schema===5){k.validation.service=serviceEvaluation(s,now,k.id);k.validation.passed&&=k.validation.service.pass;s.commerce.evaluations.push(copy(k.validation.service));}value = copy(k.validation); break; }
       case 'publishKnowledge': {
         const k = get(s, 'knowledge', data.id); const fresh = regression(candidate(s, k.id, 'knowledge'), now, k.id);
         assert(k.validation?.passed && k.validation.fingerprint === fresh.fingerprint && fresh.passed, '草稿或依赖已变化，或知识已失效；请重新测试且全部通过后发布');
+        assert(s.schema!==5||(serviceEvalCurrent(s,k.id)&&serviceEvaluation(s,now,k.id).pass),'办理规则失效或事实依赖已变化，请重跑完整流程测试');
         if (k.live) k.versions.push(copy(k.live)); k.live = {...copy(k.draft), version: (k.live?.version || 0) + 1, publishedAt: now}; k.draft = null; k.disabled = false; k.validation = null; break;
       }
       case 'disableKnowledge': { const k = get(s, 'knowledge', data.id); assert(k.live && !k.disabled, '知识未在使用中'); k.disabled = true; k.disabledReason = text(data.reason, '停用原因', 300); break; }
       case 'saveFlow': { const f = {humanWords: split(data.humanWords), intakeEnabled: data.intakeEnabled === true}; validateFlow(f); s.flow.draft = f; s.flow.validation = null; break; }
-      case 'testFlow': { validateFlow(s.flow.draft); s.flow.validation = regression(candidate(s, '', 'flow'), now); value = copy(s.flow.validation); break; }
+      case 'testFlow': { validateFlow(s.flow.draft); s.flow.validation = regression(candidate(s, '', 'flow'), now);if(s.schema===5){s.flow.validation.service=serviceEvaluation(s,now,'',true);s.flow.validation.passed&&=s.flow.validation.service.pass;s.commerce.evaluations.push(copy(s.flow.validation.service));}value = copy(s.flow.validation); break; }
       case 'publishFlow': {
         const fresh = regression(candidate(s, '', 'flow'), now); assert(s.flow.validation?.passed && s.flow.validation.fingerprint === fresh.fingerprint && fresh.passed, '流程或知识已变化，请重新运行测试后发布');
+        assert(s.schema!==5||(s.flow.validation.service?.pass&&s.flow.validation.service.fingerprint===serviceFingerprint(s)&&serviceEvaluation(s,now,'',true).pass),'业务依赖变化或规则失效，请重跑完整流程测试');
         s.flow.versions.push(copy(s.flow.live)); s.flow.live = {...copy(s.flow.draft), version: s.flow.live.version + 1}; s.flow.draft = null; s.flow.validation = null; break;
       }
       case 'reviewGap': {
         const g = get(s, 'gaps', data.id); managing(a, get(s, 'conversations', g.conversationId)); assert(g.status !== 'closed', '已验收记录不可改判');
         assert(['confirmed', 'dismissed'].includes(data.status), '复核结论无效'); g.review = text(data.review, '复核依据'); g.status = data.status;
-        if (g.status === 'confirmed') g.cause = text(data.cause, '根因说明'); break;
+        if(g.status==='confirmed'){g.cause=text(data.cause,'根因说明');if(s.schema===5){g.causeType=data.causeType||'knowledge';assert(['knowledge','routing','business','workflow','collaboration','notification'].includes(g.causeType),'根因类别无效');const conv=get(s,'conversations',g.conversationId),m=conv.messages.filter(m=>m.role==='customer'&&normalize(m.body)===normalize(g.query)).at(-1);g.sourceCaseIds=m?.caseIds?.length?copy(m.caseIds):[m?.caseId||conv.caseIds.at(-1)].filter(Boolean);g.sourceCaseId=g.sourceCaseIds[0]||'';}}break;
       }
-      case 'linkGap': { const g = get(s, 'gaps', data.id); assert(['confirmed', 'fixing'].includes(g.status), '请先由经理确认问题'); get(s, 'knowledge', data.knowledgeId); g.knowledgeId = data.knowledgeId; g.status = 'fixing'; g.validation = null; break; }
+      case 'linkGap': { const g = get(s, 'gaps', data.id); assert(['confirmed', 'fixing'].includes(g.status), '请先由经理确认问题');if(s.schema===5&&g.causeType&&g.causeType!=='knowledge'){g.remediation=text(data.remediation,'流程整改说明');const allowed={routing:['trigger-policy','trigger-request','two-items','changed-intent'],business:['query-failure','refund-unknown','refund-idempotent'],workflow:['happy-path','review-reject','supplement'],collaboration:['handoff-timeout'],notification:['notification-failure']};assert(allowed[g.causeType].includes(data.scenarioId),'请选择对应根因的复验场景');g.scenarioId=data.scenarioId;g.knowledgeId='';}else{get(s, 'knowledge', data.knowledgeId);g.knowledgeId=data.knowledgeId;} g.status = 'fixing'; g.validation = null; break; }
       case 'acceptGap': {
         const g = get(s, 'gaps', data.id); managing(a, get(s, 'conversations', g.conversationId)); assert(g.status === 'fixing', '尚未关联整改措施');
+        if(s.schema===5&&g.causeType&&g.causeType!=='knowledge'){
+          const all=serviceEvaluation(s,now),originals=(g.sourceCaseIds||[g.sourceCaseId]).filter(Boolean).map(id=>get(s,'cases',id));
+          assert(all.pass&&all.rows.some(r=>r.id===g.scenarioId&&r.pass),'完整流程或关联失败场景尚未通过');
+          assert(originals.length&&originals.every(c=>c.status==='completed'&&Commerce.resultReady(s,c)),'原始失败事项尚无完整解决证据，不能仅凭示例验收');
+          if(g.causeType==='notification')assert(originals.every(c=>s.commerce.notifications.some(n=>n.caseId===c.id&&n.status==='sent'&&n.receipt?.kind==='notification_sent')),'原事项通知尚无有效送达回执');
+          if(g.causeType==='collaboration')assert(originals.every(c=>{const h=s.commerce.handoffs.filter(h=>h.caseId===c.id).at(-1);return h?.status==='accepted'&&c.ownerId===h.targetId&&s.tickets.filter(t=>t.caseId===c.id).every(t=>t.ownerId===c.ownerId);}), '原交接尚无接收与责任落实证据');
+          if(g.causeType==='business')assert(originals.every(c=>c.result?.evidence?.kind==='simulated-refund'||c.result?.evidence?.kind==='simulated-commerce'&&c.result.evidence.snapshot?.queryStatus==='ok'||c.service&&Commerce.resultReady(s,c)),'原业务失败尚无成功回执或实际核对依据');
+          g.acceptance=text(data.acceptance,'验收说明');g.validation={...all,sourceCaseIds:originals.map(c=>c.id)};g.status='closed';break;
+        }
         const k = get(s, 'knowledge', g.knowledgeId); assert(k.live && !k.draft && !k.disabled, '整改知识尚未发布，或还有待发布草稿');
         const rs = classify(s, g.query, get(s, 'conversations', g.conversationId).customerId, now);
         assert(rs.some(r => r.knowledge?.id === k.id), '原始问题未命中关联知识，不能验收');
-        const all = regression(s, now); assert(all.passed, '全量回归未通过，不能验收');
+        const all = regression(s, now); assert(all.passed, '全量回归未通过，不能验收');if(s.schema===5)assert(serviceEvaluation(s,now).pass,'完整业务流程未通过，不能验收');
         g.acceptance = text(data.acceptance, '验收说明'); g.validation = {at: now, fingerprint: fingerprint(s), version: k.live.version, rows: all.rows}; g.status = 'closed'; break;
       }
       case 'export': value = copy(s); break;
@@ -723,6 +816,7 @@
     return {
       customer: copy(get(s, 'customers', customerId)),
       connection: customerConnection(s, customerId),
+      ...(s.schema===5?{services:s.cases.filter(c=>c.customerId===customerId&&c.service).map(c=>Commerce.project(s,c))}:{}),
       orders: s.orders.filter(o => o.customerId === customerId).map(o=>({...copy(o),...(s.schema===5?{commerce:Commerce.snapshot(s,o.id)}:{})})),
       conversations: s.conversations.filter(c => c.customerId === customerId).map(c => ({id: c.id, customerId: c.customerId, state: c.state, caseIds: [...c.caseIds], createdAt: c.createdAt, updatedAt: c.updatedAt, messages: c.messages.filter(m => m.visibility === 'public').map(m => Object.fromEntries(Object.entries(copy(m)).filter(([key]) => ['id','role','body','at','visibility','author','caseId','ticketId','orderId','intake','citation','aiAssist'].includes(key))))})),
       cases: s.cases.filter(c => c.customerId === customerId).map(c => ({id: c.id, kind: c.kind, title: c.title, orderId: c.orderId, status: c.status, feedback: c.feedback, conversationIds: [...c.conversationIds], createdAt: c.createdAt, result: c.result ? {publicText: c.result.publicText, at: c.result.at} : null})),
@@ -735,13 +829,22 @@
     const tickets = s.tickets.filter(t => within(a, t) && (t.ownerId === a.id || (!t.ownerId && t.status === 'new')));
     const relatedTickets = s.tickets.filter(t => within(a,t) && !tickets.some(x=>x.id===t.id) && conversations.some(c=>c.caseIds.includes(t.caseId)));
     const visibleCustomers = new Set([...conversations, ...tickets].map(x => x.customerId));
-    return copy({conversations, tickets, relatedTickets, customers: s.customers.filter(c => visibleCustomers.has(c.id)), orders: s.orders.filter(o => visibleCustomers.has(o.customerId)), cases: s.cases.filter(c => conversations.some(x => x.caseIds.includes(c.id)) || tickets.some(t => t.caseId === c.id))});
+    const handoffs=s.schema===5?(s.commerce.handoffs||[]).filter(h=>h.targetId===a.id&&h.status==='pending'):[];handoffs.forEach(h=>visibleCustomers.add(get(s,'cases',h.caseId).customerId));
+    return copy({conversations,tickets,relatedTickets,handoffs,customers:s.customers.filter(c=>visibleCustomers.has(c.id)),orders:s.orders.filter(o=>visibleCustomers.has(o.customerId)),cases:s.cases.filter(c=>conversations.some(x=>x.caseIds.includes(c.id))||tickets.some(t=>t.caseId===c.id)||handoffs.some(h=>h.caseId===c.id))});
+  }
+  function serviceView(s,identity,{caseId}){
+    const a=actor(s,identity),c=get(s,'cases',caseId);assert(s.schema===5,'请选择电商工作空间');
+    if(c.service){Commerce.access(s,a,c,{read:true});return {...Commerce.project(s,c,{internal:a.role!=='customer'}),service:true};}
+    const conv=s.conversations.find(v=>c.conversationIds.includes(v.id)&&v.ownerId===a.id);
+    const teamId=c.teamId||s.conversations.find(v=>c.conversationIds.includes(v.id))?.teamId;
+    if(a.role==='customer')owns(a,c);else assert(within(a,{teamId})&&(a.role==='manager'||a.role==='agent'&&(conv||s.tickets.some(t=>t.caseId===c.id&&t.ownerId===a.id))),'无权查看此事项');
+    return {...Commerce.project(s,c),service:false,ownerName:conv?s.staff.find(x=>x.id===conv.ownerId)?.name:'服务责任组',history:[],result:c.result?{at:c.result.at,publicText:c.result.publicText,evidence:copy(c.result.evidence)}:null};
   }
   function metrics(s, now = Date.now()) {
     const completed = s.cases.filter(c => c.status === 'completed');
     const confirmed = completed.filter(c => c.feedback === 'confirmed');
-    return {conversations: s.conversations.length, cases: s.cases.length, completed: completed.length, confirmed: confirmed.length, botConfirmed: confirmed.filter(c => !c.humanTouched).length, waiting: s.conversations.filter(c => c.state === 'queued').length, activeTickets: s.tickets.filter(t => t.status !== 'done').length, overdue: s.tickets.filter(t => t.status !== 'done' && t.dueAt < now).length, gaps: s.gaps.filter(g => !['closed', 'dismissed'].includes(g.status)).length};
+    return {conversations:s.conversations.length,cases:s.cases.length,completed:completed.length,confirmed:confirmed.length,botConfirmed:confirmed.filter(c=>!c.humanTouched).length,waiting:s.conversations.filter(c=>c.state==='queued').length,activeTickets:s.tickets.filter(t=>t.status!=='done').length,overdue:s.tickets.filter(t=>t.status!=='done'&&t.dueAt<now).length,gaps:s.gaps.filter(g=>!['closed','dismissed'].includes(g.status)).length,...(s.schema===5?{service:Commerce.metrics(s)}:{})};
   }
-  const api = {copy, get, split, roles, actor, retrieve, intentions, classify, execute, customerView, deskView, metrics, regression, fingerprint, activeArticles, sopView, suggestion, closePreview, aiPending, customerConnection, validWorkflow, intakeToken};
+  const api={copy,get,split,roles,actor,retrieve,intentions,classify,execute,customerView,deskView,serviceView,serviceEvalCurrent,metrics,regression,fingerprint,activeArticles,sopView,suggestion,closePreview,aiPending,customerConnection,validWorkflow,intakeToken};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.SupportDomain = api;
 })(typeof window !== 'undefined' ? window : globalThis);

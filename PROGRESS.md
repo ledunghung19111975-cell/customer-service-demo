@@ -1,8 +1,12 @@
-# T-151 第 1 棒执行记录
+# T-151 智能客服电商实施执行记录
 
 产出 Agent：Codex；代码主写与收敛：Codex；分棒验收：Claude（待复验）。
 
 日志保留完整文本；仅清除空白行缩进以通过 Git 空白检查，未格式化原始 TAP 另存于文中列出的 `/tmp` 路径。
+
+## 当前交付状态（2026-10-06）
+
+报告的五项调整已实现并完成内部验证：咨询与双商品触发、商品级退货退款进度、人工接续、完整流程评测与分类整改、可下钻指标。全量 445 通过、0 失败、0 跳过；用户验收及 Claude 保留抽查未执行。项目提交凭证见工作记录；下方保留各次真实执行证据。
 
 ## 开工回执（2026-10-05）
 - 目标：仅修复 F1、F8，使 S2-1、S2-1b、S8-1a、S5-1、S5-1c 符合。
@@ -2639,3 +2643,259 @@ S8-1a  符合   多位客户都说“你好”
 触发：数据/领域/存储/视图存在实质耦合。两位只读审查Agent并行：正确性与边界、复杂度与证据；无降级。去重7项（P0×0、P1×3、P2×4）已修复：混合异常误办结、AI使用旧摘要、V4路由回归、SOP证据状态、内置回归旧ID、写后读取异常恢复、保存失败文档口径。异常项追加无ID两轮反证后关闭；最终未解决P0/P1/P2均0。审查成本相对预期返工收益：低。独立末轮56项通过，主Agent全量390项通过；客服真实入口事件采用两包裹快照并发送通过。
 
 第2棒代码与内部验证完成，待用户分棒验收。第3至5棒未开始。完整退货退款、任意分摊、真机、真实接口、资金/通知和多标签原子并发不在本棒通过范围。
+
+
+## 2026-10-06 报告五项调整与电商完整演示
+
+产出 Agent：Codex；主写、集成与最终收敛：Codex；参与：Codex（客户/客服视图、运营视图、两路独立只读审查）。
+
+### 开工依据与约束
+
+用户授权“全部调整”，基线为 `bddbb29`，项目工作区干净。基线命令 `node --test --test-reporter=tap tests/*.test.cjs` 实际 390 通过、0 跳过，完整日志 `/tmp/T151-all-adjust-baseline.tap`。继续沿用纯前端、固定杯子一件 12900 分、袋子 4900 分、整单 17800 分、蓝色主题与独立电商数据。用户 8769 预览保留；实际写入验收使用 8770；不操作 8768、旧 V4 业务键或草稿，不推送。
+
+### 完成范围与验证映射
+
+| 调整 | 实现及证据 |
+| --- | --- |
+| 咨询与办理触发 | 全原句范围/订单校验、规则咨询不建申请、双商品分别记录；否定异常不创建错误售后。政策内容从有效商品规则生成，短问句/人工建议/续答一致 |
+| 退货退款及进度 | 预览无占用、客户确认、审批/补件/拒绝、寄回/收货/验收、原义务退款、通知、主动反馈；金额12900、袋子事实不变 |
+| 人工接续 | 接管与审批独立；待接收/接收/拒接/超时；事项和工单同步换责，原会话接待人保留；新负责人及关闭后都能发事项公开回复 |
+| 业务评测与整改 | 12条多轮领域命令在副本运行；草稿/live、版本和时间有效性控制发布；原通知需sent回执，双商品需全部原事项证据，协作需接收和责任落实 |
+| 事项看板 | 10项指标及具体ID集合可重算；查询/办理均可下钻；退款、业务完成和客户确认分开；实际人工步骤不算AI独立完成 |
+
+范围外：真实业务/资金/通知/模型、任意多数量、优惠运费分摊、正式换货取消改址、真机键盘及多人原子并发。未宣称生产权限或模型质量评测。
+
+### 原代码红灯
+
+命令：`node --test --test-reporter=tap tests/service.test.cjs`，实际退出码1；此时23项均失败。先写新用例再实现，原始日志 `/tmp/T151-all-adjust-red.tap`。
+
+```text
+  ...
+1..23
+# tests 23
+# suites 0
+# pass 0
+# fail 23
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 67.539417
+```
+
+审核反例补测：10项新增用例在修复前失败，日志 `/tmp/T151-audit-red.tap`（其中通知用例的首次夹具缺少客户消息，修好夹具后另做撤修反证；不将夹具错误当业务红灯证据）。其他失败对应指纹自失效、scope漏判、自由政策矛盾、过期发布、失败退款安全终止、移交权限、外来订单、否定/完成补件、无draft评测。
+
+```text
+  ...
+1..34
+# tests 34
+# suites 0
+# pass 24
+# fail 10
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 143.253042
+```
+
+通知原回执守卫反向验证：暂时撤掉该守卫，实际运行 `node --test --test-reporter=tap --test-name-pattern="notification remediation" tests/service.test.cjs`，退出码1。随后 `finally` 逐字还原领域文件；完整新领域用例恢复37通过。没有改既有测试、helpers、固定复现脚本或跳过测试。
+
+```text
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 63.627708
+```
+
+还原后的实际命令 `node --test --test-reporter=tap tests/service.test.cjs`（退出码0）：
+
+```text
+  ...
+1..37
+# tests 37
+# suites 0
+# pass 37
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 180.57625
+```
+
+### 交付测试与不变复现
+
+`node --test --test-reporter=tap tests/service.test.cjs tests/service-ui.test.cjs tests/service-ops-ui.test.cjs`（退出码0）：
+
+```text
+  ...
+1..55
+# tests 55
+# suites 0
+# pass 55
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 295.256834
+```
+
+`node --test --test-reporter=tap tests/*.test.cjs`（退出码0）：
+
+```text
+  ...
+1..445
+# tests 445
+# suites 0
+# pass 445
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 532.204208
+```
+
+原390项保持，新增55项（领域37、真实入口事件13、运营组件5）。运营组件的注入投影只验证排版；查询下钻、已发布知识评测和超时恢复另有真正入口事件及独立复验，不用组件断言冒充业务通过。
+
+命令 `node "/Users/zhang/Desktop/00_工作台/交接记录/2026-10-03-T146客服Demo产品场景审查-复现脚本.cjs"`，在项目目录执行；日志 `/tmp/T151-all-adjust-repro.txt`：
+
+```text
+S2-1   符合   寒暄、致谢、确认词
+S2-1b  符合   机器人答对后客户说“谢谢”
+S5-1   符合   演示脚本第 3 节：联系人工→接管→记录结果→结束沟通
+S5-1c  符合   对已完成的问题选“不适用”关闭
+S8-1a  符合   多位客户都说“你好”
+缺陷检查 49 项：不符合 43，符合 6；对照检查 17 项：符合 17，不符合 0；样本 7 条
+```
+
+`shasum -a 256 "<上述脚本路径>"`：
+
+```text
+261d589425b13b4eabcf2235fe2d2b94fef280922c8eb3dede7809137d414ed7
+```
+
+43项旧缺陷仍未通过，不算本轮五项调整的完整生产审查；脚本中5项旧寒暄排队前提失效的证据限制继续保留。
+
+### 真实浏览器与单文件
+
+原生浏览器独立来源 `http://127.0.0.1:8770/?data=ecommerce` 实际输入、点击、表单和角色切换：
+
+- 发送双诉求，袋子CS00105与杯子CS00108分开；杯子主动预览/确认，申请AS00114，一件¥129。
+- 经理审批→客户寄回运单DEMO-RETURN-BROWSER-001→管理员收件与验收→客服01接管并提交原退款。
+- 模拟未知后查询原请求，前后同号 `4b16c67d-a1d4-4160-a831-fd5064b732e5`，仍未办结；随后模拟成功¥129。
+- 模拟通知失败时退款成功保留、客户待确认；原通知补发成功后客户主动确认。袋子一直是独立待办。
+- 袋子由客服01发起、客服02接收，接收前原人负责；接收后新负责人发送本事项公开回复，杯子保持客服01及退款/反馈记录。
+- 已发布KB001无draft运行12流程场景全绿；保存接待策略、运行回归并确认发布，实际v1→v2，旧评测提示需重新运行。
+- 手机详情弹层完整位于手机屏内，右侧留白。1280×720源码实测：phone x56/y90/right316.77/bottom654.32，dialog x56/y129.51/right316.77/bottom654.32，无横向溢出。截图 `/tmp/T151-all-adjust-phone.png`。
+
+单文件 `dist/智能客服.html?data=ecommerce` 实际复用以上数据，手机详情按钮可操作，弹层仍在框内（bottom均692.32），重复DOM ID=0；新咨询发送“七天退货”，收到规则v1、¥129及经理审核/寄回验收要求，再查支付并从“已查询”卡片打开实际查询快照。截图 `/tmp/T151-all-adjust-overview.png`。
+
+构建命令 `python3 build_single.py` 成功生成当前dist。技能检查器原样运行：`node /Users/zhang/.codex/skills/html-prototype-artifacts/scripts/check-html-artifact.mjs dist/智能客服.html --json` 返回失败，原因是全源码regex把JavaScript模板内的id字串当成静态DOM重复；脚本检查 errors=[]、inlineScripts=13，原输出 `/tmp/T151-single-static.json`。未改检查器。13段脚本另经 `vm.Script` 语法验证全部通过；真实运行DOM无重复ID，序列化运行DOM（仅移除已独立验证的script内容）经同检查器 status=ok。没有将原检查器失败写成通过。
+
+### 独立审查
+
+触发：业务金额、回执、责任、存储/视图与发布校验跨模块耦合。两路只读强模型审查并行，无降级：正确性/边界发现0/5/2；范围/证据发现0/5/3；通知误验收重复合并后有效P0/P1/P2=0/9/5，均修复并独立复验，最终剩余0/0/0。成本相对预期返工收益低。正确性独立重放原7组反例及54专项；范围独立全量445并复验短政策/人工建议/续答、有效期、双商品原问题、通知、下钻与超时UI。
+
+### 打包与文件
+
+代码：index.html、src/app.js、src/commerce.js、src/domain.js、src/workbench-app.js、src/views/{service,customer,mobile,desk,operations,shared}.js、src/forms.css；新增上述3测试文件。主题、旧存储模块、seed、已有测试与helpers未改。文档：README、产品方案、演示脚本、验收矩阵、交付/体验说明、电商方案、PROGRESS/BLOCKED和工作记录。dist及MANIFEST随当前版本生成；项目与桌面分别提交，未推送。用户验收及Claude保留抽查待执行。
+
+### 当前清单校验输出
+
+命令：`shasum -a 256 -c MANIFEST.sha256`（退出码0），87项全部OK。
+
+```text
+.gitignore: OK
+BLOCKED.md: OK
+PRODUCT_EXPERIENCE.json: OK
+PROGRESS.md: OK
+README.md: OK
+app.js: OK
+build_single.py: OK
+dist/智能客服.html: OK
+docs/交付与应用说明.md: OK
+docs/产品体验调整.md: OK
+docs/当前方案与角色分工修改计划.md: OK
+docs/演示脚本.md: OK
+docs/评审与修改记录.md: OK
+docs/验收矩阵.md: OK
+engine.js: OK
+flow-editor.js: OK
+flow-graph.js: OK
+index.html: OK
+legacy.html: OK
+product-copy.js: OK
+product.css: OK
+run.py: OK
+src/app.js: OK
+src/commerce.js: OK
+src/copy.js: OK
+src/domain.js: OK
+src/forms.css: OK
+src/mobile.css: OK
+src/seed.js: OK
+src/store.js: OK
+src/styles.css: OK
+src/theme.css: OK
+src/views/customer.js: OK
+src/views/desk.js: OK
+src/views/mobile.js: OK
+src/views/operations.js: OK
+src/views/service.js: OK
+src/views/shared.js: OK
+src/workbench-app.js: OK
+src/workbench.css: OK
+styles.css: OK
+tests/browser_smoke.py: OK
+tests/commerce-storage.test.cjs: OK
+tests/commerce-ui.test.cjs: OK
+tests/commerce.test.cjs: OK
+tests/copy.test.cjs: OK
+tests/domain.test.cjs: OK
+tests/engine.test.cjs: OK
+tests/evidence/README.md: OK
+tests/evidence/baseline-engine-tests.cjs.txt: OK
+tests/evidence/baseline-findings.json: OK
+tests/evidence/baseline-tests.tap: OK
+tests/evidence/browser-report.json: OK
+tests/evidence/browser-run.txt: OK
+tests/evidence/copy-all-tests.tap: OK
+tests/evidence/copy-local-review.json: OK
+tests/evidence/copy-v4-tests.tap: OK
+tests/evidence/environment.json: OK
+tests/evidence/local-review.json: OK
+tests/evidence/local-tests.tap: OK
+tests/evidence/pass1-tests.tap: OK
+tests/evidence/product-review.json: OK
+tests/evidence/product-tests.tap: OK
+tests/evidence/sop-all-tests.tap: OK
+tests/evidence/sop-mobile-review.json: OK
+tests/evidence/sop-v4-tests.tap: OK
+tests/evidence/static-resource-check.json: OK
+tests/evidence/unit-tests.tap: OK
+tests/evidence/v4-all-tests.tap: OK
+tests/evidence/v4-local-review.json: OK
+tests/evidence/v4-tests.tap: OK
+tests/fixtures/previous-defaults.json: OK
+tests/graph.test.cjs: OK
+tests/helpers/app.cjs: OK
+tests/product-experience.test.cjs: OK
+tests/product_browser_smoke.py: OK
+tests/requirements.txt: OK
+tests/service-ops-ui.test.cjs: OK
+tests/service-ui.test.cjs: OK
+tests/service.test.cjs: OK
+tests/t151-p0.test.cjs: OK
+tests/ui.test.cjs: OK
+tests/v4-ui.test.cjs: OK
+tests/workbench-review.test.cjs: OK
+tests/workbench-ui.test.cjs: OK
+tests/workflow.test.cjs: OK
+方案文档.md: OK
+```
+
+`git diff --check` 返回退出码0、无输出。清单在写入本记录后重新生成并校验。

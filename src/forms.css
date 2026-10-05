@@ -15,3 +15,22 @@
 .commerce-item{display:grid;gap:5px;padding-top:10px;border-top:1px solid var(--line);font-size:12px}
 .commerce-order-card .order-actions{display:flex;flex-wrap:wrap;gap:6px}
 .commerce-facts{background:var(--surface-2);border-color:var(--line)}
+/* 产出 Agent：Codex。事项视图沿用工作空间与手机弹层布局。 */
+.commerce-item .btn{justify-self:start}
+.service-panel{border:1px solid var(--line);border-radius:10px;padding:14px;margin:14px 0;min-width:0;overflow-wrap:anywhere;background:var(--surface)}
+.service-panel h3{margin:0;font-size:14px}.service-panel p{line-height:1.65}
+.service-axes{display:grid;gap:7px;margin:12px 0}
+.service-axis{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px}
+.service-axis .pill{white-space:normal;text-align:right}
+.service-actions{display:flex;flex-wrap:wrap;align-items:start;gap:8px;margin:12px 0}
+.service-actions>.sop-form,.service-actions>details,.service-actions>p{width:100%}
+.service-handoff-summary,.service-history{margin-top:8px;font-size:12px;line-height:1.65}
+.service-progress-card>span{display:block;margin:5px 0;font-size:12px}
+.phone-overlay-host .service-panel{padding:10px;margin:0}
+.phone-overlay-host .service-axis{gap:8px}
+.phone-overlay-host .service-actions .btn{max-width:100%;white-space:normal}
+.phone-overlay-host .service-panel .sop-facts{grid-template-columns:90px minmax(0,1fr)}
+.service-incoming-panel{padding:12px;border-bottom:1px solid var(--line);background:var(--surface-2)}
+.service-incoming-panel h3{font-size:13px;margin:0 0 8px}
+.service-incoming-panel article{display:grid;gap:8px;margin:10px 0;font-size:12px;overflow-wrap:anywhere}
+.service-incoming-panel small{color:var(--muted)}

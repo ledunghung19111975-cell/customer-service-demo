@@ -16,6 +16,7 @@
     function after(success){closeModal();render();if(success)toast(success);cache();}
     function orderFacts(id,customerId){const o=store.state.orders.find(o=>o.id===id&&o.customerId===customerId);return o?`<div class="order-facts"><strong>${e(o.product)}</strong><p>${e(o.id)} · ${e(o.status)} · ¥${Number(o.price).toFixed(2)}</p><p>规格：${e(o.spec||o.variant||'待核对')}　数量：${e(o.quantity??'待核对')}</p><small>订单记录提供以上信息；退换货资格仍需客服核对。</small></div>`:'<p class="muted">请选择客户本人订单。未确认的信息保持为空。</p>';}
     function intake(caseId,conversationId='',reuse=false){
+      if(store.state.schema===5&&ctx.service.openForCase(caseId))return;
       const c=currentCase(caseId);if(c.kind!=='aftersales')return legacyIntake(caseId,conversationId);
       if(identity().role==='customer'){connected();if(c.customerId!==identity().id)throw Error('无权查看该问题');}
       else owned(convFor(caseId,conversationId));

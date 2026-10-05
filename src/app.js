@@ -9,7 +9,7 @@
   let cached={};try{cached=JSON.parse(sessionStorage.getItem(viewKey)||'{}');}catch{}
   const ui={workspace:'customer',deskPage:'inbox',opsPage:'overview',opsRole:'manager',agentId:'lin',customerConversation:'',deskConversation:'',deskFilter:'queue',ticketFilter:'all',knowledgeId:'',composeMode:'reply',search:{},drafts:{},...cached,flowTest:null};
   if(!['manager','operator','admin'].includes(ui.opsRole))ui.opsRole='manager';
-  if(!['lin','zhou'].includes(ui.agentId))ui.agentId='lin';
+  if(!store.state?.staff.some(a=>a.role==='agent'&&a.id===ui.agentId))ui.agentId=store.state?.staff.find(a=>a.role==='agent')?.id||'lin';
   ui.search||={};ui.draftScopes||={[draftScope()]:ui.drafts||{}};ui.drafts={};let activeDraftScope='';
   const opsMenus={manager:[['overview','服务概览','chart'],['team','团队协同','users'],['quality','质量复核','shield'],['service','接待规则','settings']],operator:[['knowledge','知识与答复','book'],['flow','接待策略与测试','flow'],['quality','服务改进队列','shield']],admin:[['integrations','接入与运行','plug'],['permissions','角色与职责','users'],['logs','操作审计','shield'],['data','数据维护','settings']]};
   const $=s=>document.querySelector(s);let toastTimer,focusBeforeDialog;
@@ -44,16 +44,16 @@
     else if(ui.workspace==='desk'){const data=D.deskView(s,identity());content=ui.deskPage==='tickets'?V.tickets(s,data.tickets,ui):V.inbox(s,data,ui,D.actor(s,identity()));}
     else {
       switch(ui.opsPage){
-        case'overview':content=V.overview(s);break;
-        case'team':content=V.tickets(s,s.tickets.filter(t=>D.actor(s,identity()).teams.includes(t.teamId)),ui,true)+`<section class="panel"><div class="panel-heading"><h2>当前人工接待</h2></div>${s.conversations.filter(c=>['queued','human'].includes(c.state)&&D.actor(s,identity()).teams.includes(c.teamId)).map(c=>`<div class="attention-row"><div><strong>${e(s.customers.find(x=>x.id===c.customerId)?.name||c.customerId)}</strong><small>${e(c.id)} · ${e(c.handoffReason)}</small></div><div class="row">${pill(c.state)}${b('分配客服','assign-conversation',c.id,'small')}</div></div>`).join('')||empty('暂无待分配会话')}</section>`;break;
+        case'overview':content=V.overview(s,ui,ui.opsRole);break;
+        case'team':content=V.tickets(s,s.tickets.filter(t=>D.actor(s,identity()).teams.includes(t.teamId)),ui,true)+`<section class="panel"><div class="panel-heading"><h2>当前人工接待</h2></div>${s.conversations.filter(c=>['queued','human'].includes(c.state)&&D.actor(s,identity()).teams.includes(c.teamId)).map(c=>`<div class="attention-row"><div><strong>${e(s.customers.find(x=>x.id===c.customerId)?.name||c.customerId)}</strong><small>${e(c.id)} · ${e(c.handoffReason)}</small></div><div class="row">${pill(c.state)}${s.schema===5&&c.caseIds.some(id=>s.cases.some(x=>x.id===id&&x.service&&x.ownerId))?b('查看服务事项','service-detail',c.caseIds.find(id=>s.cases.some(x=>x.id===id&&x.service)),'small'):b('分配客服','assign-conversation',c.id,'small')}</div></div>`).join('')||empty('暂无待分配会话')}</section>`;break;
         case'knowledge':content=V.knowledge(s,ui);break;
         case'flow':content=V.flow(s,ui);break;
         case'quality':content=V.quality(s,ui,ui.opsRole);break;
         case'service':content=V.serviceSettings(s,ui);break;
-        case'integrations':content=V.integrations();break;
+        case'integrations':content=V.integrations(s);break;
         case'permissions':content=V.permissions();break;
         case'logs':content=V.logs(s);break;
-        case'data':content=V.data(commerceMode);break;
+        case'data':content=V.data(commerceMode,s,ui);break;
       }
     }
     const scrolls=[...document.querySelectorAll('.messages,.sop-workbench-scroll,.conversation-rows')].map(x=>[x.className,x.scrollTop,x.scrollHeight-x.clientHeight-x.scrollTop<40]);
@@ -66,12 +66,12 @@
   }
   function scrollMessages(){requestAnimationFrame(()=>document.querySelectorAll('.messages').forEach(x=>x.scrollTop=x.scrollHeight));}
   function modal(title,body){focusBeforeDialog=document.activeElement;$('#dialog-title').textContent=title;$('#dialog-body').innerHTML=body;$('#dialog-body').querySelectorAll('form[data-form]').forEach(form=>{const draft=ui.drafts[form.dataset.form+':'+(form.dataset.id||'new')];if(draft)Object.entries(draft).forEach(([name,value])=>{const input=form.elements.namedItem(name);if(input){if(input.type==='checkbox')input.checked=Boolean(value);else input.value=value;}});});$('#dialog-error').hidden=true;$('#dialog-error').textContent='';const dialog=$('#dialog'),host=ui.workspace==='customer'&&ui.customerMode==='mobile'?$('.phone-overlay-host'):null;if(host){host.append(dialog);[...host.parentElement.children].filter(x=>x!==host).forEach(x=>x.inert=true);if(!dialog.open)dialog.show();}else{if(dialog.parentElement!==document.body)document.body.append(dialog);if(!dialog.open)dialog.showModal();}$('#dialog-body').querySelector('input:not([type=hidden]),textarea,select,button')?.focus();}
-  function closeModal(){document.querySelectorAll('.phone-screen>[inert]').forEach(x=>x.inert=false);if($('#dialog').open)$('#dialog').close();if(workbench.onClose())render();if(focusBeforeDialog?.isConnected)focusBeforeDialog.focus();}
+  function closeModal(){document.querySelectorAll('.phone-screen>[inert]').forEach(x=>x.inert=false);if($('#dialog').open)$('#dialog').close();service.onClose();if(workbench.onClose())render();if(focusBeforeDialog?.isConnected)focusBeforeDialog.focus();}
   function customerConversation(){const list=D.customerView(store.state,'C001').conversations;let c=list.find(c=>c.id===ui.customerConversation)||list[0];if(!c){ui.customerConversation=apply('newConversation',{});c=D.get(store.state,'conversations',ui.customerConversation);}return c;}
   function quick(body){closeModal();const c=customerConversation();apply('say',{id:c.id,body});ui.customerConversation=c.id;render();scrollMessages();}
   function formDraft(key,defaults){return {...defaults,...ui.drafts[key]};}
   function ticketForUI(id){const s=store.state;if(ui.workspace==='customer'){const t=D.customerView(s,'C001').tickets.find(t=>t.id===id);if(!t)throw Error('无权查看此工单');return t;}if(ui.workspace==='desk'){const t=[...D.deskView(s,identity()).tickets,...D.deskView(s,identity()).relatedTickets].find(t=>t.id===id);if(!t)throw Error('此工单不在本人任务或公共池中');return t;}if(ui.opsRole==='manager'){const t=D.get(s,'tickets',id);if(!D.actor(s,identity()).teams.includes(t.teamId))throw Error('无权查看此工单');return t;}throw Error('当前角色无权查看工单详情');}
-  function ticketDetail(id){const s=store.state,t=ticketForUI(id),customer=ui.workspace==='customer',canEdit=ui.workspace==='desk'&&t.ownerId===ui.agentId&&t.status!=='done';const c=customer?D.customerView(s,'C001').cases.find(c=>c.id===t.caseId):D.get(s,'cases',t.caseId);const draft=formDraft('ticket-update:'+id,{status:t.status,publicText:'',evidence:'',internalText:''});
+  function ticketDetail(id){const s=store.state,t=ticketForUI(id);if(s.schema===5&&s.cases.some(c=>c.id===t.caseId&&c.service))return service.actions['service-detail']({dataset:{id:t.caseId}});const customer=ui.workspace==='customer',canEdit=ui.workspace==='desk'&&t.ownerId===ui.agentId&&t.status!=='done';const c=customer?D.customerView(s,'C001').cases.find(c=>c.id===t.caseId):D.get(s,'cases',t.caseId);const draft=formDraft('ticket-update:'+id,{status:t.status,publicText:'',evidence:'',internalText:''});
     modal('工单详情',`<div class="row between"><h2>${e(t.title)}</h2>${pill(t.status)}</div><p class="muted">${e(t.id)} · ${date(t.createdAt,true)} · ${e(t.orderId||'未关联订单')}</p><div class="result-note">${e(t.description)}</div>${t.serviceType?`<dl><dt>申请类型</dt><dd>${t.serviceType==='exchange'?'换货':'退货'}</dd>${t.exchangeRequest?`<dt>换货要求</dt><dd>${e(t.exchangeRequest)}</dd>`:''}${t.extraNote?`<dt>补充说明</dt><dd>${e(t.extraNote)}</dd>`:''}</dl>`:''}<div class="timeline">${t.history.map(h=>`<div class="timeline-entry"><small>${date(h.at,true)} · ${e(h.actor||'客服')}</small><p>${e(h.publicText)}</p>${!customer&&h.internalText?`<div class="internal-evidence">内部备注：${e(h.internalText)}</div>`:''}${!customer&&h.evidence?`<div class="internal-evidence">核对依据：${e(h.evidence)}</div>`:''}</div>`).join('')}</div>${customer?t.status!=='done'?`<form data-form="supplement" data-id="${e(id)}">${field('补充信息','body',ui.drafts['supplement:'+id]?.body||'','textarea','required maxlength="2000"')}<button class="btn primary" type="submit">提交补充</button></form>`:`<div class="row">${c.feedback==='confirmed'?pill('客户已确认','good')+b('仍需帮助','dispute-case',c.id):`${b('确认已解决','confirm-case',c.id,'primary')}${b('仍需帮助','dispute-case',c.id)}`}</div>`:canEdit?`<form data-form="ticket-update" data-id="${e(id)}"><label class="field"><span>处理动作</span><select name="status">${options([['working','继续处理'],['waiting_customer','请客户补充'],['done','记录办理结果']],draft.status)}</select></label>${field('客户可见说明','publicText',draft.publicText,'textarea','required maxlength="2000"')}${field('核对依据（记录结果时必填，仅内部可见）','evidence',draft.evidence,'textarea','maxlength="2000"')}${field('内部协同备注','internalText',draft.internalText,'textarea','maxlength="2000"')}<p class="muted small-text">此操作记录处理结果，不会调用退款、支付或发货接口。</p><button class="btn primary" type="submit">提交处理记录</button></form>`:ui.workspace==='desk'&&!t.ownerId?b('领取工单','claim-ticket',id,'primary'):pill('只读记录')}`);
   }
   function intake(caseId,conversationId='',standalone=false){
@@ -84,7 +84,8 @@
   }
   function confirmation(title,body,action,id){modal(title,`<p>${e(body)}</p><div class="form-footer">${b('取消','close-modal')}${b('确认','confirm-action',id,'primary',`data-command="${e(action)}"`)}</div>`);}
   function download(name,value){const blob=new Blob([typeof value==='string'?value:JSON.stringify(value,null,2)],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-  const workbench=window.SupportWorkbench.create({D,V,ui,store,identity,apply,modal,closeModal,render,cache,toast,intake,scrollMessages});
+  const service=window.SupportServiceUI.create({D,V,ui,store,identity,apply,modal,closeModal,render,cache,toast,customerConversation});
+  const workbench=window.SupportWorkbench.create({D,V,ui,store,identity,apply,modal,closeModal,render,cache,toast,intake,scrollMessages,service});
   const actions={
     workspace(el){closeModal();navigate(el.dataset.id);render();scrollMessages();},
     'desk-page'(el){navigate('desk',el.dataset.id);render();},
@@ -94,7 +95,7 @@
     'order-query'(el){quick('查物流 '+el.dataset.id);},
     'commerce-query'(el){const value=apply('queryCommerce',{orderId:el.dataset.id});modal('订单、支付与包裹',V.commerceDetails(value));},
     'order-return'(el){quick('申请退货 '+el.dataset.id);},
-    'request-human'(el){closeModal();const c=el.dataset.id||customerConversation().id;apply('requestHuman',{id:c},'已提交人工请求');render();scrollMessages();},
+    'request-human'(el){closeModal();const c=el.dataset.id||customerConversation().id,record=D.customerView(store.state,'C001').conversations.find(x=>x.id===c);if(!record)throw Error('无权访问此咨询');ui.customerConversation=c;if(['queued','human'].includes(record.state)){render();scrollMessages();toast(record.state==='queued'?'人工请求已在排队，可继续补充消息':'人工客服已接待，可继续补充消息');return;}apply('requestHuman',{id:c},'已提交人工请求');render();scrollMessages();},
     'cancel-queue'(el){apply('cancelQueue',{id:el.dataset.id},'已取消当前排队');render();},
     'customer-history'(){const data=D.customerView(store.state,'C001');modal('历史咨询',data.conversations.map(c=>`<button type="button" class="history-row" data-action="open-history" data-id="${e(c.id)}"><strong>${e(c.messages.find(m=>m.role==='customer')?.body||'新的咨询')}</strong><small>${e(c.id)} · ${date(c.createdAt,true)}</small>${pill(c.state)}</button>`).join('')||empty('暂无历史咨询'));},
     'open-history'(el){ui.customerConversation=el.dataset.id;closeModal();render();scrollMessages();},
@@ -124,17 +125,18 @@
     'disable-knowledge'(el){modal('停用知识',`<form data-form="disable-knowledge" data-id="${e(el.dataset.id)}">${field('停用原因','reason','','textarea','required maxlength="300"')}<button class="btn primary" type="submit">确认停用</button></form>`);},
     'test-flow'(){apply('testFlow',{},'回归已运行，请查看逐项结果');render();},
     'publish-flow'(){confirmation('发布接待策略','新咨询将使用新策略；正在进行的咨询继续使用开始时的版本。','publishFlow','');},
-    'review-gap'(el){const g=D.get(store.state,'gaps',el.dataset.id);const v=formDraft('review-gap:'+g.id,{status:'confirmed',review:g.review,cause:g.cause});modal('复核服务问题',`<p class="result-note">${e(g.query)}</p><form data-form="review-gap" data-id="${e(g.id)}"><label class="field"><span>复核结论</span><select name="status">${options([['confirmed','确认问题，交给运营整改'],['dismissed','排除线索，不形成整改']],v.status)}</select></label>${field('复核依据','review',v.review,'textarea','required')}${field('根因说明（确认问题时必填）','cause',v.cause,'textarea')}<button class="btn primary" type="submit">保存复核结论</button></form>`);},
+    'review-gap'(el){const g=D.get(store.state,'gaps',el.dataset.id);const v=formDraft('review-gap:'+g.id,{status:'confirmed',review:g.review,cause:g.cause});modal('复核服务问题',`<p class="result-note">${e(g.query)}</p><form data-form="review-gap" data-id="${e(g.id)}"><label class="field"><span>复核结论</span><select name="status">${options([['confirmed','确认问题，交给运营整改'],['dismissed','排除线索，不形成整改']],v.status)}</select></label>${store.state.schema===5?`<label class="field"><span>根因分类</span><select name="causeType">${options([['knowledge','知识'],['routing','触发与路由'],['business','业务数据与回执'],['workflow','办理流程'],['collaboration','人工协同'],['notification','通知']],v.causeType||g.causeType||'knowledge')}</select></label>`:''}${field('复核依据','review',v.review,'textarea','required')}${field('根因说明（确认问题时必填）','cause',v.cause,'textarea')}<button class="btn primary" type="submit">保存复核结论</button></form>`);},
     'new-gap-knowledge'(el){const g=D.get(store.state,'gaps',el.dataset.id);if(ui.opsRole!=='operator'||!['confirmed','fixing'].includes(g.status))throw Error('请先完成问题复核');ui.knowledgeId='new';ui.prefillQuery=g.query;navigate('ops','knowledge');render();},
     'link-gap'(el){const g=D.get(store.state,'gaps',el.dataset.id);modal('关联整改知识',`<p>${e(g.query)}</p><form data-form="link-gap" data-id="${e(g.id)}"><label class="field"><span>选择用于修复的知识</span><select name="knowledgeId" required>${options(store.state.knowledge.map(k=>[k.id,(k.draft||k.live).title+' · '+k.id]),g.knowledgeId)}</select></label><p class="muted small-text">关联后仍需发布修订，并由经理用原始问题验收。</p><button class="btn primary" type="submit">保存关联</button></form>`);},
-    'accept-gap'(el){modal('验证原问题并验收',`<form data-form="accept-gap" data-id="${e(el.dataset.id)}">${field('验收说明','acceptance','','textarea','required')}<p class="muted small-text">提交时重放原问题并运行全量回归，不能用手动勾选替代验证。</p><button class="btn primary" type="submit">执行验证并验收</button></form>`);},
+    'accept-gap'(el){const g=D.get(store.state,'gaps',el.dataset.id),path=store.state.schema===5&&(g.causeType||'knowledge')!=='knowledge';modal(path?'复验失败路径并验收':'验证原问题并验收',`<form data-form="accept-gap" data-id="${e(el.dataset.id)}">${field('验收说明','acceptance','','textarea','required')}<p class="muted small-text">${path?'提交时运行已关联的失败路径场景，并保存动作与状态证据。检查通过后方可验收。':'提交时重放原问题并运行全量回归，不能用手动勾选替代验证。'}</p><button class="btn primary" type="submit">执行验证并验收</button></form>`);},
     'confirm-action'(el){apply(el.dataset.command,{id:el.dataset.id},'操作已完成');closeModal();ui.flowTest=null;render();},
     'close-modal'(){closeModal();},
     'export-data'(){const data=apply('export',{});download('客服工作空间.json',data);toast('已生成工作空间导出文件');},
     'export-legacy'(){if(identity().role!=='admin')throw Error('需要系统管理员角色');const raw=localStorage.getItem('zhixu-customer-demo-v3.1');if(raw===null)throw Error('当前浏览器未读取到旧版本保存值');download('客服旧版本原始数据.json',raw);toast('已导出旧版本原始保存值，未做转换');},
     'export-v4'(){if(identity().role!=='admin')throw Error('需要系统管理员角色');const raw=storage.getItem(window.SupportStore.KEY);if(raw===null)throw Error('当前浏览器未读取到 V4 保存值');download('客服V4原始数据.json',raw);toast('已导出 V4 原始保存值，未做转换');},
     'export-broken'(){if(store.original===null)throw Error('无法读取原始保存值，可能是浏览器禁用了存储');download('客服异常原始数据.json',store.original);},
-    ...workbench.actions
+    ...workbench.actions,
+    ...service.actions
   };
   function assign(type,id){modal('分配负责人',`<form data-form="assign" data-id="${e(id)}" data-command="${type}"><label class="field"><span>接收客服</span><select name="ownerId">${options(store.state.staff.filter(a=>a.role==='agent').map(a=>[a.id,a.name]),'lin')}</select></label><p class="muted small-text">转派保留原受理时间和处理记录，原负责人不能继续修改任务。</p><button class="btn primary" type="submit">确认分配</button></form>`);}
   document.addEventListener('click',ev=>{const el=ev.target.closest('[data-action]');if(!el||el.disabled)return;try{const handler=actions[el.dataset.action];if(!handler)throw Error('此操作不可用');handler(el);cache();}catch(err){fail(err);}});
@@ -159,7 +161,7 @@
     const form=ev.target.closest('form[data-form]');if(!form)return;ev.preventDefault();
     const f=form.dataset.form,id=form.dataset.id,data=Object.fromEntries(new FormData(form)),key=f+':'+(id||'new');
     try{
-      if(workbench.submit(form,data))return;
+      if(service.submit(form,data)||workbench.submit(form,data))return;
       if(f==='ticket-request'){
         ui.pendingTicket={...ui.pendingTicket,...data,draftKey:key};
         modal('核对服务申请',`<div class="preview-block"><h2>${e(data.title)}</h2><p>${e(data.description)}</p>${ui.pendingTicket.caseId?`<small>关联问题：${e(ui.pendingTicket.caseId)}</small>`:`<small>客户：${e(store.state.customers.find(c=>c.id===data.customerId)?.name)}</small>`}</div><p class="muted">确认后创建或继续原工单。取消不会产生受理记录，也不会执行退款。</p><form data-form="ticket-confirm" data-id="new"><div class="form-footer">${b('取消','close-modal')}<button class="btn primary" type="submit">确认提交申请</button></div></form>`);return;
@@ -179,7 +181,7 @@
       else if(f==='service-settings')apply('serviceSettings',{...data,accepting:data.accepting==='true'},'接待规则已更新');
       else if(f==='review-gap'){apply('reviewGap',{id,...data},'复核结论已保存');closeModal();}
       else if(f==='link-gap'){apply('linkGap',{id,knowledgeId:data.knowledgeId},'已关联整改知识');closeModal();}
-      else if(f==='accept-gap'){apply('acceptGap',{id,acceptance:data.acceptance},'原问题验证及全量回归通过，已验收');closeModal();}
+      else if(f==='accept-gap'){apply('acceptGap',{id,acceptance:data.acceptance},'复验通过，已验收');closeModal();}
       else throw Error('未知表单');
       if(f!=='flow-query')delete ui.drafts[key];cache();render();if(['customer-say','reply','note'].includes(f))scrollMessages();
     }catch(err){fail(err);}
