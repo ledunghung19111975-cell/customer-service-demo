@@ -7,6 +7,11 @@ import argparse
 import threading
 import webbrowser
 
+class WorkspaceHandler(SimpleHTTPRequestHandler):
+    def end_headers(self):
+        self.send_header('Cache-Control', 'no-store')
+        super().end_headers()
+
 def main():
     parser = argparse.ArgumentParser(description='启动智能客服工作空间')
     parser.add_argument('--port', type=int, default=8768)
@@ -15,7 +20,7 @@ def main():
     if not 1024 <= args.port <= 65535:
         parser.error('端口必须在 1024–65535 之间')
     root = Path(__file__).resolve().parent
-    handler = partial(SimpleHTTPRequestHandler, directory=str(root))
+    handler = partial(WorkspaceHandler, directory=str(root))
     try:
         server = ThreadingHTTPServer(('127.0.0.1', args.port), handler)
     except OSError as exc:

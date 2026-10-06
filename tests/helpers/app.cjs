@@ -96,7 +96,7 @@ class Element {
   remove(){if(this.parent)this.parent.childNodes=this.parent.childNodes.filter(x=>x!==this);this.parent=null;}
 }
 function memory(initial={}){const values=new Map(Object.entries(initial));return {getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,String(value)),removeItem:key=>values.delete(key)};}
-function app({state=Seed.create(),view={},hash='',search='',local,session,controlledTimers=false}={}){
+function app({state=Seed.create(),view={},hash='',search='?data=v4',local,session,controlledTimers=false}={}){
   local||=memory({[Store.KEY]:JSON.stringify(state)});session||=memory({'qinghe-support-view':JSON.stringify(view)});
   const doc=new Element('document'),events={},windowEvents={},errors=[],pendingTimers=new Map();let timerSequence=0;
   const schedule=(fn,delay)=>{if(!controlledTimers)return 1;const id=++timerSequence;pendingTimers.set(id,{fn,delay});return id;};

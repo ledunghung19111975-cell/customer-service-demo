@@ -62,22 +62,63 @@
   }
   function intentions(query, config, commerce=false) {
     const lower = query.toLowerCase();
+    query = stripSocialEdges(query);
     const declined = lower.replace(/人工(?:智能|费|成本)/g, '').replace(/(?:不需要|不要|不用|不想|无需|别)(?:帮我|给我|再|先)?(?:转接|转|找|联系)?人工(?:客服)?/g, '').replace(/人工(?:客服)?(?:就|先)?(?:不用|不要|不需要)了?/g, '');
     const human = config.humanWords.some(w => declined.includes(w.toLowerCase()));
     const id = query.match(/\b(?:EC-)?SO[A-Z0-9]+\b/i)?.[0].toUpperCase() || '';
     const onlyId = /^(?:订单号[是为：:]?\s*)?(?:EC-)?SO[A-Z0-9]+[。！!]?$/i.test(query.trim());
-    const policy = /(规则|条件|政策|无理由|如何退|怎么退|退货运费|了解)/.test(query) && /(退|售后)/.test(query);
     const negatedReturn = /(不要|不想|不需要|暂不|先不).{0,6}(退货|退款|换货|申请)/.test(query);
     const intake = !negatedReturn && (/(申请|办理).{0,6}(退货|退款|换货|售后)/.test(query) || /(想|要|需要|帮我)(退货|退款|换货)/.test(query));
+    const policyQuestion = /(怎么|如何|能不能|能.{0,8}吗|可以.{0,8}吗|规则|条件|流程|政策|无理由|退货运费|了解)/;
+    const policy = /(退|售后)/.test(query) && (commerce
+      ? !intake && !/(我要|我想|帮我|申请|办理)/.test(query) && policyQuestion.test(query)
+      : /(规则|条件|政策|无理由|如何退|怎么退|退货运费|了解)/.test(query));
+    const damage = /(破损|损坏|碎|坏|裂|漏水)/;
+    const independentIssue = /(物流|支付|付款|扣款|扣.{0,8}(钱|笔|次)|包裹|快递|没(?:有)?收到|未收到|没拿到|没到|丢失|少发|漏发|停滞|催发货|地址|退款.{0,8}(没|未|不到|失败|未知))/;
+    const mixedPolicy = commerce && policy && (independentIssue.test(query) || declined.split(/[，,。；;]|另外|还有|而且|但是|以及/).map(stripSocialEdges).filter(Boolean).some(part=>!(policyQuestion.test(part)&&/(退|售后)/.test(part))&&!damage.test(part)));
     const lookup = !/(不查|不要查)/.test(query) && (/(查|看|查询|到哪|在哪|进度).{0,8}(订单|物流|快递)/.test(query) || /(订单|物流|快递).{0,8}(到哪|在哪|进度|状态)/.test(query) || /^(订单|物流|快递)$/.test(query.trim()) || (commerce&&(/(查|看|查询|到哪|在哪|进度).{0,8}(包裹|支付)/.test(query)||/(包裹|支付).{0,8}(到哪|在哪|进度|状态)/.test(query)||/^(包裹|支付)$/.test(query.trim()))));
-    return {human, id, onlyId, policy, intake, lookup};
+    return {human, id, onlyId, policy, mixedPolicy, intake, lookup};
+  }
+  const address = '(?:你们?|您们?|亲(?:爱的)?|老师|老板|客服(?:小姐姐|小哥哥)?|小姐姐|小哥哥)';
+  const goodbye = '拜{2,}|再见|再会|(?:回头|回|下次|改天|明天|一会儿?)见|(?<![a-z0-9])8{2,}6?(?![a-z0-9])';
+  const greeting = '你好|您好|在吗|在不在|哈[喽啰罗]|嗨|早(?:上好|安)?|上午好|中午好|下午好|晚上好|晚安|hello|hi|hey';
+  const socialWords = '(?:'+greeting+')'+address+'?|(?:谢谢|多谢|感谢|谢[了啦哈])'+address+'?|辛苦'+address+'?了?|好(?:的|滴|嘞|吧)?|行|嗯+|哦+|噢+|收到|明白了?|了解了?|知道了?|清楚了?|ok(?:ay)?|'+goodbye;
+  const closingWords = '没(?:有)?(?:事|问题)了?|没啥事了?|(?:不用|不需要|无需)了?';
+  const socialText = query => query.toLowerCase().replace(/[\s，,。.!！?？、；;~～…]/g, '');
+  function socialTokens(q,closing=true) {
+    const word=new RegExp(socialWords+(closing?'|'+closingWords:''),'gy'),tokens=[];
+    for(let i=0;i<q.length;){
+      word.lastIndex=i;const match=word.exec(q);
+      if(!match){i++;continue;}
+      let end=word.lastIndex;
+      while(/[呀啊啦呢哟喔呐嘞噢咯哈哒唷哇咧]/.test(q[end]||'')){
+        word.lastIndex=end;if(word.test(q))break;
+        end++;
+      }
+      tokens.push({start:i,end});i=end;
+    }
+    return tokens;
+  }
+  function stripSocialEdges(query) {
+    const parts=[...query.matchAll(/[^\s，,。.!！?？、；;~～…]/g)],q=parts.map(x=>x[0].toLowerCase()).join('');
+    const ids=[...query.matchAll(/\b(?:EC-)?SO[A-Z0-9]+\b/gi)];let idIndex=0;
+    const tokens=socialTokens(q,false).filter(t=>{
+      const start=parts[t.start].index,end=parts[t.end-1].index+1;
+      while(idIndex<ids.length&&ids[idIndex].index+ids[idIndex][0].length<=start)idIndex++;
+      return idIndex>=ids.length||ids[idIndex].index>=end;
+    });
+    let start=0,end=q.length;
+    for(const token of tokens){if(token.start!==start)break;start=token.end;}
+    for(const token of tokens.slice().reverse()){if(token.end!==end)break;end=token.start;}
+    return start>=end?'':query.slice(parts[start].index,parts[end-1].index+1);
   }
   function socialReply(query) {
-    const q = query.toLowerCase().replace(/[\s，,。.!！?？、；;~～…]/g, '');
-    const tokens = q.match(/你好|您好|在吗|在不在|早上好|早安|晚上好|hello|hi|谢谢(?:你|您)?|多谢|谢了|感谢(?:你|您)?|辛苦了|好(?:的|吧)?|嗯|哦|收到|明白了?|了解了?|知道了|ok|呀|啊|啦|呢/g);
-    if (!q || tokens?.join('') !== q) return '';
+    const q = socialText(query);
+    const tokens=socialTokens(q);
+    if (!q || tokens.map(t=>q.slice(t.start,t.end)).join('')!==q) return '';
+    if (/(8{2,}6?|拜|再见|再会|(?:回头|回|下次|改天|明天|一会儿?)见|没(?:有|啥)?事|没问题|不用|不需要|无需|晚安)/.test(q)) return '好的，祝您生活愉快。有需要可以再来咨询。';
     if (/(谢|辛苦)/.test(q)) return '不客气，有其他问题可以继续告诉我。';
-    if (/(你好|您好|在吗|在不在|早|晚上好|hello|hi)/.test(q)) return '您好，我在。请告诉我需要什么帮助。';
+    if (/(你好|您好|在吗|在不在|早|午好|晚上好|哈[喽啰罗]|嗨|hello|hi|hey)/.test(q)) return '您好，我在。请告诉我需要什么帮助。';
     return '好的，有需要可以继续告诉我。';
   }
   function classify(s, query, customerId, now = Date.now(), config = s.flow.live, options = {}) {
@@ -85,12 +126,13 @@
     if (p.human) return [{kind: 'handoff', reason: '客户要求人工协助'}];
     const social = socialReply(query);
     if (social) return [{kind: 'social', body: social}];
+    if (p.mixedPolicy) return [{kind:'handoff',reason:'规则咨询包含其他业务诉求，需要人工逐项核实'}];
     const orderIds = new Set((query.match(/\b(?:EC-)?SO[A-Z0-9]+\b/gi) || []).map(id => id.toUpperCase()));
     if (orderIds.size > 1) return [{kind: 'handoff', reason: '同时涉及多个订单，需要逐项核实对应诉求'}];
-    if(s.schema===5&&(p.intake||/(没(?:有)?收到|未收到|没拿到|没到|破损|损坏|碎了|坏了|裂痕|漏水|丢了|丢失|少发|漏发|停滞|催发货)/.test(query)))return [{kind:'handoff',reason:'商品售后或物流异常需要人工逐项核实'}];
+    if(s.schema===5&&!p.policy&&(p.intake||/(没(?:有)?收到|未收到|没拿到|没到|破损|损坏|碎了|坏了|裂痕|漏水|丢了|丢失|少发|漏发|停滞|催发货)/.test(query)))return [{kind:'handoff',reason:'商品售后或物流异常需要人工逐项核实'}];
     if(s.schema===5&&p.lookup){
-      const request=normalize(query).toUpperCase().replace(p.id,'');
-      const simple=/^(?:(?:请|麻烦)(?:帮我)?|帮我|我想|我要)?(?:(?:查(?:询)?(?:一下)?|看(?:一下)?)(?:我的|这笔)?(?:订单|物流|快递|包裹|支付)(?:信息|详情|状态|进度)?|(?:我的)?(?:订单|物流|快递|包裹|支付)(?:到哪了?|在哪|状态|进度|信息|详情))$/;
+      const request=normalize(stripSocialEdges(query)).toUpperCase().replace(p.id,'');
+      const simple=/^(?:(?:请|麻烦)(?:帮我)?|帮我|我想|我要)?(?:(?:查(?:询)?(?:一下|下)?|看(?:一下|下)?)(?:我的|这笔)?(?:订单|物流|快递|包裹|支付)(?:信息|详情|状态|进度)?|(?:我的)?(?:订单|物流|快递|包裹|支付)(?:到哪了?|在哪|状态|进度|信息|详情))$/;
       if(!simple.test(request))return [{kind:'handoff',reason:'查询包含其他描述，需要人工核实具体诉求'}];
     }
     const results = [];
@@ -101,7 +143,7 @@
     if (p.intake) results.push({kind: config.intakeEnabled ? 'intake' : 'handoff', orderId: p.id, reason: '售后申请需要人工受理'});
     if (p.policy || !results.length) {
       const question = p.policy ? query.split(/[，,。；;]/).find(x => /(规则|条件|政策|无理由|如何退|怎么退|退货运费)/.test(x)) || query : query;
-      let knowledge = retrieve(s, question, now, query,customerId);
+      let knowledge = retrieve(s, s.schema===5&&p.policy?question+' 退货 规则':question, now, query,customerId);
       if(s.schema===5&&p.policy&&knowledge&&!knowledge.conflict){knowledge=policyKnowledge(s,knowledge,query,customerId,now);if(!knowledge){results.push({kind:'handoff',reason:'该商品没有当前可用的已核实政策，请人工核对'});return results;}}
       results.push(knowledge?.conflict ? {kind: 'conflict'} : knowledge ? {kind: 'answer', knowledge} : {kind: 'gap'});
     }
@@ -167,7 +209,7 @@
   }
   function run(s, conv, query, now, options = {}) {
     const plan = intentions(query, conv.flow, s.schema===5);
-    if(s.schema===5&&!plan.human&&Commerce.collect(s,conv,query,now)){handoff(s,conv,'商品诉求已分别记录，需核对申请或异常',now);conv.runs.push({at:now,flowVersion:conv.flow.version,query,steps:['service-intent']});return;}
+    if(s.schema===5&&!plan.human&&!plan.policy&&Commerce.collect(s,conv,query,now)){handoff(s,conv,'商品诉求已分别记录，需核对申请或异常',now);conv.runs.push({at:now,flowVersion:conv.flow.version,query,steps:['service-intent']});return;}
     const pending = conv.pendingCaseId && get(s, 'cases', conv.pendingCaseId);
     if (plan.onlyId && pending && pending.kind === 'aftersales') {
       const c = aftersalesCase(s, conv, pending, plan.id, now); conv.pendingCaseId = '';
@@ -330,7 +372,7 @@
   }
   function recognise(s, conv, body, now) {
     if(s.schema===5){
-      if(Commerce.collect(s,conv,body,now))return;
+      if(!intentions(body,conv.flow,true).policy&&Commerce.collect(s,conv,body,now))return;
       const services=conv.caseIds.map(id=>get(s,'cases',id)).filter(c=>c.service&&c.status!=='completed');
       const p=intentions(body,conv.flow,true);
       if(services.length&&!p.lookup&&!p.intake&&!p.policy&&!p.human){
