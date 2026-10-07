@@ -25,20 +25,34 @@ label{display:block;font-size:12px;color:#4d6067;margin-bottom:6px}input,select,
 .chat-page .chat-panel{height:auto;min-height:0;max-height:none}
 .chat-page .chat-head,.chat-page .composer,.desk-chat>.panel-head,.desk-chat>.reply-form{flex:none}
 .chat-page .message{flex-shrink:0}
-.chat-page .customer-aside,.chat-page .queue-panel,.desk-context{min-height:0;max-height:none;overflow-y:auto;overscroll-behavior:contain}
-.chat-page .work-main{min-height:0;grid-template-rows:auto minmax(0,1fr);gap:12px}
-.chat-page .desk-summary>.panel-head{padding:12px 16px}
-.chat-page .desk-summary>.panel-body{padding:8px 16px}
-.chat-page .desk-summary .work-toolbar{margin-top:0}
-.chat-page .desk-columns{min-height:0;grid-template-rows:minmax(0,1fr);align-items:stretch}
+.chat-page .customer-aside,.chat-page .queue-panel,.desk-workflow{min-height:0;max-height:none;overflow-y:auto;overscroll-behavior:contain}
+.chat-page .work-main{min-height:0;grid-template-rows:minmax(0,1fr);gap:0}
+.chat-page .desk-columns{min-height:0;grid-template-columns:minmax(0,1fr) 320px;grid-template-rows:minmax(0,1fr);align-items:stretch}
 .desk-chat{display:flex;flex-direction:column;min-height:0}
 .chat-page .desk-history{flex:1 1 0;min-height:0;max-height:none}
 .chat-page .messages{overscroll-behavior:contain;scroll-behavior:auto}
 .desk-chat>.reply-form{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:8px;padding:10px 16px;margin:0;background:white}
 .desk-chat>.reply-form textarea{height:56px;min-height:44px;max-height:56px;resize:none}
 .desk-chat>.reply-form>.help{grid-column:1/-1;font-size:10px}
-.desk-context .business-history{border-top:0;border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:16px}
-@media(max-width:1100px){.chat-page .desk-context{display:none}.chat-page .desk-columns{grid-template-columns:minmax(0,1fr)}}
+.workflow-context .business-history{border-top:0;border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:16px}
+.desk-workflow{display:flex;flex-direction:column;min-width:0}
+.desk-workflow>.panel-head{flex:none;padding:16px 18px}
+.desk-workflow>.workflow-body{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:18px}
+.workflow-case{margin-bottom:18px;overflow-wrap:anywhere}
+.workflow-case h2{font-size:18px;margin:10px 0 6px}
+.workflow-question{font-size:12px;line-height:1.8;background:var(--tint);padding:12px;border-radius:9px;margin-top:10px;white-space:pre-wrap;overflow-wrap:anywhere}
+.workflow-steps{list-style:none;counter-reset:step;padding:0;margin:16px 0;display:grid;gap:16px}
+.workflow-steps li{counter-increment:step;position:relative;padding-left:33px;font-size:12px}
+.workflow-steps li:before{content:counter(step);position:absolute;left:0;top:1px;width:23px;height:23px;border-radius:50%;background:var(--tint);color:var(--primary);display:grid;place-items:center;font-weight:600}
+.workflow-steps span{display:block;color:var(--muted);margin-top:3px}
+.workflow-actions{border-top:1px solid var(--line);padding-top:16px;margin-top:18px}
+.workflow-actions .actions{margin-top:10px}
+.workflow-actions button{font-size:12px;padding:6px 9px}
+.workflow-context{border-top:1px solid var(--line);padding-top:16px;margin-top:18px}
+.workflow-context summary{cursor:pointer;font-size:13px;font-weight:600}
+.workflow-context .business-history{margin-top:16px}
+.compact-workflow-actions{display:none}
+@media(max-width:1100px){.chat-page .desk-workflow{display:none}.compact-workflow-actions{display:inline-block}.chat-page .desk-columns{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:780px){
   .chat-page{padding:10px 12px 8px}
   .chat-page>.page-head{margin-bottom:8px;gap:6px}
@@ -48,12 +62,6 @@ label{display:block;font-size:12px;color:#4d6067;margin-bottom:6px}input,select,
   .chat-page>.workbench{grid-template-rows:minmax(0,1fr);gap:8px}
   .chat-page .queue-panel{display:none}
   .chat-page .compact-queue-actions{display:inline-block}
-  .chat-page .desk-summary>.panel-head{padding:8px 10px}
-  .chat-page .desk-summary h2{font-size:16px}
-  .chat-page .desk-summary>.panel-body{padding:6px 10px}
-  .chat-page .desk-summary .eyebrow{display:none}
-  .chat-page .desk-summary .work-toolbar{gap:4px}
-  .chat-page .desk-summary button{font-size:11px;padding:4px 7px}
   .chat-page .actor-select{font-size:11px}
   .chat-page .actor-select .field{display:flex;align-items:center;gap:8px}
   .chat-page .actor-select select{min-width:105px}
@@ -66,19 +74,9 @@ label{display:block;font-size:12px;color:#4d6067;margin-bottom:6px}input,select,
   .chat-page .composer{padding-top:8px;padding-bottom:8px}
   .chat-page .composer textarea{height:44px}
   .chat-page .composer-hint,.desk-chat>.reply-form>.help{display:none}
-  .chat-page .desk-summary>.panel-body{max-height:78px;overflow-y:auto}
 }
 
-.compact-case-actions{display:none}
 .desk-chat>.reply-form>.field,.chat-page .actor-select .field{margin-bottom:0}
-@media(max-width:780px){
-  .compact-case-actions{display:inline-block}
-  .chat-page .desk-summary>.panel-body{display:none}
-  .chat-page .desk-summary>.panel-head{flex-wrap:nowrap}
-  .chat-page .desk-summary>.panel-head>div:first-child{min-width:0;flex:1}
-  .chat-page .desk-summary h2{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .chat-page .desk-summary>.panel-head>.row{gap:5px;flex-wrap:nowrap}
-}
 
 .compact-queue-actions{display:none}
 @media(max-height:540px){
@@ -86,11 +84,9 @@ label{display:block;font-size:12px;color:#4d6067;margin-bottom:6px}input,select,
   #app:has(>.chat-page)>.topbar .brand,#app:has(>.chat-page)>.topbar .session-label{display:none}
   #app:has(>.chat-page)>.topbar .topnav{width:100%;order:0;justify-content:center}
   .chat-page>.page-head>div:first-child{display:none}
-  .chat-page .compact-queue-actions,.chat-page .compact-case-actions{display:inline-block}
+  .chat-page .compact-queue-actions{display:inline-block}
   .chat-page>.workbench{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
-  .chat-page .queue-panel,.chat-page .desk-summary>.panel-body{display:none}
-  .chat-page .desk-summary>.panel-head{padding:6px 10px}
-  .chat-page .desk-summary .eyebrow{display:none}
+  .chat-page .queue-panel{display:none}
   .desk-chat>.panel-head{padding:6px 10px}
   .desk-chat>.reply-form textarea{height:44px;max-height:44px}
   .chat-page .messages{padding:12px 14px}

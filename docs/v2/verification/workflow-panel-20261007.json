@@ -1,0 +1,478 @@
+{
+  "agent": "Codex",
+  "date": "2026-10-07",
+  "origin": "http://127.0.0.1:8776/",
+  "checks": [
+    {
+      "label": "desktop-before-long-reply",
+      "chat": {
+        "bottom": 708,
+        "clientHeight": 542,
+        "height": 544.203125,
+        "scrollHeight": 542,
+        "width": 580,
+        "x": 336,
+        "y": 163.796875
+      },
+      "duplicateIds": [],
+      "messages": {
+        "bottom": 604.203125,
+        "clientHeight": 372,
+        "height": 372.40625,
+        "scrollHeight": 372,
+        "width": 578,
+        "x": 337,
+        "y": 231.796875
+      },
+      "page": {
+        "height": 720,
+        "width": 1280
+      },
+      "panel": {
+        "bottom": 708,
+        "clientHeight": 542,
+        "height": 544.203125,
+        "scrollHeight": 542,
+        "width": 320,
+        "x": 932,
+        "y": 163.796875
+      },
+      "panelBody": {
+        "bottom": 707,
+        "clientHeight": 484,
+        "height": 484.453125,
+        "scrollHeight": 711,
+        "width": 318,
+        "x": 933,
+        "y": 222.546875
+      },
+      "reply": {
+        "bottom": 707,
+        "clientHeight": 102,
+        "height": 102.796875,
+        "scrollHeight": 102,
+        "width": 578,
+        "x": 337,
+        "y": 604.203125
+      },
+      "send": {
+        "bottom": 697,
+        "clientHeight": 37,
+        "height": 39,
+        "scrollHeight": 37,
+        "width": 84,
+        "x": 815,
+        "y": 658
+      },
+      "sendVisible": true,
+      "viewport": {
+        "height": 720,
+        "width": 1280
+      }
+    },
+    {
+      "label": "desktop-after-long-reply",
+      "chat": {
+        "bottom": 708,
+        "clientHeight": 542,
+        "height": 544.203125,
+        "scrollHeight": 542,
+        "width": 580,
+        "x": 336,
+        "y": 163.796875
+      },
+      "duplicateIds": [],
+      "messages": {
+        "bottom": 604.203125,
+        "clientHeight": 372,
+        "height": 372.40625,
+        "scrollHeight": 2540,
+        "width": 578,
+        "x": 337,
+        "y": 231.796875
+      },
+      "page": {
+        "height": 720,
+        "width": 1280
+      },
+      "panel": {
+        "bottom": 708,
+        "clientHeight": 542,
+        "height": 544.203125,
+        "scrollHeight": 542,
+        "width": 320,
+        "x": 932,
+        "y": 163.796875
+      },
+      "panelBody": {
+        "bottom": 707,
+        "clientHeight": 484,
+        "height": 484.453125,
+        "scrollHeight": 711,
+        "width": 318,
+        "x": 933,
+        "y": 222.546875
+      },
+      "reply": {
+        "bottom": 707,
+        "clientHeight": 102,
+        "height": 102.796875,
+        "scrollHeight": 102,
+        "width": 578,
+        "x": 337,
+        "y": 604.203125
+      },
+      "send": {
+        "bottom": 697,
+        "clientHeight": 37,
+        "height": 39,
+        "scrollHeight": 37,
+        "width": 84,
+        "x": 815,
+        "y": 658
+      },
+      "sendVisible": true,
+      "viewport": {
+        "height": 720,
+        "width": 1280
+      }
+    },
+    {
+      "label": "mobile-long-reply",
+      "chat": {
+        "bottom": 659,
+        "clientHeight": 452,
+        "height": 454,
+        "scrollHeight": 452,
+        "width": 366,
+        "x": 12,
+        "y": 205
+      },
+      "duplicateIds": [],
+      "messages": {
+        "bottom": 559.203125,
+        "clientHeight": 302,
+        "height": 302.203125,
+        "scrollHeight": 2414,
+        "width": 364,
+        "x": 13,
+        "y": 257
+      },
+      "page": {
+        "height": 667,
+        "width": 390
+      },
+      "panel": {
+        "bottom": 0,
+        "clientHeight": 0,
+        "height": 0,
+        "scrollHeight": 0,
+        "width": 0,
+        "x": 0,
+        "y": 0
+      },
+      "panelBody": {
+        "bottom": 0,
+        "clientHeight": 0,
+        "height": 0,
+        "scrollHeight": 0,
+        "width": 0,
+        "x": 0,
+        "y": 0
+      },
+      "reply": {
+        "bottom": 658,
+        "clientHeight": 98,
+        "height": 98.796875,
+        "scrollHeight": 98,
+        "width": 364,
+        "x": 13,
+        "y": 559.203125
+      },
+      "send": {
+        "bottom": 650,
+        "clientHeight": 37,
+        "height": 39,
+        "scrollHeight": 37,
+        "width": 84,
+        "x": 283,
+        "y": 611
+      },
+      "sendVisible": true,
+      "viewport": {
+        "height": 667,
+        "width": 390
+      }
+    },
+    {
+      "label": "viewport-844x390",
+      "chat": {
+        "bottom": 378,
+        "clientHeight": 236,
+        "height": 238.203125,
+        "scrollHeight": 236,
+        "width": 804,
+        "x": 20,
+        "y": 139.796875
+      },
+      "duplicateIds": [],
+      "messages": {
+        "bottom": 286.203125,
+        "clientHeight": 102,
+        "height": 102.40625,
+        "scrollHeight": 2636,
+        "width": 802,
+        "x": 21,
+        "y": 183.796875
+      },
+      "page": {
+        "height": 390,
+        "width": 844
+      },
+      "panel": {
+        "bottom": 0,
+        "clientHeight": 0,
+        "height": 0,
+        "scrollHeight": 0,
+        "width": 0,
+        "x": 0,
+        "y": 0
+      },
+      "panelBody": {
+        "bottom": 0,
+        "clientHeight": 0,
+        "height": 0,
+        "scrollHeight": 0,
+        "width": 0,
+        "x": 0,
+        "y": 0
+      },
+      "reply": {
+        "bottom": 377,
+        "clientHeight": 90,
+        "height": 90.796875,
+        "scrollHeight": 90,
+        "width": 802,
+        "x": 21,
+        "y": 286.203125
+      },
+      "send": {
+        "bottom": 367,
+        "clientHeight": 37,
+        "height": 39,
+        "scrollHeight": 37,
+        "width": 84,
+        "x": 723,
+        "y": 328
+      },
+      "sendVisible": true,
+      "viewport": {
+        "height": 390,
+        "width": 844
+      }
+    },
+    {
+      "label": "viewport-390x480",
+      "chat": {
+        "bottom": 472,
+        "clientHeight": 360,
+        "height": 362,
+        "scrollHeight": 360,
+        "width": 366,
+        "x": 12,
+        "y": 110
+      },
+      "duplicateIds": [],
+      "messages": {
+        "bottom": 384.203125,
+        "clientHeight": 230,
+        "height": 230.203125,
+        "scrollHeight": 2531,
+        "width": 364,
+        "x": 13,
+        "y": 154
+      },
+      "page": {
+        "height": 480,
+        "width": 390
+      },
+      "panel": {
+        "bottom": 0,
+        "clientHeight": 0,
+        "height": 0,
+        "scrollHeight": 0,
+        "width": 0,
+        "x": 0,
+        "y": 0
+      },
+      "panelBody": {
+        "bottom": 0,
+        "clientHeight": 0,
+        "height": 0,
+        "scrollHeight": 0,
+        "width": 0,
+        "x": 0,
+        "y": 0
+      },
+      "reply": {
+        "bottom": 471,
+        "clientHeight": 86,
+        "height": 86.796875,
+        "scrollHeight": 86,
+        "width": 364,
+        "x": 13,
+        "y": 384.203125
+      },
+      "send": {
+        "bottom": 463,
+        "clientHeight": 37,
+        "height": 39,
+        "scrollHeight": 37,
+        "width": 84,
+        "x": 283,
+        "y": 424
+      },
+      "sendVisible": true,
+      "viewport": {
+        "height": 480,
+        "width": 390
+      }
+    },
+    {
+      "label": "viewport-1100x720",
+      "chat": {
+        "bottom": 708,
+        "clientHeight": 542,
+        "height": 544.203125,
+        "scrollHeight": 542,
+        "width": 807,
+        "x": 273,
+        "y": 163.796875
+      },
+      "duplicateIds": [],
+      "messages": {
+        "bottom": 604.203125,
+        "clientHeight": 372,
+        "height": 372.40625,
+        "scrollHeight": 2644,
+        "width": 805,
+        "x": 274,
+        "y": 231.796875
+      },
+      "page": {
+        "height": 720,
+        "width": 1100
+      },
+      "panel": {
+        "bottom": 0,
+        "clientHeight": 0,
+        "height": 0,
+        "scrollHeight": 0,
+        "width": 0,
+        "x": 0,
+        "y": 0
+      },
+      "panelBody": {
+        "bottom": 0,
+        "clientHeight": 0,
+        "height": 0,
+        "scrollHeight": 0,
+        "width": 0,
+        "x": 0,
+        "y": 0
+      },
+      "reply": {
+        "bottom": 707,
+        "clientHeight": 102,
+        "height": 102.796875,
+        "scrollHeight": 102,
+        "width": 805,
+        "x": 274,
+        "y": 604.203125
+      },
+      "send": {
+        "bottom": 697,
+        "clientHeight": 37,
+        "height": 39,
+        "scrollHeight": 37,
+        "width": 84,
+        "x": 979,
+        "y": 658
+      },
+      "sendVisible": true,
+      "viewport": {
+        "height": 720,
+        "width": 1100
+      }
+    },
+    {
+      "label": "viewport-1101x720",
+      "chat": {
+        "bottom": 708,
+        "clientHeight": 542,
+        "height": 544.203125,
+        "scrollHeight": 542,
+        "width": 401,
+        "x": 336,
+        "y": 163.796875
+      },
+      "duplicateIds": [],
+      "messages": {
+        "bottom": 604.203125,
+        "clientHeight": 372,
+        "height": 372.40625,
+        "scrollHeight": 2713,
+        "width": 399,
+        "x": 337,
+        "y": 231.796875
+      },
+      "page": {
+        "height": 720,
+        "width": 1101
+      },
+      "panel": {
+        "bottom": 708,
+        "clientHeight": 542,
+        "height": 544.203125,
+        "scrollHeight": 542,
+        "width": 320,
+        "x": 753,
+        "y": 163.796875
+      },
+      "panelBody": {
+        "bottom": 688.5078125,
+        "clientHeight": 466,
+        "height": 465.9609375,
+        "scrollHeight": 466,
+        "width": 318,
+        "x": 754,
+        "y": 222.546875
+      },
+      "reply": {
+        "bottom": 707,
+        "clientHeight": 102,
+        "height": 102.796875,
+        "scrollHeight": 102,
+        "width": 399,
+        "x": 337,
+        "y": 604.203125
+      },
+      "send": {
+        "bottom": 697,
+        "clientHeight": 37,
+        "height": 39,
+        "scrollHeight": 37,
+        "width": 84,
+        "x": 636,
+        "y": 658
+      },
+      "sendVisible": true,
+      "viewport": {
+        "height": 720,
+        "width": 1101
+      }
+    }
+  ],
+  "completedConclusion": "服务办理\n\n服务处理\n×\nCS001002\n已办结\n澄清服务诉求\n\n客服 01 跟进\n\n处理结论\n\n已确认客户只咨询人工服务时间，已告知服务安排。\n\n办理操作\n内部备注\n安排后续反馈\n安排回访\n转派接续客服\n登记质量问题\n核实通知状态\n关联信息与业务事件",
+  "console": []
+}

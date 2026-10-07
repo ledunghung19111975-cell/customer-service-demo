@@ -108,3 +108,35 @@ test('高度约束只在聊天和工作台生效，切到普通业务页会解�
   await v.click({page:'chat'});assert.match(v.node('#app').innerHTML,/<main class="page chat-page">/);
   await v.click({view:'ops'});assert.doesNotMatch(v.node('#app').innerHTML,/<main class="page chat-page">/);
 });
+
+test('澄清面板跟随选中事项，只引用该事项追问并转义正文',async()=>{
+  const f=fixture();f.say('需要帮忙弄一下');f.say('怎么清洗');
+  const general=f.state.cases.find(c=>c.title==='澄清服务诉求'),product=f.state.cases.find(c=>c.title==='确认咨询商品');
+  assert(general&&product);const q=f.conv.messages.find(m=>m.role==='assistant'&&m.caseIds?.includes(general.id));q.body='<img src=x> 请说明具体诉求';
+  const before=JSON.stringify(f.state),v=view(f.state);await v.click({view:'desk'});
+  for(const c of [general,product]){
+    await v.click({action:'select-case',case:c.id});const html=v.node('#app').innerHTML;
+    const panel=html.slice(html.indexOf('<aside class="panel desk-workflow"'));
+    assert.match(panel,new RegExp('<h2>'+c.title+'</h2>'));assert.match(panel,/确认具体诉求/);assert.match(panel,/data-command="claim"/);assert.doesNotMatch(html,/desk-summary/);
+    if(c===general){assert.match(panel,/&lt;img src=x&gt;/);assert.doesNotMatch(panel,/<img src=x>|哪种商品的使用/);}
+    else{assert.match(panel,/哪种商品的使用/);assert.doesNotMatch(panel,/&lt;img src=x&gt;/);}
+  }
+  assert.equal(JSON.stringify(f.state),before);
+});
+test('处理面板沿用角色权限，已完成澄清展示真实结论',async()=>{
+  const f=fixture();f.say('需要帮忙弄一下');const c=f.state.cases[0];f.run('claim',{caseId:c.id},'agent');
+  let v=view(f.state);await v.click({view:'desk'});assert.match(v.node('#app').innerHTML,/data-command="completeInquiry"/);
+  await v.change('deskActor','zhou');assert.doesNotMatch(v.node('#app').innerHTML,/data-command="completeInquiry"|id="reply-form"/);
+  f.run('completeInquiry',{caseId:c.id,reason:'已确认是咨询营业时间 <核实>'},'agent');v=view(f.state);
+  const html=v.desk(f.state.cases[0]),panel=html.slice(html.indexOf('<aside class="panel desk-workflow"'));
+  assert.match(panel,/已确认是咨询营业时间 &lt;核实&gt;/);assert.doesNotMatch(panel,/待确认内容|workflow-steps|data-command="completeInquiry"/);
+});
+test('窄屏处理面板保留办理、历史与备注，消费者无法打开',async()=>{
+  const f=fixture(),caseId=f.claim();f.run('reply',{caseId,body:'需要保留的答复'},'agent');f.run('note',{caseId,body:'核实中的备注'},'agent');
+  f.run('scheduleCallback',{caseId,nextAt:NOW+86400000,reason:'确认服务是否解决 <回访>'},'agent');
+  const before=JSON.stringify(f.state),v=view(f.state);await v.click({action:'desk-workflow',case:caseId});assert.notEqual(v.node('#dialog').open,true);
+  await v.click({view:'desk'});await v.click({action:'desk-workflow',case:caseId});assert.equal(v.node('#dialog').open,true);
+  assert.match(v.node('#dialog-body').innerHTML,/data-command="handoff"/);assert.match(v.node('#dialog-body').innerHTML,/需要保留的答复/);assert.match(v.node('#dialog-body').innerHTML,/核实中的备注/);assert.doesNotMatch(v.node('#dialog-body').innerHTML,/workflow-steps/);
+  assert.match(v.node('#dialog-body').innerHTML,/已安排 .* 回访：确认服务是否解决 &lt;回访&gt;/);assert.match(v.node('#dialog-body').innerHTML,/data-command="callbackResult"/);
+  await v.click({action:'close'});assert.equal(v.node('#dialog').open,false);assert.equal(JSON.stringify(f.state),before);
+});
