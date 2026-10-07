@@ -3,7 +3,7 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const root=process.env.V2_TEST_ROOT||path.resolve(__dirname,'..');
-const M=require(path.join(root,'src/v2/model.js')),S=require(path.join(root,'src/v2/service.js'));
+const M=require(path.join(root,'src/v2/model.js')),S=require(path.join(root,'src/v2/service.js')),P=require(path.join(root,'src/v2/sop.js'));
 const NOW=Date.parse('2026-10-07T10:00:00Z');
 function fixture(){
   let state=M.createState(NOW),at=NOW;
@@ -17,7 +17,7 @@ function fixture(){
 function view(state){
   const nodes=new Map(),listeners=new Map();
   const document={querySelector(selector){if(selector==='.messages')return null;if(!nodes.has(selector))nodes.set(selector,{innerHTML:'',addEventListener(){},close(){this.open=false;},showModal(){this.open=true;}});return nodes.get(selector);},addEventListener(name,handler){listeners.set(name,handler);}};
-  const window={SupportV2Model:M,SupportV2Service:S,addEventListener(){}};
+  const window={SupportV2Model:M,SupportV2Service:S,SupportV2Sop:P,addEventListener(){}};
   const source=fs.readFileSync(path.join(root,'src/v2/app.js'),'utf8').replace(/\}\)\(\);\s*$/,'window.testView={chat:()=>{ui.view="customer";return chatView();},desk:c=>{ui.view="desk";return deskDetail(c);},history};})();');
   vm.runInNewContext(source,{window,document,navigator:{},localStorage:{getItem:()=>JSON.stringify(state)},setTimeout:()=>0,clearTimeout(){},Date});
   return {...window.testView,click:dataset=>listeners.get('click')({target:{closest:()=>({dataset})}}),change:(name,value)=>listeners.get('change')({target:{name,value}}),node:selector=>nodes.get(selector)};
@@ -117,7 +117,7 @@ test('澄清面板跟随选中事项，只引用该事项追问并转义正文',
   for(const c of [general,product]){
     await v.click({action:'select-case',case:c.id});const html=v.node('#app').innerHTML;
     const panel=html.slice(html.indexOf('<aside class="panel desk-workflow"'));
-    assert.match(panel,new RegExp('<h2>'+c.title+'</h2>'));assert.match(panel,/确认具体诉求/);assert.match(panel,/data-command="claim"/);assert.doesNotMatch(html,/desk-summary/);
+    assert.match(panel,new RegExp('<h2>'+c.title+'</h2>'));assert.match(panel,/class="sop-axis"/);assert.match(panel,/data-command="claim"/);assert.doesNotMatch(html,/desk-summary/);
     if(c===general){assert.match(panel,/&lt;img src=x&gt;/);assert.doesNotMatch(panel,/<img src=x>|哪种商品的使用/);}
     else{assert.match(panel,/哪种商品的使用/);assert.doesNotMatch(panel,/&lt;img src=x&gt;/);}
   }

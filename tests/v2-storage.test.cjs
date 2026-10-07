@@ -8,6 +8,7 @@ const vm=require('node:vm');
 const root=path.resolve(process.env.V2_TEST_ROOT||path.join(__dirname,'..'));
 const M=require(path.join(root,'src/v2/model.js'));
 const S=require(path.join(root,'src/v2/service.js'));
+const P=require(path.join(root,'src/v2/sop.js'));
 const KEY='support-ecommerce-v2';
 const NOW=Date.parse('2026-10-06T12:00:00Z');
 const filename=path.join(root,'src/v2/app.js');
@@ -71,7 +72,7 @@ function makeTab(store,{navigator=permittedNavigator()}={}){
     });
     return nodes.get(selector);
   }
-  const window={SupportV2Model:M,SupportV2Service:S,navigator,addEventListener:(name,listener)=>listeners.set(name,listener)};
+  const window={SupportV2Model:M,SupportV2Service:S,SupportV2Sop:P,navigator,addEventListener:(name,listener)=>listeners.set(name,listener)};
   const document={querySelector:node,addEventListener(){}};
   class Clock extends Date{constructor(...args){super(...(args.length?args:[NOW+60000]));}static now(){return NOW+60000;}}
   vm.runInNewContext(source,{window,document,navigator,localStorage:store.storage,Date:Clock,Error,setTimeout:()=>1,clearTimeout(){}},{filename});

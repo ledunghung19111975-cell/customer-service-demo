@@ -1,0 +1,19 @@
+test_old_entry_rejected_without_overwriting_bundle (test_v2_build.BuildTests.test_old_entry_rejected_without_overwriting_bundle) ... ok
+test_v2_bundle_contains_current_lock_and_no_external_runtime (test_v2_build.BuildTests.test_v2_bundle_contains_current_lock_and_no_external_runtime) ... ok
+test_01_verified_original_fixture (test_v2_installer.InstallerTests.test_01_verified_original_fixture) ... ok
+test_02_dry_run_does_not_write (test_v2_installer.InstallerTests.test_02_dry_run_does_not_write) ... ok
+test_03_apply_idempotent_preserves_original (test_v2_installer.InstallerTests.test_03_apply_idempotent_preserves_original) ... ok
+test_04_wrong_entry_has_no_effect (test_v2_installer.InstallerTests.test_04_wrong_entry_has_no_effect) ... ok
+test_05_conflicting_file_has_no_partial_effect (test_v2_installer.InstallerTests.test_05_conflicting_file_has_no_partial_effect) ... ok
+test_06_restore_entry_preserves_new_sources_and_can_reapply (test_v2_installer.InstallerTests.test_06_restore_entry_preserves_new_sources_and_can_reapply) ... ok
+test_07_backup_conflict_stops_before_writing (test_v2_installer.InstallerTests.test_07_backup_conflict_stops_before_writing) ... ok
+test_08_symlink_destination_is_rejected (test_v2_installer.InstallerTests.test_08_symlink_destination_is_rejected) ... ok
+test_09_rollback_after_write_exception (test_v2_installer.InstallerTests.test_09_rollback_after_write_exception) ... ok
+test_10_crlf_original_is_preserved_in_backup (test_v2_installer.InstallerTests.test_10_crlf_original_is_preserved_in_backup) ... ok
+test_11_altered_payload_is_rejected (test_v2_installer.InstallerTests.test_11_altered_payload_is_rejected) ... ok
+test_12_restore_does_not_overwrite_custom_entry (test_v2_installer.InstallerTests.test_12_restore_does_not_overwrite_custom_entry) ... ok
+
+----------------------------------------------------------------------
+Ran 14 tests in 0.284s
+
+OK
