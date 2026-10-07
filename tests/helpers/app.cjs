@@ -102,7 +102,8 @@ function app({state=Seed.create(),view={},hash='',search='?data=v4',local,sessio
   const schedule=(fn,delay)=>{if(!controlledTimers)return 1;const id=++timerSequence;pendingTimers.set(id,{fn,delay});return id;};
   doc.addEventListener=(type,fn)=>(events[type]||=[]).push(fn);
   doc._dispatch=(type,event)=>{for(const fn of events[type]||[])fn(event);};
-  doc.activeElement=null;doc.innerHTML=fs.readFileSync(path.join(ROOT,'index.html'),'utf8');doc.body=doc.querySelector('body');
+  const entry=fs.existsSync(path.join(ROOT,'ecommerce-v1.html'))?'ecommerce-v1.html':'index.html';
+  doc.activeElement=null;doc.innerHTML=fs.readFileSync(path.join(ROOT,entry),'utf8');doc.body=doc.querySelector('body');
   doc.createElement=tag=>{const el=new Element(tag);el._ownerDocument=doc;return el;};
   const location={hash,search};const history={pushState(_a,_b,url){location.hash=url;},replaceState(_a,_b,url){location.hash=url;}};
   const win={addEventListener:(type,fn)=>(windowEvents[type]||=[]).push(fn)};

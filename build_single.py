@@ -9,9 +9,11 @@ html = re.sub(r'^[ \t]*<script src="[^"]+" defer></script>[ \t]*\n?', '', html, 
 for stylesheet in re.findall(r'<link rel="stylesheet" href="([^"]+)">', html):
     css = (root / stylesheet).read_text(encoding='utf-8')
     html = html.replace(f'<link rel="stylesheet" href="{stylesheet}">', '<style>\n' + css + '\n</style>')
-bundle = '\n'.join('<script>\n' + (root / p).read_text(encoding='utf-8') + '\n</script>' for p in scripts)
+bundle = '\n'.join('<script>\n' + (root / p).read_text(encoding='utf-8').replace('</script', '<\\/script') + '\n</script>' for p in scripts)
 html = html.replace('</body>', bundle + '\n</body>')
 out = root / 'dist'
 out.mkdir(exist_ok=True)
 (out / '智能客服.html').write_text(html, encoding='utf-8')
+if 'src/v2/app.js' in scripts:
+    (out / '智能客服_V2.html').write_text(html, encoding='utf-8')
 print(out / '智能客服.html')

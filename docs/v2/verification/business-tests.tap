@@ -1,0 +1,430 @@
+TAP version 13
+# Subtest: 初始关系：一单两件两包裹，待发货与未支付订单独立存在
+ok 1 - 初始关系：一单两件两包裹，待发货与未支付订单独立存在
+  ---
+  duration_ms: 4.228757
+  type: 'test'
+  ...
+# Subtest: 寒暄致谢不会创建业务事项
+ok 2 - 寒暄致谢不会创建业务事项
+  ---
+  duration_ms: 4.77507
+  type: 'test'
+  ...
+# Subtest: 知识答复没有用户反馈时不算解决
+ok 3 - 知识答复没有用户反馈时不算解决
+  ---
+  duration_ms: 1.73633
+  type: 'test'
+  ...
+# Subtest: 明确解决反馈后知识问题才计AI独立解决
+ok 4 - 明确解决反馈后知识问题才计AI独立解决
+  ---
+  duration_ms: 1.712979
+  type: 'test'
+  ...
+# Subtest: 混合句：清洗咨询与正常在途分别处理，不整句转人工
+ok 5 - 混合句：清洗咨询与正常在途分别处理，不整句转人工
+  ---
+  duration_ms: 1.184575
+  type: 'test'
+  ...
+# Subtest: 混合句：知识答复完成后，仅异常包裹进入人工核实
+ok 6 - 混合句：知识答复完成后，仅异常包裹进入人工核实
+  ---
+  duration_ms: 1.027034
+  type: 'test'
+  ...
+# Subtest: 未知或他人订单不会撤销同句中已经能够回答的知识诉求
+ok 7 - 未知或他人订单不会撤销同句中已经能够回答的知识诉求
+  ---
+  duration_ms: 0.620664
+  type: 'test'
+  ...
+# Subtest: 两笔订单都有保温杯时先澄清，不自动选第一件退货
+ok 8 - 两笔订单都有保温杯时先澄清，不自动选第一件退货
+  ---
+  duration_ms: 0.462846
+  type: 'test'
+  ...
+# Subtest: 正常在途不创建异常事项
+ok 9 - 正常在途不创建异常事项
+  ---
+  duration_ms: 0.790476
+  type: 'test'
+  ...
+# Subtest: 签收但未收到不凭轨迹办结
+ok 10 - 签收但未收到不凭轨迹办结
+  ---
+  duration_ms: 0.661923
+  type: 'test'
+  ...
+# Subtest: 订单级未收到存在两个包裹时先问具体商品
+ok 11 - 订单级未收到存在两个包裹时先问具体商品
+  ---
+  duration_ms: 0.526716
+  type: 'test'
+  ...
+# Subtest: 选购咨询给出维护过的用途和规格，不直接下单
+ok 12 - 选购咨询给出维护过的用途和规格，不直接下单
+  ---
+  duration_ms: 0.49924
+  type: 'test'
+  ...
+# Subtest: 价格库存使用商品来源与查询结果
+ok 13 - 价格库存使用商品来源与查询结果
+  ---
+  duration_ms: 0.548686
+  type: 'test'
+  ...
+# Subtest: 优惠资格核实：threshold
+ok 14 - 优惠资格核实：threshold
+  ---
+  duration_ms: 0.520374
+  type: 'test'
+  ...
+# Subtest: 优惠资格核实：scope
+ok 15 - 优惠资格核实：scope
+  ---
+  duration_ms: 0.281411
+  type: 'test'
+  ...
+# Subtest: 优惠资格核实：expired
+ok 16 - 优惠资格核实：expired
+  ---
+  duration_ms: 0.382087
+  type: 'test'
+  ...
+# Subtest: 优惠资格核实：eligible
+ok 17 - 优惠资格核实：eligible
+  ---
+  duration_ms: 0.799526
+  type: 'test'
+  ...
+# Subtest: 不可叠加优惠不错误判可用
+ok 18 - 不可叠加优惠不错误判可用
+  ---
+  duration_ms: 0.301396
+  type: 'test'
+  ...
+# Subtest: 支付查询状态不与未支付混淆：failed
+ok 19 - 支付查询状态不与未支付混淆：failed
+  ---
+  duration_ms: 0.524868
+  type: 'test'
+  ...
+# Subtest: 支付查询状态不与未支付混淆：unknown
+ok 20 - 支付查询状态不与未支付混淆：unknown
+  ---
+  duration_ms: 0.310873
+  type: 'test'
+  ...
+# Subtest: 支付查询状态不与未支付混淆：not_found
+ok 21 - 支付查询状态不与未支付混淆：not_found
+  ---
+  duration_ms: 0.261514
+  type: 'test'
+  ...
+# Subtest: 支付待核实不能取消或修改地址
+ok 22 - 支付待核实不能取消或修改地址
+  ---
+  duration_ms: 1.11484
+  type: 'test'
+  ...
+# Subtest: 消费者无法读取他人订单或材料
+ok 23 - 消费者无法读取他人订单或材料
+  ---
+  duration_ms: 1.416912
+  type: 'test'
+  ...
+# Subtest: 未核验访客仍可请求人工，但不能查个人订单
+ok 24 - 未核验访客仍可请求人工，但不能查个人订单
+  ---
+  duration_ms: 0.778847
+  type: 'test'
+  ...
+# Subtest: 不需要人工不会被关键词错误转人工
+ok 25 - 不需要人工不会被关键词错误转人工
+  ---
+  duration_ms: 1.461883
+  type: 'test'
+  ...
+# Subtest: 无人在线仍保留责任组和下次反馈
+ok 26 - 无人在线仍保留责任组和下次反馈
+  ---
+  duration_ms: 0.357289
+  type: 'test'
+  ...
+# Subtest: 预览取消不产生申请或退款
+ok 27 - 预览取消不产生申请或退款
+  ---
+  duration_ms: 1.463756
+  type: 'test'
+  ...
+# Subtest: 缺少材料按已发布规则阻断，无内部材料编码要求
+ok 28 - 缺少材料按已发布规则阻断，无内部材料编码要求
+  ---
+  duration_ms: 0.77522
+  type: 'test'
+  ...
+# Subtest: 退货只占用杯子，不影响另一件商品及包裹
+ok 29 - 退货只占用杯子，不影响另一件商品及包裹
+  ---
+  duration_ms: 1.521387
+  type: 'test'
+  ...
+# Subtest: 重复确认返回原申请；不能再次创建同商品申请
+ok 30 - 重复确认返回原申请；不能再次创建同商品申请
+  ---
+  duration_ms: 1.527619
+  type: 'test'
+  ...
+# Subtest: 规则在预览后发布变更，确认需重新核对
+ok 31 - 规则在预览后发布变更，确认需重新核对
+  ---
+  duration_ms: 1.601193
+  type: 'test'
+  ...
+# Subtest: 确认前仓库锁单变化，订单变更不产生假成功
+ok 32 - 确认前仓库锁单变化，订单变更不产生假成功
+  ---
+  duration_ms: 0.849916
+  type: 'test'
+  ...
+# Subtest: 已支付取消：独立退款，无寄回验收
+ok 33 - 已支付取消：独立退款，无寄回验收
+  ---
+  duration_ms: 1.264929
+  type: 'test'
+  ...
+# Subtest: 未支付取消不生成退款
+ok 34 - 未支付取消不生成退款
+  ---
+  duration_ms: 0.761143
+  type: 'test'
+  ...
+# Subtest: 修改地址需预览确认，变更之后可再次核对修改
+ok 35 - 修改地址需预览确认，变更之后可再次核对修改
+  ---
+  duration_ms: 2.455601
+  type: 'test'
+  ...
+# Subtest: 已出库订单不能自助改址
+ok 36 - 已出库订单不能自助改址
+  ---
+  duration_ms: 0.521477
+  type: 'test'
+  ...
+# Subtest: 换货必须明确存在且有库存的目标规格
+ok 37 - 换货必须明确存在且有库存的目标规格
+  ---
+  duration_ms: 1.053878
+  type: 'test'
+  ...
+# Subtest: 换货寄回验收后停在履约协调，不产生退款和新包裹
+ok 38 - 换货寄回验收后停在履约协调，不产生退款和新包裹
+  ---
+  duration_ms: 2.018544
+  type: 'test'
+  ...
+# Subtest: 配件补发受理保存缺失内容，审核后不退款
+ok 39 - 配件补发受理保存缺失内容，审核后不退款
+  ---
+  duration_ms: 1.73123
+  type: 'test'
+  ...
+# Subtest: 另包在途不能直接按漏发申请补发
+ok 40 - 另包在途不能直接按漏发申请补发
+  ---
+  duration_ms: 0.419055
+  type: 'test'
+  ...
+# Subtest: 仅退款经审核后直达退款，不要求虚构寄回
+ok 41 - 仅退款经审核后直达退款，不要求虚构寄回
+  ---
+  duration_ms: 0.943699
+  type: 'test'
+  ...
+# Subtest: 审核通过展示完整寄回信息，仓库签收与验收不同
+ok 42 - 审核通过展示完整寄回信息，仓库签收与验收不同
+  ---
+  duration_ms: 1.132838
+  type: 'test'
+  ...
+# Subtest: 验收异常—请求补件—补件—复核通过恢复退款节点
+ok 43 - 验收异常—请求补件—补件—复核通过恢复退款节点
+  ---
+  duration_ms: 2.889163
+  type: 'test'
+  ...
+# Subtest: 审核拒绝后原申请可申请复核，不新建售后
+ok 44 - 审核拒绝后原申请可申请复核，不新建售后
+  ---
+  duration_ms: 1.613304
+  type: 'test'
+  ...
+# Subtest: 重复提交退款沿用原请求，未知结果保留占用
+ok 45 - 重复提交退款沿用原请求，未知结果保留占用
+  ---
+  duration_ms: 3.131065
+  type: 'test'
+  ...
+# Subtest: 成功、重复及过期回执不重复退款或倒退状态
+ok 46 - 成功、重复及过期回执不重复退款或倒退状态
+  ---
+  duration_ms: 2.011235
+  type: 'test'
+  ...
+# Subtest: 错误请求或金额的回执不改变退款结果
+ok 47 - 错误请求或金额的回执不改变退款结果
+  ---
+  duration_ms: 2.395159
+  type: 'test'
+  ...
+# Subtest: 退款失败不释放原商品占用，重试保留原请求
+ok 48 - 退款失败不释放原商品占用，重试保留原请求
+  ---
+  duration_ms: 3.750005
+  type: 'test'
+  ...
+# Subtest: 退款成功后用户称未到账，重开原事项而非重复退款
+ok 49 - 退款成功后用户称未到账，重开原事项而非重复退款
+  ---
+  duration_ms: 2.282145
+  type: 'test'
+  ...
+# Subtest: 未执行申请可以凭撤回回执释放占用
+ok 50 - 未执行申请可以凭撤回回执释放占用
+  ---
+  duration_ms: 1.361463
+  type: 'test'
+  ...
+# Subtest: 已寄回或退款未知不能直接撤回释放占用
+ok 51 - 已寄回或退款未知不能直接撤回释放占用
+  ---
+  duration_ms: 2.138988
+  type: 'test'
+  ...
+# Subtest: 发票、价保与维修有独立必要信息，受理不算执行成功
+ok 52 - 发票、价保与维修有独立必要信息，受理不算执行成功
+  ---
+  duration_ms: 3.251415
+  type: 'test'
+  ...
+# Subtest: 通用人工结案不能伪造退货、退款、补发完成
+ok 53 - 通用人工结案不能伪造退货、退款、补发完成
+  ---
+  duration_ms: 0.798754
+  type: 'test'
+  ...
+# Subtest: 客服不能代替客户确认申请或越权执行退款
+ok 54 - 客服不能代替客户确认申请或越权执行退款
+  ---
+  duration_ms: 0.940489
+  type: 'test'
+  ...
+# Subtest: 客服接管后不再自动发送AI公开回复
+ok 55 - 客服接管后不再自动发送AI公开回复
+  ---
+  duration_ms: 1.141321
+  type: 'test'
+  ...
+# Subtest: 客服可整理草稿，但需要用户再次确认
+ok 56 - 客服可整理草稿，但需要用户再次确认
+  ---
+  duration_ms: 1.106231
+  type: 'test'
+  ...
+# Subtest: 人工转派未接收前保留原责任，确认后会话与未完事项一致转移
+ok 57 - 人工转派未接收前保留原责任，确认后会话与未完事项一致转移
+  ---
+  duration_ms: 1.264013
+  type: 'test'
+  ...
+# Subtest: 转派拒收和超时不会移除原责任人
+ok 58 - 转派拒收和超时不会移除原责任人
+  ---
+  duration_ms: 1.892344
+  type: 'test'
+  ...
+# Subtest: 补件与跨会话接续仍是原申请
+ok 59 - 补件与跨会话接续仍是原申请
+  ---
+  duration_ms: 2.447745
+  type: 'test'
+  ...
+# Subtest: 通知失败不改变已成功的退款，且留下跟进安排
+ok 60 - 通知失败不改变已成功的退款，且留下跟进安排
+  ---
+  duration_ms: 2.231856
+  type: 'test'
+  ...
+# Subtest: 回访未联系上必须给出下一次反馈，不能顺便办结售后
+ok 61 - 回访未联系上必须给出下一次反馈，不能顺便办结售后
+  ---
+  duration_ms: 1.517896
+  type: 'test'
+  ...
+# Subtest: 场景草稿不立即生效，测试发布后新申请使用新版
+ok 62 - 场景草稿不立即生效，测试发布后新申请使用新版
+  ---
+  duration_ms: 1.275765
+  type: 'test'
+  ...
+# Subtest: 改过的草稿不能复用旧测试发布，错误规则阻断
+ok 63 - 改过的草稿不能复用旧测试发布，错误规则阻断
+  ---
+  duration_ms: 0.875126
+  type: 'test'
+  ...
+# Subtest: 不允许把仅退款配置成寄回流程
+ok 64 - 不允许把仅退款配置成寄回流程
+  ---
+  duration_ms: 0.345743
+  type: 'test'
+  ...
+# Subtest: 知识修订必须正反例通过，发布后实际问答命中新版
+ok 65 - 知识修订必须正反例通过，发布后实际问答命中新版
+  ---
+  duration_ms: 1.308043
+  type: 'test'
+  ...
+# Subtest: 知识质量闭环复验原问题，不以保存草稿代替生效
+ok 66 - 知识质量闭环复验原问题，不以保存草稿代替生效
+  ---
+  duration_ms: 2.730923
+  type: 'test'
+  ...
+# Subtest: 非知识故障必须有业务验证记录，知识运营不能自行验收
+ok 67 - 非知识故障必须有业务验证记录，知识运营不能自行验收
+  ---
+  duration_ms: 1.707472
+  type: 'test'
+  ...
+# Subtest: 内部备注不出现在消费者投影中
+ok 68 - 内部备注不出现在消费者投影中
+  ---
+  duration_ms: 0.850838
+  type: 'test'
+  ...
+# Subtest: 无效命令或失败操作不会修改输入状态
+ok 69 - 无效命令或失败操作不会修改输入状态
+  ---
+  duration_ms: 0.497257
+  type: 'test'
+  ...
+# Subtest: 不接受脚本、超大或错误格式的材料
+ok 70 - 不接受脚本、超大或错误格式的材料
+  ---
+  duration_ms: 0.68593
+  type: 'test'
+  ...
+1..70
+# tests 70
+# suites 0
+# pass 70
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 199.544734
