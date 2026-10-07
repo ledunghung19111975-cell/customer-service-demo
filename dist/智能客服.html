@@ -181,6 +181,27 @@ details[open]>.sop-group .sop-group-names{display:none}
 .self-right .message.assistant .message-sender,.self-right .message.agent .message-sender,.self-right .message.assistant .message-meta,.self-right .message.agent .message-meta{text-align:left}
 .self-right .message.assistant .bubble,.self-right .message.agent .bubble{border-radius:2px 12px 12px 12px}
 .self-right .message.assistant .bubble,.self-right .message.agent .bubble{background:#f3f6f7}
+/* Service queue: conversations an agent can take over, with waiting time and what each one is about. */
+.queue-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:0 16px;padding:4px;background:#eef2f3;border-radius:10px}
+.queue-tabs button{border:0;background:transparent;border-radius:8px;padding:6px 8px;font-size:13px;color:#4f6670;display:flex;justify-content:center;gap:6px}
+.queue-tabs button span{font-size:11px;color:var(--muted)}
+.queue-tabs button.active{background:white;color:var(--ink);font-weight:600;box-shadow:0 1px 2px #20384014}
+.session-row{border-bottom:1px solid var(--line);background:white}
+.session-row.active{background:#ebf3ef;box-shadow:inset 3px 0 var(--primary)}
+.session-main{display:block;width:100%;text-align:left;border:0;border-radius:0;background:transparent;padding:13px 17px 10px}
+.session-main:hover:not(:disabled){background:#f2f7f5}
+.session-row.active .session-main:hover:not(:disabled){background:#e3efe9}
+.session-time{display:block;margin-top:4px;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.session-row:has(.badge.warn) .session-time{color:#80601f;font-weight:600}
+.session-last{display:block;margin-top:5px;font-size:12px;color:#33505a;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.session-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.session-tag{font-size:11px;line-height:18px;padding:0 7px;border-radius:999px;background:#eef2f3;color:#4f6670}
+.session-tag.warn{background:#fbefd5;color:#6b4a0c}
+.session-take{margin:0 17px 12px;width:calc(100% - 34px)}
+.session-cases{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.session-cases .muted{width:100%}
+.session-cases button{font-size:12px;padding:4px 9px}
+.session-cases button.active{background:var(--tint);border-color:var(--primary);color:var(--primary);font-weight:600}
 
 </style>
 </head>
@@ -523,7 +544,9 @@ details[open]>.sop-group .sop-group-names{display:none}
   }
   function ask(s,conv,title,body,now,action='orders',fields={}) {
     const c=makeCase(s,conv,'clarification',title,{...fields,action},now,'clarify:'+title);
-    message(s,conv,'assistant',body,now,[c.id],{action});return c;
+    // Several clauses of one message can land on the same question; ask it once.
+    if(!conv.messages.some(m=>m.at===now&&m.role==='assistant'&&m.body===body&&m.caseIds?.includes(c.id)))message(s,conv,'assistant',body,now,[c.id],{action});
+    return c;
   }
   function answer(s,conv,title,body,source,now,fields={}) {
     const c=makeCase(s,conv,'knowledge',title,fields,now,'knowledge:'+normalize(title));
@@ -578,9 +601,9 @@ details[open]>.sop-group .sop-group-names{display:none}
     if(/^(你好|您好|嗨|hi|hello|在吗|谢谢|感谢|好的|好|嗯|不用了|再见)[呀啊哦呢啦！!。 .?？]*$/i.test(body.trim())) {
       message(s,conv,'assistant',/(谢谢|感谢|再见)/.test(body)?'已保留当前服务进度。还有其他问题可以继续说明。':'请说明需要咨询或办理的问题。',now);return customer;
     }
-    const clauses=body.split(/[，,。；;\n]+/).map(x=>x.trim()).filter(Boolean);const ids=[];
+    const clauses=body.split(/[，,。；;\n]+/).map(x=>x.trim()).filter(Boolean);const ids=[];let vague=false;
     for(let q of clauses) {
-      if(/^(好的|好|谢谢|感谢|嗯)$/.test(q))continue;
+      if(/^(你好|您好|嗨|hi|hello|在吗|在不在|好的|好|谢谢|感谢|嗯)[呀啊哦呢啦！!。 .?？~～]*$/i.test(q))continue;
       const products=productMention(s,q),product=products.length===1?products[0]:null;
       let order;try{order=orderMention(s,a,conv,q);itemMention(s,a,conv,q,order);}catch(error){const c=ask(s,conv,'核对订单归属','暂无法核对该订单与商品，请从本人订单中重新选择；未展示其他订单的个人信息。',now,'orders');ids.push(c.id);continue;}
       let c;
@@ -639,10 +662,12 @@ details[open]>.sop-group .sop-group-names{display:none}
         const k=retrieve(s,q,now);
         if(k)c=answer(s,conv,k.live.title,k.live.answer,`${k.live.source} · v${k.live.version}`,now);
         else if(/^(不要|不用|不需要|不想)/.test(q)) {message(s,conv,'assistant','不会提交您未确认的业务操作。已有申请需要撤回时，请进入原申请办理。',now);continue;}
-        else c=ask(s,conv,'澄清服务诉求','请补充需要了解的商品、订单或希望办理的事情；也可以直接请求人工。',now,'orders');
+        else vague=true;
       }
       if(c)ids.push(c.id);
     }
+    // A general clarification only helps when no clause produced anything specific.
+    if(vague&&!ids.length)ids.push(ask(s,conv,'澄清服务诉求','请补充需要了解的商品、订单或希望办理的事情；也可以直接请求人工。',now,'orders').id);
     customer.caseIds=[...new Set(ids)];return customer;
   }
   function applicationFor(s,a,applicationId) {
@@ -1203,7 +1228,7 @@ details[open]>.sop-group .sop-group-names{display:none}
   try {original=localStorage.getItem(KEY);}catch(err){storageAvailable=false;}
   if(!storageAvailable||original===null)state=M.createState();
   else try {state=JSON.parse(original);S.validateState(state);}catch(err){corrupt=err.message;state=null;}
-  const ui={view:'customer',page:'chat',opsPage:'dashboard',deskActor:'lin',opsActor:'operator',caseId:'',queueFilter:'all',conversationId:state?.conversations.find(c=>c.customerId==='C001'&&c.status==='open')?.id||'',modal:'',form:null,replyDraft:null,sopAlt:null};
+  const ui={view:'customer',page:'chat',opsPage:'dashboard',deskActor:'lin',opsActor:'operator',caseId:'',queueFilter:'all',conversationId:state?.conversations.find(c=>c.customerId==='C001'&&c.status==='open')?.id||'',modal:'',form:null,replyDraft:null,sopAlt:null,queueTab:'',sessionFilter:'active',convId:''};
   const $=s=>document.querySelector(s),app=$('#app'),dialog=$('#dialog');
   function actor(){if(ui.view==='customer')return {id:'C001',role:'customer'};const a=state.staff.find(a=>a.id===(ui.view==='desk'?ui.deskActor:ui.opsActor));return {id:a.id,role:a.role};}
   function run(command,data,who=actor()) {
@@ -1271,17 +1296,43 @@ details[open]>.sop-group .sop-group-names{display:none}
     if(['manager','agent'].includes(a.role)){const notification=state.notifications.filter(n=>n.caseId===c.id).at(-1);if(notification)rows.push(btn('核实通知状态','command',`data-command="notificationResult" data-case="${e(c.id)}" data-notification="${e(notification.id)}"`));}
     return `<div class="actions">${rows.join('')}</div>`+(h?`<p class="small muted">转派 ${e(staffName(h.targetId))} 待接收。当前责任人：${e(staffName(c.ownerId))}。</p>`:'');}
   function deskRows(){const a=actor();return state.cases.filter(c=>!c.mergedInto).filter(c=>ui.queueFilter==='mine'?c.ownerId===a.id:ui.queueFilter==='pending'?c.status!=='completed'&&!['withdrawn','rejected'].includes(c.stage):ui.queueFilter==='group'?c.groupOwnerId===state.staff.find(x=>x.id===a.id).team:true);}
-  function queueContents(rows,currentId,dialogView=false){return `<div class="panel-head"><h3>服务队列</h3>${badge(rows.length+'项')}</div><div class="panel-body">${select(dialogView?'queueDialogFilter':'queueFilter','显示范围',[['all','全部事项'],['mine','我负责的'],['group','本责任组'],['pending','未完成事项']],ui.queueFilter)}</div>${rows.map(x=>`<button class="case-row ${x.id===currentId?'active':''}" data-action="select-case" data-case="${e(x.id)}"><div class="row between"><span class="case-id">${e(x.id)}</span>${stageBadge(x)}</div><strong>${e(x.title)}</strong><span class="small muted">${e(groups[x.groupOwnerId]||'服务组')} · ${e(x.ownerId?staffName(x.ownerId):'待分配')}</span></button>`).join('')||empty('队列暂无事项','消费者提出问题或确认申请后会显示在这里。')}`;}
-  function openDeskQueue(){modal('服务队列',queueContents(deskRows(),ui.caseId,true),'queue');}
-  function desk(){const a=actor(),rows=deskRows();let c=rows.find(c=>c.id===ui.caseId)||rows[0];if(c)ui.caseId=c.id;
-    return `<div class="page-head"><div><p class="eyebrow">SERVICE WORKBENCH</p><h1>事项与协作</h1><p>接待责任与业务办理责任分别保留，转派确认前不丢失跟进人。</p></div><div class="actor-select">${select('deskActor','当前处理角色',state.staff.filter(x=>x.role!=='operator').map(x=>[x.id,x.name]),ui.deskActor)}${a.role==='agent'?btn(state.staff.find(x=>x.id===a.id).available?'设为离线':'设为在线','presence','','small'):''}${btn('服务队列','desk-queue','','small compact-queue-actions')}</div></div><div class="workbench"><aside class="panel queue-panel">${queueContents(rows,c?.id)}</aside><section class="work-main">${c?deskDetail(c):'<div class="panel">'+empty('选择需要跟进的事项','可以处理用户诉求、受理资料、业务回执和后续反馈。')+'</div>'}</section></div>`;}
+  const queueTab=()=>ui.queueTab||(actor().role==='agent'?'sessions':'cases');
+  const isOpenCase=c=>c.status!=='completed'&&!['withdrawn','rejected'].includes(c.stage);
+  const ago=ms=>{const m=Math.max(0,Math.floor(ms/60000));return m<1?'不到 1 分钟':m<60?m+' 分钟':Math.floor(m/60)+' 小时 '+m%60+' 分钟';};
+  const deskConv=c=>c?.conversationIds.includes(ui.convId)?ui.convId:c?.conversationIds.at(-1)||'';
+  // The case an agent handles when picking a conversation: their own open case, then an unclaimed one.
+  function sessionCase(v,a){const cs=v.caseIds.map(id=>state.cases.find(c=>c.id===id)).filter(c=>c&&!c.mergedInto),open=cs.filter(isOpenCase);return open.find(c=>c.ownerId===a.id)||open.find(c=>!c.ownerId)||open[0]||cs.at(-1);}
+  function deskSessions(){const a=actor(),rank=v=>v.status==='closed'?4:v.mode==='queue'?0:v.mode==='human'?(v.ownerId===a.id?1:2):3;
+    const keep={active:v=>v.status==='open'&&['queue','human'].includes(v.mode),waiting:v=>v.status==='open'&&v.mode==='queue',mine:v=>v.status==='open'&&v.ownerId===a.id,all:()=>true}[ui.sessionFilter]||(v=>v.status==='open'&&['queue','human'].includes(v.mode));
+    return state.conversations.filter(v=>sessionCase(v,a)&&keep(v)).sort((x,y)=>rank(x)-rank(y)||(rank(x)===0?(x.requestedAt||x.updatedAt)-(y.requestedAt||y.updatedAt):y.updatedAt-x.updatedAt));}
+  function sessionRow(v,currentConv){
+    const a=actor(),c=sessionCase(v,a),customer=state.customers.find(x=>x.id===v.customerId),msgs=v.messages;
+    const replied=msgs.findLastIndex(m=>m.role==='agent'||m.role==='assistant'),pending=msgs.slice(replied+1).filter(m=>m.role==='customer').length,last=msgs.filter(m=>m.role==='customer').at(-1);
+    const [label,tone,since,prefix]=v.status==='closed'?['已结束','',v.closedAt,'结束于 ']:v.mode==='queue'?['待接入','warn',v.requestedAt||v.updatedAt,'等待 ']:v.mode==='human'?[v.ownerId===a.id?'我接待中':staffName(v.ownerId)+' 接待中',v.ownerId===a.id?'good':'blue',v.claimedAt||v.updatedAt,'已接待 ']:['AI 接待中','',v.createdAt,'AI 接待 '];
+    const intents=[...new Set(v.caseIds.map(id=>state.cases.find(x=>x.id===id)).filter(x=>x&&!x.mergedInto&&isOpenCase(x)).map(x=>P.build(state,x.id)?.intent?.name||'待澄清'))];
+    const time=v.status==='closed'?`<span class="session-time">${prefix}${e(t(since))}</span>`:`<span class="session-time" data-since="${Number(since)}" data-prefix="${prefix}">${prefix}${ago(Date.now()-since)}</span>`;
+    const canTake=a.role==='agent'&&v.status==='open'&&v.mode!=='human'&&(!c.ownerId||c.ownerId===a.id);
+    return `<div class="session-row ${v.id===currentConv?'active':''}"><button type="button" class="session-main" data-action="select-session" data-conv="${e(v.id)}" data-case="${e(c.id)}"><span class="row between"><strong>${e(customer?.name||'客户')}</strong>${badge(label,tone)}</span>${time}<span class="session-last">${e(last?.body||'尚未发送消息')}</span><span class="session-tags">${intents.slice(0,2).map(n=>`<span class="session-tag">${e(n)}</span>`).join('')}${intents.length>2?`<span class="session-tag">+${intents.length-2}</span>`:''}${pending?`<span class="session-tag warn">${pending} 条待回复</span>`:''}</span></button>${canTake?btn('接管会话','take-conversation',`data-conv="${e(v.id)}" data-case="${e(c.id)}"`,'primary small session-take'):''}</div>`;
+  }
+  function queueContents(dialogView=false){
+    const tab=queueTab(),rows=deskRows(),sessions=deskSessions(),currentId=ui.caseId,currentConv=deskConv(state.cases.find(c=>c.id===ui.caseId));
+    const tabs=`<div class="queue-tabs" role="tablist" aria-label="队列类型">${[['sessions','接待会话',sessions.length],['cases','业务事项',rows.length]].map(([k,l,n])=>`<button type="button" role="tab" aria-selected="${tab===k}" class="${tab===k?'active':''}" data-action="queue-tab" data-tab="${k}">${l}<span>${n}</span></button>`).join('')}</div>`;
+    if(tab==='sessions')return `<div class="panel-head"><h3>服务队列</h3>${badge(sessions.length+'个会话')}</div>${tabs}<div class="panel-body">${select(dialogView?'sessionDialogFilter':'sessionFilter','显示范围',[['active','待接入与接待中'],['waiting','待接入'],['mine','我接待的'],['all','全部会话']],ui.sessionFilter||'active')}</div>${sessions.map(v=>sessionRow(v,currentConv)).join('')||empty('暂无接待会话','客户请求人工或转人工后，会话会在这里排队。')}`;
+    return `<div class="panel-head"><h3>服务队列</h3>${badge(rows.length+'项')}</div>${tabs}<div class="panel-body">${select(dialogView?'queueDialogFilter':'queueFilter','显示范围',[['all','全部事项'],['mine','我负责的'],['group','本责任组'],['pending','未完成事项']],ui.queueFilter)}</div>${rows.map(x=>`<button class="case-row ${x.id===currentId?'active':''}" data-action="select-case" data-case="${e(x.id)}"><div class="row between"><span class="case-id">${e(x.id)}</span>${stageBadge(x)}</div><strong>${e(x.title)}</strong><span class="small muted">${e(groups[x.groupOwnerId]||'服务组')} · ${e(x.ownerId?staffName(x.ownerId):'待分配')}</span></button>`).join('')||empty('队列暂无事项','消费者提出问题或确认申请后会显示在这里。')}`;}
+  function openDeskQueue(){modal('服务队列',queueContents(true),'queue');}
+  function desk(){const a=actor(),rows=deskRows();
+    let c=queueTab()==='sessions'?state.cases.find(x=>x.id===ui.caseId&&!x.mergedInto)||(()=>{const v=deskSessions()[0];return v?sessionCase(v,a):null;})()||rows[0]:rows.find(x=>x.id===ui.caseId)||rows[0];
+    if(c)ui.caseId=c.id;
+    return `<div class="page-head"><div><p class="eyebrow">SERVICE WORKBENCH</p><h1>事项与协作</h1><p>接待责任与业务办理责任分别保留，转派确认前不丢失跟进人。</p></div><div class="actor-select">${select('deskActor','当前处理角色',state.staff.filter(x=>x.role!=='operator').map(x=>[x.id,x.name]),ui.deskActor)}${a.role==='agent'?btn(state.staff.find(x=>x.id===a.id).available?'设为离线':'设为在线','presence','','small'):''}${btn('服务队列','desk-queue','','small compact-queue-actions')}</div></div><div class="workbench"><aside class="panel queue-panel">${queueContents()}</aside><section class="work-main">${c?deskDetail(c):'<div class="panel">'+empty('选择需要跟进的事项','可以处理用户诉求、受理资料、业务回执和后续反馈。')+'</div>'}</section></div>`;}
   function deskContext(c,conv){return `${state.callbacks.filter(cb=>cb.caseId===c.id&&cb.status==='scheduled').map(cb=>`<div class="notice">已安排 ${e(t(cb.nextAt))} 回访：${e(cb.reason)}</div>`).join('')}<div class="business-history"><h4 class="section-title">业务事件</h4>${history(c,conv)}</div><h4 class="section-title">事项信息</h4>${facts(c)}${returnOf(c)?`<h4 class="section-title">退回验收</h4>${kv([['寄回地址',returnOf(c).instructions.address],['最近验收',returnOf(c).inspection?.reason]])}`:''}<h4 class="section-title">内部备注</h4>${c.notes.map(n=>`<p class="notes">${e(n.body)}<br><span class="small muted">${e(staffName(n.actorId))} · ${e(t(n.at))}</span></p>`).join('')||'<p class="muted small">暂无内部备注。</p>'}`;}
   function deskDetail(c){
-    const a=actor(),conv=state.conversations.find(v=>v.id===c.conversationIds.at(-1));
+    const a=actor(),conv=state.conversations.find(v=>v.id===deskConv(c));
     return `<div class="desk-columns"><section class="panel desk-chat"><div class="panel-head"><h3>会话记录</h3><div class="row">${btn('处理面板','desk-workflow',`data-case="${e(c.id)}"`,'small compact-workflow-actions')}${conv&&['agent','manager'].includes(a.role)?btn('结束本次接待','command',`data-command="closeConversation" data-case="${e(c.id)}"`,'quiet small'):''}</div></div><div class="panel-body messages desk-history">${conversationMessages(conv).map(messageView).join('')||'<p class="muted small">暂无会话消息。</p>'}</div>${a.role==='agent'&&c.ownerId===a.id?replyForm(c,a):''}</section><aside class="panel desk-workflow" aria-label="服务处理面板"><div class="panel-head"><h3>服务处理</h3></div><div class="panel-body workflow-body">${deskWorkflow(c,conv)}</div></aside></div>`;
   }
   function deskWorkflow(c,conv){
-    return `<div class="workflow-case"><div class="row between"><span class="case-id">${e(c.id)}</span>${stageBadge(c)}</div><h2>${e(c.title)}</h2><p class="small muted">${e(c.ownerId?staffName(c.ownerId)+' 跟进':'待客服接管')}</p></div>${c.type==='clarification'&&c.status==='completed'?`<div class="notice"><strong>处理结论</strong><p class="break">${e(c.result?.reason||'已登记处理结果。')}</p></div>`:''}${sopAxis(P.build(state,c.id,{agentId:actor().id,fmt:t}))}<section class="workflow-actions"><h4>办理操作</h4>${staffActions(c)}</section><details class="workflow-context"><summary>关联信息与业务事件</summary>${deskContext(c,conv)}</details>`;
+    const v=state.conversations.find(x=>x.id===deskConv(c)),siblings=(v?.caseIds||[]).map(id=>state.cases.find(x=>x.id===id)).filter(x=>x&&!x.mergedInto);
+    const switcher=siblings.length>1?`<div class="session-cases"><span class="small muted">本会话事项 ${siblings.length}</span>${siblings.map(x=>`<button type="button" class="${x.id===c.id?'active':''}" data-action="select-case" data-case="${e(x.id)}" data-conv="${e(v.id)}">${e(x.title)}</button>`).join('')}</div>`:'';
+    return `${switcher}<div class="workflow-case"><div class="row between"><span class="case-id">${e(c.id)}</span>${stageBadge(c)}</div><h2>${e(c.title)}</h2><p class="small muted">${e(c.ownerId?staffName(c.ownerId)+' 跟进':'待客服接管')}</p></div>${c.type==='clarification'&&c.status==='completed'?`<div class="notice"><strong>处理结论</strong><p class="break">${e(c.result?.reason||'已登记处理结果。')}</p></div>`:''}${sopAxis(P.build(state,c.id,{agentId:actor().id,fmt:t}))}<section class="workflow-actions"><h4>办理操作</h4>${staffActions(c)}</section><details class="workflow-context"><summary>关联信息与业务事件</summary>${deskContext(c,conv)}</details>`;
   }
   const SOP_TAG={current:'进行中',async:'会后跟进',skip:'未触发'};
   function sopRow(n,cls=''){
@@ -1351,7 +1402,10 @@ details[open]>.sop-group .sop-group-names{display:none}
     const d=target.dataset,act=d.action;if(!act)return;
     if(act==='close'){close();return;}
     if(act==='goto-orders'||act==='goto-progress'){close();ui.page=act==='goto-orders'?'orders':'progress';render();return;}
-    if(act==='select-case'){ui.caseId=d.case;if(ui.modal==='queue')close();render();return;}
+    if(act==='select-case'){ui.caseId=d.case;ui.convId=d.conv||'';if(ui.modal==='queue')close();render();if(ui.modal==='workflow'){const c=state.cases.find(x=>x.id===d.case);if(c)modal('服务处理',deskWorkflow(c,null),'workflow');}return;}
+    if(act==='select-session'){ui.convId=d.conv;ui.caseId=d.case;ui.replyDraft=null;if(ui.modal==='queue')close();render();return;}
+    if(act==='queue-tab'){ui.queueTab=d.tab;render();if(ui.modal==='queue')openDeskQueue();return;}
+    if(act==='take-conversation'){ui.convId=d.conv;ui.caseId=d.case;if(ui.modal==='queue')close();render();simpleForm('确认接管会话','claim',{caseId:d.case},'<div class="notice">接管后由你接待这位客户的会话，机器人不再公开回复；排队期间的消息和已有事项一并保留。</div>');return;}
     if(act==='desk-queue'){if(ui.view==='desk')openDeskQueue();return;}
     if(act==='case'){caseModal(d.case);return;}
     if(act==='desk-context'){const c=state.cases.find(c=>c.id===d.case);if(!c||ui.view!=='desk')return;modal('关联信息与业务事件',deskContext(c,null),'case');return;}
@@ -1403,7 +1457,7 @@ details[open]>.sop-group .sop-group-names{display:none}
     case 'command-form':{const base=JSON.parse(v.base),command=v.command;delete v.base;delete v.command;const data={...base,...v};if('nextAt' in data)data.nextAt=new Date(data.nextAt).getTime();if('resolved'in data)data.resolved=data.resolved==='true';if(data.satisfaction==='')delete data.satisfaction;const result=run(command,data);close();render();if(command==='queryRefund'){modal('原退款查询结果',kv([['退款记录',result.id],['原请求号',result.requestId],['当前结果',({processing:'处理中',unknown:'结果未知，继续核实',success:'渠道成功',failed:'执行失败'})[result.status]],['金额',M.amount(result.amountCents)],['查询时间',t(result.queriedAt)]])+'<p class="muted">查询未创建新的退款请求。</p>','refund-result');}else {toast('已记录本次处理结果');if(ui.view==='customer'&&base.caseId)caseModal(base.caseId);}break;}
   }}catch(err){showError(err);}});
   document.addEventListener('change',async event=>{try{const el=event.target;
-    if(el.name==='deskActor'){ui.deskActor=el.value;render();return;}if(el.name==='opsActor'){ui.opsActor=el.value;render();return;}if(el.name==='queueFilter'||el.name==='queueDialogFilter'){ui.queueFilter=el.value;render();if(el.name==='queueDialogFilter')openDeskQueue();return;}
+    if(el.name==='deskActor'){ui.deskActor=el.value;render();return;}if(el.name==='opsActor'){ui.opsActor=el.value;render();return;}if(el.name==='queueFilter'||el.name==='queueDialogFilter'){ui.queueFilter=el.value;render();if(el.name==='queueDialogFilter')openDeskQueue();return;}if(el.name==='sessionFilter'||el.name==='sessionDialogFilter'){ui.sessionFilter=el.value;render();if(el.name==='sessionDialogFilter')openDeskQueue();return;}
     if(el.closest('#application-form')&&['type','orderId','itemId'].includes(el.name)){captureApplication();if(el.name==='orderId'){ui.form.itemId='';for(const k of ['targetVariant','addressName','addressPhone','addressText'])delete ui.form[k];ui.form.sourceCaseId='';}if(el.name==='itemId')delete ui.form.targetVariant;if(el.name==='type')for(const k of ['targetVariant','missingName','invoiceTitle','taxId','comparison'])delete ui.form[k];applicationForm();return;}
     if(el.id==='material-file'&&el.files?.length){if(ui.modal==='application')captureApplication();else if(ui.modal==='supplement'){const fd=new FormData($('#supplement-form'));ui.form.reason=fd.get('reason');ui.form.attachmentIds=fd.getAll('attachmentIds');}const file=el.files[0];if(file.size>512000)throw Error('单张图片不能超过500KB，请选择较小的照片');if(!['image/png','image/jpeg','image/webp'].includes(file.type))throw Error('仅支持PNG、JPEG和WebP图片');const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(Error('材料读取失败'));reader.readAsDataURL(file);});const id=run('addAttachment',{name:file.name,mime:file.type,size:file.size,dataUrl});ui.form.attachmentIds=[...(ui.form.attachmentIds||[]),id].slice(-3);if(ui.modal==='application')applicationForm();else showSupplement();toast('图片已添加，请核对后提交');}
   }catch(err){showError(err);}});
@@ -1421,6 +1475,8 @@ details[open]>.sop-group .sop-group-names{display:none}
     }).catch(()=>{editingAllowed=false;render();toast('无法取得编辑权限，请关闭其他页面后刷新重试。');});
     else editingNotice='本页仅供查看。当前浏览器不支持安全编辑，请使用现代浏览器通过本地 HTTP 地址打开。';
   }
+  // Waiting times tick in place so drafts and scroll positions survive.
+  if(typeof setInterval==='function')setInterval(()=>{for(const el of document.querySelectorAll?.('[data-since]')||[])el.textContent=el.dataset.prefix+ago(Date.now()-Number(el.dataset.since));},30000);
   render();
 })();
 

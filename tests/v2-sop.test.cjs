@@ -1,4 +1,4 @@
-// 产出 Agent：Claude；客服工作台 SOP 竖轴、意图映射、节点推进、话术预填，以及转人工后 AI 静默回归。
+// 产出 Agent：Claude；客服工作台 SOP 竖轴、意图映射、节点推进、话术预填、转人工后 AI 静默、单句单条澄清与会话队列回归。
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
@@ -157,4 +157,31 @@ test('会话已由其他客服接待时，回复被拒绝且不改动记录',()=
   const other=f.run('newConversation',{});f.run('requestHuman',{conversationId:other});
   f.state.conversations.find(v=>v.id===other).ownerId='zhou';const before=JSON.stringify(f.state);
   assert.throws(()=>f.run('reply',{caseId:id,body:'你好'},'agent'),/会话已有其他接待客服/);assert.equal(JSON.stringify(f.state),before);
+});
+
+test('一句话只回一条澄清：寒暄分句跳过，同一追问不重复，泛化追问让位于具体追问',()=>{
+  const cases=[['你好，我买的杯子有问题，想退货','确认售后商品'],['杯子坏了，想退货','确认售后商品'],['需要帮忙弄一下','澄清服务诉求'],['在吗，保温杯怎么清洗','保温杯清洁与保养']];
+  for(const [body,title] of cases){
+    const f=fixture(),n=f.state.conversations[0].messages.length;f.say(body);const added=f.state.conversations[0].messages.slice(n);
+    assert.equal(added.filter(m=>m.role==='assistant').length,1,body);assert.deepEqual(f.state.cases.map(c=>c.title),[title],body);
+  }
+  const f=fixture(),n=f.state.conversations[0].messages.length;f.say('怎么清洗，帮我查订单');
+  assert.equal(f.state.conversations[0].messages.slice(n).filter(m=>m.role==='assistant').length,2,'两个不同诉求各自追问');
+});
+
+test('服务队列按会话排队：等待时间、待回复条数与意图可见，可直接接管会话',async()=>{
+  const f=fixture();f.say('保温杯漏水了，想退货');f.run('requestHuman',{conversationId:'CONV001'});f.say('在吗？');f.say('杯盖一直漏');
+  const queue=html=>html.slice(html.indexOf('<aside class="panel queue-panel"'),html.indexOf('<section class="work-main"'));
+  let v=view(f.state);await tick();await v.click({view:'desk'});let q=queue(v.html());
+  assert.match(q,/aria-selected="true" class="active" data-action="queue-tab" data-tab="sessions"/);
+  assert.match(q,/待接入/);assert.match(q,/data-since="\d+" data-prefix="等待 ">等待 /);assert.match(q,/2 条待回复/);
+  assert.match(q,/session-tag">退货退款</);assert.match(q,/session-tag">待澄清</);assert.equal((q.match(/class="session-row/g)||[]).length,1);
+  const take=q.match(/data-action="take-conversation" data-conv="CONV001" data-case="([^"]+)"/);assert.ok(take);
+  const before=JSON.stringify(v.state());await v.click({action:'take-conversation',conv:'CONV001',case:take[1]});
+  assert.equal(v.node('#dialog-title').textContent,'确认接管会话');assert.match(v.node('#dialog-body').innerHTML,/name="command" type="hidden" value="claim"/);assert.equal(JSON.stringify(v.state()),before);
+  f.run('claim',{caseId:take[1]},'agent');v=view(f.state);await tick();await v.click({view:'desk'});q=queue(v.html());
+  assert.match(q,/我接待中/);assert.match(q,/data-prefix="已接待 "/);assert.doesNotMatch(q,/take-conversation/);
+  assert.match(panel(v.html()),/class="session-cases"/);
+  await v.change('sessionFilter','waiting');assert.match(queue(v.html()),/暂无接待会话/);
+  await v.change('deskActor','warehouse');assert.match(queue(v.html()),/aria-selected="true" class="active" data-action="queue-tab" data-tab="cases"/);
 });

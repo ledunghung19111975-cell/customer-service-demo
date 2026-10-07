@@ -227,7 +227,9 @@
   }
   function ask(s,conv,title,body,now,action='orders',fields={}) {
     const c=makeCase(s,conv,'clarification',title,{...fields,action},now,'clarify:'+title);
-    message(s,conv,'assistant',body,now,[c.id],{action});return c;
+    // Several clauses of one message can land on the same question; ask it once.
+    if(!conv.messages.some(m=>m.at===now&&m.role==='assistant'&&m.body===body&&m.caseIds?.includes(c.id)))message(s,conv,'assistant',body,now,[c.id],{action});
+    return c;
   }
   function answer(s,conv,title,body,source,now,fields={}) {
     const c=makeCase(s,conv,'knowledge',title,fields,now,'knowledge:'+normalize(title));
@@ -282,9 +284,9 @@
     if(/^(你好|您好|嗨|hi|hello|在吗|谢谢|感谢|好的|好|嗯|不用了|再见)[呀啊哦呢啦！!。 .?？]*$/i.test(body.trim())) {
       message(s,conv,'assistant',/(谢谢|感谢|再见)/.test(body)?'已保留当前服务进度。还有其他问题可以继续说明。':'请说明需要咨询或办理的问题。',now);return customer;
     }
-    const clauses=body.split(/[，,。；;\n]+/).map(x=>x.trim()).filter(Boolean);const ids=[];
+    const clauses=body.split(/[，,。；;\n]+/).map(x=>x.trim()).filter(Boolean);const ids=[];let vague=false;
     for(let q of clauses) {
-      if(/^(好的|好|谢谢|感谢|嗯)$/.test(q))continue;
+      if(/^(你好|您好|嗨|hi|hello|在吗|在不在|好的|好|谢谢|感谢|嗯)[呀啊哦呢啦！!。 .?？~～]*$/i.test(q))continue;
       const products=productMention(s,q),product=products.length===1?products[0]:null;
       let order;try{order=orderMention(s,a,conv,q);itemMention(s,a,conv,q,order);}catch(error){const c=ask(s,conv,'核对订单归属','暂无法核对该订单与商品，请从本人订单中重新选择；未展示其他订单的个人信息。',now,'orders');ids.push(c.id);continue;}
       let c;
@@ -343,10 +345,12 @@
         const k=retrieve(s,q,now);
         if(k)c=answer(s,conv,k.live.title,k.live.answer,`${k.live.source} · v${k.live.version}`,now);
         else if(/^(不要|不用|不需要|不想)/.test(q)) {message(s,conv,'assistant','不会提交您未确认的业务操作。已有申请需要撤回时，请进入原申请办理。',now);continue;}
-        else c=ask(s,conv,'澄清服务诉求','请补充需要了解的商品、订单或希望办理的事情；也可以直接请求人工。',now,'orders');
+        else vague=true;
       }
       if(c)ids.push(c.id);
     }
+    // A general clarification only helps when no clause produced anything specific.
+    if(vague&&!ids.length)ids.push(ask(s,conv,'澄清服务诉求','请补充需要了解的商品、订单或希望办理的事情；也可以直接请求人工。',now,'orders').id);
     customer.caseIds=[...new Set(ids)];return customer;
   }
   function applicationFor(s,a,applicationId) {

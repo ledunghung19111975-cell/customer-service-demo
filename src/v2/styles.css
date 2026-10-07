@@ -171,3 +171,24 @@ details[open]>.sop-group .sop-group-names{display:none}
 .self-right .message.assistant .message-sender,.self-right .message.agent .message-sender,.self-right .message.assistant .message-meta,.self-right .message.agent .message-meta{text-align:left}
 .self-right .message.assistant .bubble,.self-right .message.agent .bubble{border-radius:2px 12px 12px 12px}
 .self-right .message.assistant .bubble,.self-right .message.agent .bubble{background:#f3f6f7}
+/* Service queue: conversations an agent can take over, with waiting time and what each one is about. */
+.queue-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:0 16px;padding:4px;background:#eef2f3;border-radius:10px}
+.queue-tabs button{border:0;background:transparent;border-radius:8px;padding:6px 8px;font-size:13px;color:#4f6670;display:flex;justify-content:center;gap:6px}
+.queue-tabs button span{font-size:11px;color:var(--muted)}
+.queue-tabs button.active{background:white;color:var(--ink);font-weight:600;box-shadow:0 1px 2px #20384014}
+.session-row{border-bottom:1px solid var(--line);background:white}
+.session-row.active{background:#ebf3ef;box-shadow:inset 3px 0 var(--primary)}
+.session-main{display:block;width:100%;text-align:left;border:0;border-radius:0;background:transparent;padding:13px 17px 10px}
+.session-main:hover:not(:disabled){background:#f2f7f5}
+.session-row.active .session-main:hover:not(:disabled){background:#e3efe9}
+.session-time{display:block;margin-top:4px;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.session-row:has(.badge.warn) .session-time{color:#80601f;font-weight:600}
+.session-last{display:block;margin-top:5px;font-size:12px;color:#33505a;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.session-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.session-tag{font-size:11px;line-height:18px;padding:0 7px;border-radius:999px;background:#eef2f3;color:#4f6670}
+.session-tag.warn{background:#fbefd5;color:#6b4a0c}
+.session-take{margin:0 17px 12px;width:calc(100% - 34px)}
+.session-cases{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.session-cases .muted{width:100%}
+.session-cases button{font-size:12px;padding:4px 9px}
+.session-cases button.active{background:var(--tint);border-color:var(--primary);color:var(--primary);font-weight:600}

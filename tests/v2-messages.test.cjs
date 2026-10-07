@@ -88,9 +88,10 @@ test('只有业务时间线的事项详情保留人工回复',()=>{
   assert.match(view(f.state).history(f.state.cases[0]),/客服 01：详情应能查看的答复/);
 });
 
-test('紧凑队列支持筛选并在选择事项后关闭，不改变业务数据',async()=>{
+test('紧凑队列业务事项页签支持筛选并在选择事项后关闭，不改变业务数据',async()=>{
   const f=fixture();f.say('杯子怎么清洗，EC-ITEM-002 还没到');const caseId=f.claim(),before=JSON.stringify(f.state),v=view(f.state);
   await v.click({view:'desk'});await v.click({action:'desk-queue'});assert.equal(v.node('#dialog').open,true);
+  await v.click({action:'queue-tab',tab:'cases'});assert.equal(v.node('#dialog').open,true);
   assert.match(v.node('#dialog-body').innerHTML,/f-queueDialogFilter/);assert.doesNotMatch(v.node('#dialog-body').innerHTML,/id="f-queueFilter"/);
   await v.change('queueDialogFilter','mine');const html=v.node('#dialog-body').innerHTML;
   assert.match(html,new RegExp('data-case="'+caseId+'"'));assert.doesNotMatch(html,/物流进度/);
