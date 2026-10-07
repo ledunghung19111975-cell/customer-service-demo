@@ -4,12 +4,54 @@
   "origin": "http://localhost:8770（验收端口，未写入日常 8768）",
   "scope": "客服工作台 SOP 竖轴与回复话术预填",
   "checks": [
-    {"viewport": "1440x900", "observed": "三栏布局；右侧面板显示 SOP 进度、图例与竖轴（接入、识别、分流办理、收尾），5 类 19 个意图中命中分组展开；回复框上方显示话术预填卡片"},
-    {"viewport": "900x1000", "observed": "右侧面板经「处理面板」弹窗打开；轨道实线从用户进线延伸到命中意图「退货退款」，其后为虚线；图例圆点对齐"},
-    {"action": "采用并发送", "observed": "客服消息保存 sopNode=greet；卡片推进到「退货退款 · 核对订单商品」，提示客户尚未回复"},
-    {"action": "填入修改 → 改写 → 确认发送", "observed": "回复框带入原话术与 sopNode=refund.0；改写后的消息仍保存 sopNode=refund.0；卡片显示「已追问 · 等待客户补充」"},
-    {"action": "消费者端回复后回到工作台", "observed": "节点推进到「退货退款 · 收集原因与凭证」，带出致歉与凭证话术"},
-    {"viewport": "375x812", "measure": {"scrollWidth": 375, "replyFormBottom": 803, "viewportHeight": 812, "prefillCardHeight": 142, "historyHeight": 274}, "observed": "无横向溢出，回复区在首屏内；窄屏卡片话术限 3 行"}
+    {
+      "viewport": "1440x900",
+      "observed": "三栏布局；右侧面板显示 SOP 进度、图例与竖轴（接入、识别、分流办理、收尾），5 类 19 个意图中命中分组展开；回复框上方显示话术预填卡片"
+    },
+    {
+      "viewport": "900x1000",
+      "observed": "右侧面板经「处理面板」弹窗打开；轨道实线从用户进线延伸到命中意图「退货退款」，其后为虚线；图例圆点对齐"
+    },
+    {
+      "action": "采用并发送",
+      "observed": "客服消息保存 sopNode=greet；卡片推进到「退货退款 · 核对订单商品」，提示客户尚未回复"
+    },
+    {
+      "action": "填入修改 → 改写 → 确认发送",
+      "observed": "回复框带入原话术与 sopNode=refund.0；改写后的消息仍保存 sopNode=refund.0；卡片显示「已追问 · 等待客户补充」"
+    },
+    {
+      "action": "消费者端回复后回到工作台",
+      "observed": "节点推进到「退货退款 · 收集原因与凭证」，带出致歉与凭证话术"
+    },
+    {
+      "viewport": "375x812",
+      "measure": {
+        "scrollWidth": 375,
+        "replyFormBottom": 803,
+        "viewportHeight": 812,
+        "prefillCardHeight": 142,
+        "historyHeight": 274
+      },
+      "observed": "无横向溢出，回复区在首屏内；窄屏卡片话术限 3 行"
+    },
+    {
+      "action": "联系人工后排队中发送「保温杯怎么清洗」",
+      "observed": "会话 mode=queue，最后一条为客户消息，无 AI 回复"
+    },
+    {
+      "action": "客服接管并采用欢迎语后，客户发送「我饿了」",
+      "observed": "会话 mode=human、ownerId=lin，最后一条为客户消息，无 AI 回复，事项数不变；顶部显示由客服 01 接待"
+    },
+    {
+      "viewport": "1280x860",
+      "observed": "消费者端本人消息居右（浅绿）、客服与 AI 居左（浅灰）；客服工作台客户居左、客服居右"
+    }
   ],
-  "not_verified": ["真实 iOS 软键盘", "多人并发编辑", "Windows 字体回退", "1101–1280 宽度区间右侧面板逐像素检查"]
+  "not_verified": [
+    "真实 iOS 软键盘",
+    "多人并发编辑",
+    "Windows 字体回退",
+    "1101–1280 宽度区间右侧面板逐像素检查"
+  ]
 }

@@ -1,4 +1,4 @@
-// 产出 Agent：Claude；客服工作台 SOP 竖轴、意图映射、节点推进与话术预填回归。
+// 产出 Agent：Claude；客服工作台 SOP 竖轴、意图映射、节点推进、话术预填，以及转人工后 AI 静默回归。
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
@@ -102,6 +102,7 @@ test('所有路由场景的预填话术都有实值，系统查询节点不提�
 
 test('回复只接受合法节点键，空值保持旧行为，SOP 推导不改写记录',()=>{
   const f=fixture(),id=f.run('requestHuman',{conversationId:'CONV001'});f.run('claim',{caseId:id},'agent');
+  assert.equal(f.sop(id).nodes.clarify.note,'客户要求人工，诉求待确认');
   assert.throws(()=>f.run('reply',{caseId:id,body:'你好',sopNode:'<img>'},'agent'),/话术节点无效/);
   f.run('reply',{caseId:id,body:'普通回复',sopNode:''},'agent');
   const msg=f.state.conversations[0].messages.at(-1);assert.equal(msg.role,'agent');assert.equal('sopNode' in msg,false);
@@ -133,4 +134,27 @@ test('预填卡片：采用并发送记录节点，填入修改带出原节点�
   const sent=v.state().conversations[0].messages.at(-1);assert.equal(sent.sopNode,'greet');assert.match(sent.body,/^您好，我是客服 01/);
   html=v.html();assert.match(html,/节点「退货退款 · 核对订单商品」/);assert.match(html,/客户还没有回复上一条消息/);
   await v.change('deskActor','zhou');assert.doesNotMatch(v.html(),/sop-prefill|id="reply-form"/);
+});
+
+test('新会话复用已接管的人工事项：客服回复即接手会话，AI 不再插话也不新建事项',()=>{
+  const f=fixture(),id=f.run('requestHuman',{conversationId:'CONV001'});f.run('claim',{caseId:id},'agent');f.run('reply',{caseId:id,body:'上次的回复'},'agent');f.run('closeConversation',{conversationId:'CONV001'},'agent');
+  const next=f.run('newConversation',{});f.run('say',{conversationId:next,body:'你好'});assert.equal(f.run('requestHuman',{conversationId:next}),id);
+  f.run('reply',{caseId:id,body:'请问是哪件商品？'},'agent');let cv=f.state.conversations.find(v=>v.id===next);
+  assert.equal(cv.mode,'human');assert.equal(cv.ownerId,'lin');
+  const cases=f.state.cases.length;f.run('say',{conversationId:next,body:'我饿了'});cv=f.state.conversations.find(v=>v.id===next);
+  assert.equal(cv.messages.at(-1).role,'customer');assert.equal(cv.messages.at(-1).body,'我饿了');assert.equal(f.state.cases.length,cases);
+  assert.equal(f.state.conversations.find(v=>v.id==='CONV001').mode,'human');
+});
+
+test('转人工排队期间 AI 不再答复，客户消息保留给客服',()=>{
+  const f=fixture(),conv=()=>f.state.conversations[0];f.run('requestHuman',{conversationId:'CONV001'});const n=conv().messages.length,cases=f.state.cases.length;
+  f.say('保温杯怎么清洗');f.say('EC-SO20261005001 的物流到哪了');
+  assert.deepEqual(conv().messages.slice(n).map(m=>m.role),['customer','customer']);assert.equal(f.state.cases.length,cases);assert.equal(conv().mode,'queue');
+});
+
+test('会话已由其他客服接待时，回复被拒绝且不改动记录',()=>{
+  const f=fixture(),id=f.run('requestHuman',{conversationId:'CONV001'});f.run('claim',{caseId:id},'agent');
+  const other=f.run('newConversation',{});f.run('requestHuman',{conversationId:other});
+  f.state.conversations.find(v=>v.id===other).ownerId='zhou';const before=JSON.stringify(f.state);
+  assert.throws(()=>f.run('reply',{caseId:id,body:'你好'},'agent'),/会话已有其他接待客服/);assert.equal(JSON.stringify(f.state),before);
 });

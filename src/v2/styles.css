@@ -163,3 +163,11 @@ details[open]>.sop-group .sop-group-names{display:none}
 @media(max-height:760px){.sop-prefill{padding:8px 10px}.sop-prefill-text{margin:4px 0 6px;font-size:13px}.sop-prefill-actions .help{display:none}}
 @media(max-height:540px){.sop-prefill-text{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}}
 @media(max-width:600px){.sop-prefill{padding:8px 10px}.sop-prefill-head .small,.sop-prefill-actions .help{display:none}.sop-prefill-text{margin:4px 0 6px;font-size:13px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}}
+/* Consumer side reads like a chat app: own messages on the right, AI and agents on the left. */
+.self-right .message.customer{align-self:flex-end;flex-direction:row-reverse}
+.self-right .message.customer .message-sender,.self-right .message.customer .message-meta{text-align:right}
+.self-right .message.customer .bubble{border-radius:12px 2px 12px 12px;background:#e9f3ed}
+.self-right .message.assistant,.self-right .message.agent{align-self:flex-start;flex-direction:row}
+.self-right .message.assistant .message-sender,.self-right .message.agent .message-sender,.self-right .message.assistant .message-meta,.self-right .message.agent .message-meta{text-align:left}
+.self-right .message.assistant .bubble,.self-right .message.agent .bubble{border-radius:2px 12px 12px 12px}
+.self-right .message.assistant .bubble,.self-right .message.agent .bubble{background:#f3f6f7}

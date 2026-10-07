@@ -133,7 +133,7 @@
     if(hit)set('clarify','skip');
     else if(c.status==='completed')set('clarify','done','处理结论：'+short(c.result?.reason||'已登记处理结果',40));
     else if(answered('clarify'))set('clarify','done','客户已补充说明',fmt(sent.clarify.at));
-    else set('clarify','todo',question?'待确认内容：'+question.body:c.type==='aftersales'?'已定位商品，待客户选择退货、换货或补发':c.type==='human'?'客户要求人工，诉求待确认':'');
+    else set('clarify','todo',c.type==='clarification'&&question?'待确认内容：'+question.body:c.type==='aftersales'?'已定位商品，待客户选择退货、换货或补发':c.type==='human'?'客户要求人工，诉求待确认':'');
     let steps=[],asking=c.type==='clarification'&&c.status!=='completed'&&question&&!Object.keys(sent).some(k=>k.startsWith(iid+'.'));
     if(hit){
       steps=stepStates(iid,c,app).map((status,i,all)=>{

@@ -272,7 +272,8 @@
   }
   function routeMessage(s,a,conv,body,now) {
     const customer=message(s,conv,'customer',body,now);
-    if(conv.mode==='human')return customer;
+    // Once handed to people (queued or taken over) the assistant stays silent; the agent reads these messages.
+    if(conv.mode!=='ai')return customer;
     const noHuman=body.replace(/人工智能/g,'').replace(/人工(?:客服)?(?:的)?(?:服务时间|工作时间|营业时间|上班时间|几点上班|几点下班)/g,'').replace(/(?:不用|不需要|不要|不想|无需)(?:转|找|联系)?人工(?:客服)?/g,'');
     if(/(?:转|找|联系)?人工(?:客服)?|真人客服|投诉/.test(noHuman)) {
       const c=manual(s,conv,/投诉/.test(noHuman)?'complaint':'human','人工服务',/投诉/.test(noHuman)?'已记录投诉诉求，将结合相关事项和处理依据复核。':'您可以直接转人工，无需先完成机器人表单。',now);
@@ -521,6 +522,8 @@
       permit(a,['agent']);const c=caseFor(s,a,d.caseId);working(a,c);const body=required(d.body,'回复内容',4000);c.humanTouched=true;
       // A reply sent from the SOP prefill records its node so the desk can show progress.
       const sopNode=clean(d.sopNode);fail(!sopNode||/^(greet|clarify|followup|confirm|rate|[a-zA-Z]{2,20}\.[0-9])$/.test(sopNode),'话术节点无效');
+      // Speaking in an open conversation takes it over, even when the case was claimed in an earlier one.
+      for(const cid of c.conversationIds){const cv=get(s,'conversations',cid);if(cv.status!=='open')continue;fail(!cv.ownerId||cv.ownerId===a.id,'会话已有其他接待客服，请先转派');cv.ownerId=a.id;cv.mode='human';cv.claimedAt ||= now;}
       customerMessage(s,c,body,now,a,sopNode?{sopNode}:{});c.firstHumanReplyAt ||= now;return c.id;
     },
     note(s,a,d,now) {const c=caseFor(s,a,d.caseId);working(a,c);c.notes.push({body:required(d.body,'内部备注'),actorId:a.id,at:now});c.humanTouched=true;return c.id;},
