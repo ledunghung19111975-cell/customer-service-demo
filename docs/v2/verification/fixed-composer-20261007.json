@@ -1,0 +1,267 @@
+{
+  "date": "2026-10-07",
+  "agent": "Codex",
+  "url": "http://127.0.0.1:8775/",
+  "before": {
+    "button": 699,
+    "composer": 707,
+    "messageHeight": 341,
+    "pageHeight": 720,
+    "viewport": 720
+  },
+  "deskBefore": {
+    "button": 697,
+    "form": 707,
+    "height": 720,
+    "messages": 184,
+    "page": 720
+  },
+  "checks": [
+    {
+      "view": "desk",
+      "buttonBottom": 650,
+      "buttonTop": 611,
+      "composerBottom": 658,
+      "messageHeight": 147,
+      "page": [
+        390,
+        667
+      ],
+      "scrollHeight": 13796,
+      "viewport": [
+        390,
+        667
+      ]
+    },
+    {
+      "view": "customer",
+      "buttonBottom": 650,
+      "buttonTop": 611,
+      "composerBottom": 658,
+      "messageHeight": 275,
+      "page": [
+        390,
+        667
+      ],
+      "scrollHeight": 17597,
+      "viewport": [
+        390,
+        667
+      ]
+    },
+    {
+      "view": "customer-after-send",
+      "buttonBottom": 650,
+      "buttonTop": 611,
+      "composerBottom": 658,
+      "messageHeight": 275,
+      "page": [
+        390,
+        667
+      ],
+      "scrollHeight": 17704,
+      "viewport": [
+        390,
+        667
+      ]
+    },
+    {
+      "view": "desk",
+      "buttonBottom": 463,
+      "buttonTop": 424,
+      "buttonVisible": true,
+      "composerBottom": 471,
+      "messageHeight": 177,
+      "page": [
+        390,
+        480
+      ],
+      "panelBottom": 472,
+      "scrollHeight": 13891,
+      "viewport": [
+        390,
+        480
+      ]
+    },
+    {
+      "view": "desk",
+      "buttonBottom": 367,
+      "buttonTop": 328,
+      "buttonVisible": true,
+      "composerBottom": 377,
+      "messageHeight": 45,
+      "page": [
+        844,
+        390
+      ],
+      "panelBottom": 378,
+      "scrollHeight": 10830,
+      "viewport": [
+        844,
+        390
+      ]
+    },
+    {
+      "view": "customer",
+      "buttonBottom": 369,
+      "buttonTop": 330,
+      "buttonVisible": true,
+      "composerBottom": 377,
+      "messageHeight": 35,
+      "page": [
+        844,
+        390
+      ],
+      "panelBottom": 378,
+      "scrollHeight": 17575,
+      "viewport": [
+        844,
+        390
+      ]
+    },
+    {
+      "view": "customer",
+      "buttonBottom": 803,
+      "buttonTop": 764,
+      "composerBottom": 835,
+      "messageHeight": 409,
+      "page": [
+        390,
+        844
+      ],
+      "scrollHeight": 17704,
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "view": "desk",
+      "buttonBottom": 801,
+      "buttonTop": 762,
+      "composerBottom": 835,
+      "messageHeight": 395,
+      "page": [
+        390,
+        844
+      ],
+      "scrollHeight": 13899,
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "view": "customer",
+      "buttonBottom": 579,
+      "buttonTop": 540,
+      "composerBottom": 587,
+      "messageHeight": 221,
+      "page": [
+        1280,
+        600
+      ],
+      "scrollHeight": 14674,
+      "viewport": [
+        1280,
+        600
+      ]
+    },
+    {
+      "view": "desk",
+      "buttonBottom": 577,
+      "buttonTop": 538,
+      "composerBottom": 587,
+      "messageHeight": 94,
+      "page": [
+        1280,
+        600
+      ],
+      "scrollHeight": 13693,
+      "viewport": [
+        1280,
+        600
+      ]
+    },
+    {
+      "view": "customer",
+      "buttonBottom": 463,
+      "buttonTop": 424,
+      "buttonVisible": true,
+      "composerBottom": 471,
+      "messageHeight": 151,
+      "page": [
+        390,
+        480
+      ],
+      "panelBottom": 472,
+      "scrollHeight": 17694,
+      "viewport": [
+        390,
+        480
+      ]
+    },
+    {
+      "view": "desk-final",
+      "buttonBottom": 697,
+      "buttonTop": 658,
+      "buttonVisible": true,
+      "composerBottom": 707,
+      "messageHeight": 214,
+      "page": [
+        1280,
+        720
+      ],
+      "panelBottom": 708,
+      "scrollHeight": 13797,
+      "viewport": [
+        1280,
+        720
+      ]
+    },
+    {
+      "view": "customer-final",
+      "buttonBottom": 699,
+      "buttonTop": 660,
+      "buttonVisible": true,
+      "composerBottom": 707,
+      "messageHeight": 341,
+      "page": [
+        1280,
+        720
+      ],
+      "panelBottom": 708,
+      "scrollHeight": 14783,
+      "viewport": [
+        1280,
+        720
+      ]
+    }
+  ],
+  "normalPages": [
+    {
+      "page": "我的订单",
+      "chatConstrained": false,
+      "pageHeight": 1131,
+      "viewport": 720
+    },
+    {
+      "page": "商品选购",
+      "chatConstrained": false,
+      "pageHeight": 805,
+      "viewport": 720
+    },
+    {
+      "page": "服务进度",
+      "chatConstrained": false,
+      "pageHeight": 720,
+      "viewport": 720
+    },
+    {
+      "page": "运营管理",
+      "chatConstrained": false,
+      "pageHeight": 877,
+      "viewport": 720
+    }
+  ]
+}

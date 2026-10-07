@@ -15,12 +15,12 @@ function fixture(){
   return f;
 }
 function view(state){
-  const nodes=new Map();
-  const document={querySelector(selector){if(selector==='.messages')return null;if(!nodes.has(selector))nodes.set(selector,{innerHTML:'',addEventListener(){},close(){},showModal(){}});return nodes.get(selector);},addEventListener(){}};
+  const nodes=new Map(),listeners=new Map();
+  const document={querySelector(selector){if(selector==='.messages')return null;if(!nodes.has(selector))nodes.set(selector,{innerHTML:'',addEventListener(){},close(){this.open=false;},showModal(){this.open=true;}});return nodes.get(selector);},addEventListener(name,handler){listeners.set(name,handler);}};
   const window={SupportV2Model:M,SupportV2Service:S,addEventListener(){}};
   const source=fs.readFileSync(path.join(root,'src/v2/app.js'),'utf8').replace(/\}\)\(\);\s*$/,'window.testView={chat:()=>{ui.view="customer";return chatView();},desk:c=>{ui.view="desk";return deskDetail(c);},history};})();');
   vm.runInNewContext(source,{window,document,navigator:{},localStorage:{getItem:()=>JSON.stringify(state)},setTimeout:()=>0,clearTimeout(){},Date});
-  return window.testView;
+  return {...window.testView,click:dataset=>listeners.get('click')({target:{closest:()=>({dataset})}}),change:(name,value)=>listeners.get('change')({target:{name,value}}),node:selector=>nodes.get(selector)};
 }
 const ids=html=>[...html.matchAll(/data-message-id="([^"]+)"/g)].map(m=>m[1]);
 
@@ -86,4 +86,25 @@ test('同事项关联新会话后，旧会话人工回复在事项时间线中�
 test('只有业务时间线的事项详情保留人工回复',()=>{
   const f=fixture(),caseId=f.claim();f.run('reply',{caseId,body:'详情应能查看的答复'},'agent');
   assert.match(view(f.state).history(f.state.cases[0]),/客服 01：详情应能查看的答复/);
+});
+
+test('紧凑队列支持筛选并在选择事项后关闭，不改变业务数据',async()=>{
+  const f=fixture();f.say('杯子怎么清洗，EC-ITEM-002 还没到');const caseId=f.claim(),before=JSON.stringify(f.state),v=view(f.state);
+  await v.click({view:'desk'});await v.click({action:'desk-queue'});assert.equal(v.node('#dialog').open,true);
+  assert.match(v.node('#dialog-body').innerHTML,/f-queueDialogFilter/);assert.doesNotMatch(v.node('#dialog-body').innerHTML,/id="f-queueFilter"/);
+  await v.change('queueDialogFilter','mine');const html=v.node('#dialog-body').innerHTML;
+  assert.match(html,new RegExp('data-case="'+caseId+'"'));assert.doesNotMatch(html,/物流进度/);
+  await v.click({action:'select-case',case:caseId});assert.equal(v.node('#dialog').open,false);assert.match(v.node('#app').innerHTML,/id="reply-form"/);assert.equal(JSON.stringify(f.state),before);
+});
+test('紧凑办理和关联弹窗保留操作、完整历史及备注',async()=>{
+  const f=fixture(),caseId=f.claim();f.run('reply',{caseId,body:'需要保留的处理说明'},'agent');f.run('note',{caseId,body:'需要保留的内部备注'},'agent');
+  const v=view(f.state);await v.click({view:'desk'});await v.click({action:'case',case:caseId});
+  assert.match(v.node('#dialog-body').innerHTML,/data-command="handoff"/);await v.click({action:'close'});
+  await v.click({action:'desk-context',case:caseId});assert.match(v.node('#dialog-body').innerHTML,/需要保留的处理说明/);assert.match(v.node('#dialog-body').innerHTML,/需要保留的内部备注/);
+});
+test('高度约束只在聊天和工作台生效，切到普通业务页会解除',async()=>{
+  const v=view(M.createState(NOW));assert.match(v.node('#app').innerHTML,/<main class="page chat-page">/);
+  for(const page of ['orders','products','progress']){await v.click({page});assert.doesNotMatch(v.node('#app').innerHTML,/<main class="page chat-page">/);}
+  await v.click({page:'chat'});assert.match(v.node('#app').innerHTML,/<main class="page chat-page">/);
+  await v.click({view:'ops'});assert.doesNotMatch(v.node('#app').innerHTML,/<main class="page chat-page">/);
 });

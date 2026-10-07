@@ -13,3 +13,85 @@ label{display:block;font-size:12px;color:#4d6067;margin-bottom:6px}input,select,
 @media(max-width:480px){.form-grid{grid-template-columns:1fr}.dialog-body{padding:18px 16px}.dialog-head{padding:17px 16px 12px}.kv{grid-template-columns:78px minmax(0,1fr);gap:7px 9px}.quick-actions button{font-size:10px;padding:4px 7px}.chat-head{padding:13px 14px}.chat-head .small{font-size:10px}.composer{padding:11px 13px}.product-icon{width:42px;height:48px}.preview-block{padding:13px}.message .bubble{font-size:12px}.row.mobile-stack{align-items:stretch;flex-direction:column}}
 
 .composer form>button{min-width:72px;flex-shrink:0;white-space:nowrap}.case-row>strong,.case-row>span.small{display:block;margin-top:6px}.panel-body>p+p{margin-top:10px}
+
+/* Chat workspaces own the viewport; only message and context panes scroll. */
+#app:has(>.chat-page){height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+#app:has(>.chat-page)>.topbar{flex:none}
+.chat-page{display:flex;flex-direction:column;flex:1 1 0;min-height:0;width:100%;padding-bottom:12px;overflow:hidden}
+.chat-page>.page-head,.chat-page>.subnav,.chat-page>.notice,.chat-page>.footer-note{flex:none}
+.chat-page>.page-head{margin-bottom:12px}
+.chat-page>.subnav{margin-bottom:12px}
+.chat-page>.customer-layout,.chat-page>.workbench{flex:1 1 0;min-height:0;align-items:stretch}
+.chat-page .chat-panel{height:auto;min-height:0;max-height:none}
+.chat-page .chat-head,.chat-page .composer,.desk-chat>.panel-head,.desk-chat>.reply-form{flex:none}
+.chat-page .message{flex-shrink:0}
+.chat-page .customer-aside,.chat-page .queue-panel,.desk-context{min-height:0;max-height:none;overflow-y:auto;overscroll-behavior:contain}
+.chat-page .work-main{min-height:0;grid-template-rows:auto minmax(0,1fr);gap:12px}
+.chat-page .desk-summary>.panel-head{padding:12px 16px}
+.chat-page .desk-summary>.panel-body{padding:8px 16px}
+.chat-page .desk-summary .work-toolbar{margin-top:0}
+.chat-page .desk-columns{min-height:0;grid-template-rows:minmax(0,1fr);align-items:stretch}
+.desk-chat{display:flex;flex-direction:column;min-height:0}
+.chat-page .desk-history{flex:1 1 0;min-height:0;max-height:none}
+.chat-page .messages{overscroll-behavior:contain;scroll-behavior:auto}
+.desk-chat>.reply-form{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:8px;padding:10px 16px;margin:0;background:white}
+.desk-chat>.reply-form textarea{height:56px;min-height:44px;max-height:56px;resize:none}
+.desk-chat>.reply-form>.help{grid-column:1/-1;font-size:10px}
+.desk-context .business-history{border-top:0;border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:16px}
+@media(max-width:1100px){.chat-page .desk-context{display:none}.chat-page .desk-columns{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:780px){
+  .chat-page{padding:10px 12px 8px}
+  .chat-page>.page-head{margin-bottom:8px;gap:6px}
+  .chat-page>.page-head p{display:none}
+  .chat-page>.page-head h1{font-size:20px}
+  .chat-page>.subnav{margin-bottom:8px}
+  .chat-page>.workbench{grid-template-rows:minmax(0,1fr);gap:8px}
+  .chat-page .queue-panel{display:none}
+  .chat-page .compact-queue-actions{display:inline-block}
+  .chat-page .desk-summary>.panel-head{padding:8px 10px}
+  .chat-page .desk-summary h2{font-size:16px}
+  .chat-page .desk-summary>.panel-body{padding:6px 10px}
+  .chat-page .desk-summary .eyebrow{display:none}
+  .chat-page .desk-summary .work-toolbar{gap:4px}
+  .chat-page .desk-summary button{font-size:11px;padding:4px 7px}
+  .chat-page .actor-select{font-size:11px}
+  .chat-page .actor-select .field{display:flex;align-items:center;gap:8px}
+  .chat-page .actor-select select{min-width:105px}
+  .desk-chat>.panel-head{padding:10px 12px}
+  .desk-chat>.reply-form{padding:8px 10px;gap:5px}
+}
+@media(max-height:760px){
+  .chat-page{padding-top:10px}
+  .chat-page>.page-head p{display:none}
+  .chat-page .composer{padding-top:8px;padding-bottom:8px}
+  .chat-page .composer textarea{height:44px}
+  .chat-page .composer-hint,.desk-chat>.reply-form>.help{display:none}
+  .chat-page .desk-summary>.panel-body{max-height:78px;overflow-y:auto}
+}
+
+.compact-case-actions{display:none}
+.desk-chat>.reply-form>.field,.chat-page .actor-select .field{margin-bottom:0}
+@media(max-width:780px){
+  .compact-case-actions{display:inline-block}
+  .chat-page .desk-summary>.panel-body{display:none}
+  .chat-page .desk-summary>.panel-head{flex-wrap:nowrap}
+  .chat-page .desk-summary>.panel-head>div:first-child{min-width:0;flex:1}
+  .chat-page .desk-summary h2{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chat-page .desk-summary>.panel-head>.row{gap:5px;flex-wrap:nowrap}
+}
+
+.compact-queue-actions{display:none}
+@media(max-height:540px){
+  #app:has(>.chat-page)>.topbar{height:52px;min-height:52px;padding:4px 12px;flex-wrap:nowrap}
+  #app:has(>.chat-page)>.topbar .brand,#app:has(>.chat-page)>.topbar .session-label{display:none}
+  #app:has(>.chat-page)>.topbar .topnav{width:100%;order:0;justify-content:center}
+  .chat-page>.page-head>div:first-child{display:none}
+  .chat-page .compact-queue-actions,.chat-page .compact-case-actions{display:inline-block}
+  .chat-page>.workbench{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
+  .chat-page .queue-panel,.chat-page .desk-summary>.panel-body{display:none}
+  .chat-page .desk-summary>.panel-head{padding:6px 10px}
+  .chat-page .desk-summary .eyebrow{display:none}
+  .desk-chat>.panel-head{padding:6px 10px}
+  .desk-chat>.reply-form textarea{height:44px;max-height:44px}
+  .chat-page .messages{padding:12px 14px}
+}
