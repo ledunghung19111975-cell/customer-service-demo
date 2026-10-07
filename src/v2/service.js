@@ -46,9 +46,10 @@
     const m={id:id(s,'MSG'),role,body,at:now,caseIds:[...new Set(caseIds)],...extras};
     conv.messages.push(m);conv.updatedAt=now;return m;
   }
-  function customerMessage(s,c,body,now) {
-    c.history.push({at:now,text:body});
-    for(const convId of c.conversationIds){const cv=s.conversations.find(x=>x.id===convId);if(cv)message(s,cv,'system',body,now,[c.id]);}
+  function customerMessage(s,c,body,now,sender=null) {
+    const identity=sender?{kind:'reply',senderId:sender.id,senderName:sender.name}:{kind:'progress'};
+    c.history.push({at:now,text:body,...identity});
+    for(const convId of c.conversationIds){const cv=s.conversations.find(x=>x.id===convId);if(cv)message(s,cv,sender?'agent':'system',body,now,[c.id],identity);}
     const n={id:id(s,'NT'),caseId:c.id,customerId:c.customerId,body,status:'available_in_portal',at:now};s.notifications.push(n);
   }
   function connect(c,conv) {
@@ -517,7 +518,7 @@
       event(s,a,'claim',c.id,{},now);return c.id;
     },
     reply(s,a,d,now) {
-      permit(a,['agent']);const c=caseFor(s,a,d.caseId);working(a,c);const body=required(d.body,'回复内容',4000);c.humanTouched=true;customerMessage(s,c,body,now);c.firstHumanReplyAt ||= now;return c.id;
+      permit(a,['agent']);const c=caseFor(s,a,d.caseId);working(a,c);const body=required(d.body,'回复内容',4000);c.humanTouched=true;customerMessage(s,c,body,now,a);c.firstHumanReplyAt ||= now;return c.id;
     },
     note(s,a,d,now) {const c=caseFor(s,a,d.caseId);working(a,c);c.notes.push({body:required(d.body,'内部备注'),actorId:a.id,at:now});c.humanTouched=true;return c.id;},
     handoff(s,a,d,now) {
